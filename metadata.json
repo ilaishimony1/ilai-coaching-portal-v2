@@ -1,0 +1,8 @@
+{
+  "name": "Ilai Shimon | Elite Coaching Terminal V2.5",
+  "description": "Specialized Calisthenics and Handstand Coaching Platform.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
