@@ -25,7 +25,9 @@ import HSLab from './components/HSLab';
 import { AppProvider, useApp } from './AppContext';
 
 const APP_VERSION = "2.10.0";
-
+// ✅ PERMANENT AVATAR AND LOGO
+const PERMANENT_CLIENT_AVATAR = "https://firebasestorage.googleapis.com/v0/b/ilai-portal.firebasestorage.app/o/branding%2Favatar.jpeg?alt=media&token=acf8bc87-55ff-4de5-aaee-2fa25c374d37";
+const PERMANENT_COACH_LOGO = "https://firebasestorage.googleapis.com/v0/b/ilai-portal.firebasestorage.app/o/branding%2FLOGO%20.jpg?alt=media&token=d17da491-8e18-47b9-aa23-270758c7621b";
 const EMPTY_CLIENT: ClientData = {
   id: '',
   name: '',
