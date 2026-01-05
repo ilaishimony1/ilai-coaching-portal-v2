@@ -53,7 +53,25 @@ const MainApp: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('ADMIN');
   const [currentClientData, setCurrentClientData] = useState<ClientData | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  // ⛔ Prevent app from rendering before Firebase is ready
+if (cloudSync === 'loading') {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-[#020617] text-slate-400">
+      Connecting to cloud…
+    </div>
+  );
+}
+
+if (cloudSync === 'error') {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-[#020617] text-red-400">
+      Firebase connection failed
+    </div>
+  );
+}
+
   const pendingSummaries = useMemo(() => 
+    
     (clients || []).reduce((acc, c) => acc + (c.logs?.filter(l => l.workoutId === 'weekly-summary' && !l.isRead).length || 0), 0)
   , [clients]);
 
@@ -199,16 +217,40 @@ const handleLogin = async (email: string, password: string): Promise<boolean> =>
   };
 
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !currentClientData) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64 = reader.result as string;
-      setClients(prev => prev.map(c => c.id === currentClientData.id ? { ...c, avatar: base64 } : c));
-      syncService.updateDocument('clients', currentClientData.id, { avatar: base64 });
-    };
-    reader.readAsDataURL(file);
+  const file = e.target.files?.[0];
+  if (!file || !currentClientData) return;
+
+  const reader = new FileReader();
+
+  reader.onloadend = () => {
+    const base64 = reader.result as string;
+
+    // update clients list
+    setClients(prev =>
+      prev.map(c =>
+        c.id === currentClientData.id
+          ? { ...c, avatar: base64 }
+          : c
+      )
+    );
+
+    // update active client session
+    setCurrentClientData(prev =>
+      prev ? { ...prev, avatar: base64 } : prev
+    );
+
+    // persist to Firebase
+    syncService.updateDocument('clients', currentClientData.id, {
+      avatar: base64,
+    });
+
+    // ✅ RESET INPUT (important for mobile / same-file re-upload)
+    e.target.value = "";
   };
+
+  reader.readAsDataURL(file);
+};
+
 
   const handleToggleAssignment = (clientId: string, videoUid: string) => {
     const client = clients.find(c => c.id === clientId);
@@ -228,25 +270,17 @@ const handleLogin = async (email: string, password: string): Promise<boolean> =>
   };
 
   const isWeekend = useMemo(() => {
-    const day = new Date().getDay();
-    return [5, 6, 0].includes(day); 
-  }, []);
-// ⛔ Prevent app from rendering before Firebase is ready
-if (cloudSync === 'loading') {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-[#020617] text-slate-400">
-      Connecting to cloud…
-    </div>
-  );
-}
+  const day = new Date().getDay();
+  return [5, 6, 0].includes(day);
+}, []);
 
-if (cloudSync === 'error') {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-[#020617] text-red-400">
-      Firebase connection failed
-    </div>
-  );
-}
+// 👇 ADD THIS RIGHT HERE
+const resolvedClientAvatar =
+  currentClientData?.avatar && currentClientData.avatar.length > 10
+    ? currentClientData.avatar
+    : PERMANENT_CLIENT_AVATAR;
+
+
   if (authStatus.type === 'NONE') {
     return <LoginPage onLogin={handleLogin} config={landingConfig} version={APP_VERSION} />;
   }
@@ -351,7 +385,10 @@ if (cloudSync === 'error') {
     <header className="flex flex-col md:flex-row justify-between items-center gap-6">
       <div className="relative group text-center md:text-left flex items-center gap-6">
         <div onClick={() => avatarInputRef.current?.click()} className="w-20 h-20 md:w-24 md:h-24 rounded-3xl ...">
-          <img src={currentClientData.avatar} className="w-full h-full object-cover transition-transform group-hover/avatar:scale-110" />
+          <img
+  src={resolvedClientAvatar}
+  className="w-full h-full object-cover transition-transform group-hover/avatar:scale-110"
+/>
           <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center transition-opacity">
             <Camera size={24} className="text-white" />
           </div>
