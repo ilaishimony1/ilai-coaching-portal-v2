@@ -25,12 +25,11 @@ import { AppProvider, useApp } from './AppContext';
 
 const APP_VERSION = "2.10.0";
 // ✅ PERMANENT AVATAR AND LOGO
-const PERMANENT_CLIENT_AVATAR = "https://firebasestorage.googleapis.com/v0/b/ilai-portal.firebasestorage.app/o/branding%2Favatar.jpeg?alt=media&token=acf8bc87-55ff-4de5-aaee-2fa25c374d37";
 const PERMANENT_COACH_LOGO = "https://firebasestorage.googleapis.com/v0/b/ilai-portal.firebasestorage.app/o/branding%2FLOGO%20.jpg?alt=media&token=d17da491-8e18-47b9-aa23-270758c7621b";
 const EMPTY_CLIENT: ClientData = {
   id: '',
   name: '',
-  avatar: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&h=400&fit=crop',
+  avatar: '', // ✅ EMPTY on purpose
   username: '',
   password: '',
   goals: [],
@@ -46,6 +45,7 @@ const EMPTY_CLIENT: ClientData = {
   logs: [],
   messages: []
 };
+
 
 const MainApp: React.FC = () => {
   const { clients, setClients, archivedClients, setArchivedClients, landingConfig, setLandingConfig, cloudSync, syncService } = useApp();
@@ -276,9 +276,9 @@ const handleLogin = async (email: string, password: string): Promise<boolean> =>
 
 // 👇 ADD THIS RIGHT HERE
 const resolvedClientAvatar =
-  currentClientData?.avatar && currentClientData.avatar.length > 10
+  currentClientData?.avatar?.length
     ? currentClientData.avatar
-    : PERMANENT_CLIENT_AVATAR;
+    : "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&h=400&fit=crop";
 
 
   if (authStatus.type === 'NONE') {
