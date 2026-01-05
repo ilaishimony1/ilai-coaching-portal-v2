@@ -21,7 +21,6 @@ import BrandLogo from './components/BrandLogo';
 import SummaryReport from './components/SummaryReport';
 import ArchivedDashboard from './components/ArchivedDashboard';
 import MasterLibrary from './components/MasterLibrary';
-import HSLab from './components/HSLab';
 import { AppProvider, useApp } from './AppContext';
 
 const APP_VERSION = "2.10.0";
@@ -53,7 +52,6 @@ const MainApp: React.FC = () => {
   const [authStatus, setAuthStatus] = useState<AuthStatus>({ type: 'NONE' });
   const [viewMode, setViewMode] = useState<ViewMode>('ADMIN');
   const [currentClientData, setCurrentClientData] = useState<ClientData | null>(null);
-  const [isHSLabOpen, setIsHSLabOpen] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const pendingSummaries = useMemo(() => 
     (clients || []).reduce((acc, c) => acc + (c.logs?.filter(l => l.workoutId === 'weekly-summary' && !l.isRead).length || 0), 0)
@@ -255,14 +253,6 @@ if (cloudSync === 'error') {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-[#020617] text-slate-200">
-      {isHSLabOpen && currentClientData && (
-        <HSLab 
-          client={currentClientData} 
-          onExit={() => setIsHSLabOpen(false)} 
-          accentColor={landingConfig.accentColor} 
-          onLogSession={handleLogHSLabSession}
-        />
-      )}
 
       <nav className="hidden md:flex w-24 bg-[#010409]/80 backdrop-blur-xl border-r border-slate-900 flex-col items-center py-10 z-50">
         <button 
@@ -356,59 +346,45 @@ if (cloudSync === 'error') {
               client={currentClientData} 
             />
           )}
+{viewMode === 'CLIENT' && currentClientData && (
+  <div className="space-y-12 animate-in fade-in duration-1000">
+    <header className="flex flex-col md:flex-row justify-between items-center gap-6">
+      <div className="relative group text-center md:text-left flex items-center gap-6">
+        <div onClick={() => avatarInputRef.current?.click()} className="w-20 h-20 md:w-24 md:h-24 rounded-3xl ...">
+          <img src={currentClientData.avatar} className="w-full h-full object-cover transition-transform group-hover/avatar:scale-110" />
+          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center transition-opacity">
+            <Camera size={24} className="text-white" />
+          </div>
+          <input type="file" ref={avatarInputRef} className="hidden" accept="image/*" onChange={handleAvatarUpload} />
+        </div>
+        <div>
+          <h1 className="text-4xl md:text-6xl font-black text-white brand-font uppercase tracking-tighter leading-none">
+            {currentClientData.name.split(' ')[0]}'s <span className="text-blue-600/50">Portal</span>
+          </h1>
+          <p className="font-bold uppercase tracking-[0.5em] text-[10px] mt-2 text-blue-500">1:1 ONLINE COACHING</p>
+        </div>
+      </div>
+    </header>  {/* ✅ close header properly */}
 
-          {viewMode === 'CLIENT' && currentClientData && (
-            <div className="space-y-12 animate-in fade-in duration-1000">
-               <header className="flex flex-col md:flex-row justify-between items-center gap-6">
-                <div className="relative group text-center md:text-left flex items-center gap-6">
-                  <div 
-                    onClick={() => avatarInputRef.current?.click()}
-                    className="w-20 h-20 md:w-24 md:h-24 rounded-3xl bg-slate-900 border-2 border-white/5 overflow-hidden relative cursor-pointer group/avatar shadow-2xl shrink-0"
-                  >
-                    <img src={currentClientData.avatar} className="w-full h-full object-cover transition-transform group-hover/avatar:scale-110" />
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center transition-opacity">
-                      <Camera size={24} className="text-white" />
-                    </div>
-                    <input 
-                      type="file" 
-                      ref={avatarInputRef} 
-                      className="hidden" 
-                      accept="image/*" 
-                      onChange={handleAvatarUpload} 
-                    />
-                  </div>
-                  <div>
-                    <h1 className="text-4xl md:text-6xl font-black text-white brand-font uppercase tracking-tighter leading-none">
-                      {currentClientData.name.split(' ')[0]}'s <span className="text-blue-600/50">Portal</span>
-                    </h1>
-                    <p className="font-bold uppercase tracking-[0.5em] text-[10px] mt-2 text-blue-500">1:1 ONLINE COACHING</p>
-                  </div>
-                </div>
-                
-                <button 
-                  onClick={() => setIsHSLabOpen(true)}
-                  className="px-8 py-5 bg-blue-600 rounded-[2rem] text-white font-black text-xs tracking-[0.3em] uppercase flex items-center gap-4 shadow-2xl hover:scale-105 transition-all group"
-                >
-                  <Zap size={20} className="group-hover:animate-pulse" /> ENTER HS LAB
-                </button>
-              </header>
-              
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-                <div className="lg:col-span-8 space-y-12">
-                  {isWeekend && (
-                    <SummaryReport client={currentClientData} />
-                  )}
-                  <CoachDirectives notes={currentClientData.generalNotes} />
-                  <GoalTracker 
-                    goals={currentClientData.goals || []} 
-                    isCoach={authStatus.type === 'COACH'}
-                    onToggleMiniGoal={(goalId, miniIdx) => handleToggleMiniGoal(currentClientData.id, goalId, miniIdx)}
-                  />
-                  <WorkoutLibrary workouts={currentClientData.workouts || []} clientData={currentClientData} accentColor={landingConfig.accentColor} />
-                </div>
-              </div>
-            </div>
-          )}
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+      <div className="lg:col-span-8 space-y-12">
+        {isWeekend && <SummaryReport client={currentClientData} />}
+        <CoachDirectives notes={currentClientData.generalNotes} />
+        <GoalTracker
+          goals={currentClientData.goals || []}
+          isCoach={authStatus.type === 'COACH'}
+          onToggleMiniGoal={(goalId, miniIdx) => handleToggleMiniGoal(currentClientData.id, goalId, miniIdx)}
+        />
+        <WorkoutLibrary
+          workouts={currentClientData.workouts || []}
+          clientData={currentClientData}
+          accentColor={landingConfig.accentColor}
+        />
+      </div>
+    </div>
+  </div>
+)}
+
           
           {viewMode === 'LANDING_EDITOR' && (
             <LandingPageEditor config={landingConfig} onUpdate={(c) => { setLandingConfig(c); }} onBack={() => setViewMode('ADMIN')} />
