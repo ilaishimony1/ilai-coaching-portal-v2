@@ -27,9 +27,10 @@ const APP_VERSION = "2.10.0";
 // ✅ PERMANENT AVATAR AND LOGO
 const PERMANENT_COACH_LOGO = "https://firebasestorage.googleapis.com/v0/b/ilai-portal.firebasestorage.app/o/branding%2FLOGO%20.jpg?alt=media&token=d17da491-8e18-47b9-aa23-270758c7621b";
 const EMPTY_CLIENT: ClientData = {
+
   id: '',
   name: '',
-  avatar: '', // ✅ EMPTY on purpose
+  avatar: '', // empty by default
   username: '',
   password: '',
   goals: [],
@@ -39,12 +40,18 @@ const EMPTY_CLIENT: ClientData = {
       id: `w-init-${Date.now()}`,
       name: 'A',
       title: 'INITIAL PROTOCOL',
-      exercises: []
-    }
+      exercises: [],
+    },
   ],
   logs: [],
-  messages: []
+  messages: [],
 };
+const mergeClient = (client: ClientData): ClientData => ({
+  ...EMPTY_CLIENT,
+  ...client,
+  avatar: client.avatar ?? '', // 🔒 preserve avatar if it exists
+});
+
 
 
 const MainApp: React.FC = () => {
@@ -102,7 +109,7 @@ const handleLogin = async (email: string, password: string): Promise<boolean> =>
     const client = clients.find(c => c.email === cred.user.email);
     if (client) {
       setAuthStatus({ type: "CLIENT", clientId: client.id });
-      setCurrentClientData(client);
+     setCurrentClientData(mergeClient(client));
       setViewMode("CLIENT");
       return true;
     }
@@ -216,40 +223,32 @@ const handleLogin = async (email: string, password: string): Promise<boolean> =>
     });
   };
 
-  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
   const file = e.target.files?.[0];
   if (!file || !currentClientData) return;
 
   const reader = new FileReader();
 
-  reader.onloadend = () => {
+  reader.onloadend = async () => {
     const base64 = reader.result as string;
+    const clientId = currentClientData.id;
 
-    // update clients list
-    setClients(prev =>
-      prev.map(c =>
-        c.id === currentClientData.id
-          ? { ...c, avatar: base64 }
-          : c
-      )
-    );
+    // 1️⃣ update local clients list
+    setClients(prev => prev.map(c => c.id === clientId ? { ...c, avatar: base64 } : c));
 
-    // update active client session
-    setCurrentClientData(prev =>
-      prev ? { ...prev, avatar: base64 } : prev
-    );
+    // 2️⃣ update active client session
+    setCurrentClientData(prev => prev ? { ...prev, avatar: base64 } : prev);
 
-    // persist to Firebase
-    syncService.updateDocument('clients', currentClientData.id, {
-      avatar: base64,
-    });
+    // 3️⃣ persist to Firebase
+    await syncService.updateDocument("clients", clientId, { avatar: base64 });
 
-    // ✅ RESET INPUT (important for mobile / same-file re-upload)
+    // 4️⃣ allow re-upload of same image
     e.target.value = "";
   };
 
   reader.readAsDataURL(file);
 };
+
 
 
   const handleToggleAssignment = (clientId: string, videoUid: string) => {
@@ -328,9 +327,9 @@ const resolvedClientAvatar =
             <AdminDashboard 
               clients={clients} fullClients={clients} 
               pendingSummaries={pendingSummaries} pendingWorkouts={pendingWorkouts} 
-              onOpenPortal={(id) => { setCurrentClientData(clients.find(c => c.id === id)!); setViewMode('CLIENT'); }} 
-              onEditPortal={(id) => { setCurrentClientData(clients.find(c => c.id === id)!); setViewMode('TRAINER'); }} 
-              onOpenChat={(id) => { setCurrentClientData(clients.find(c => c.id === id)!); setViewMode('CHAT'); }} 
+              onOpenPortal={(id) => { setCurrentClientData(mergeClient(clients.find(c => c.id === id)!)); setViewMode('CLIENT'); }} 
+              onEditPortal={(id) => { setCurrentClientData(mergeClient(clients.find(c => c.id === id)!)); setViewMode('TRAINER'); }} 
+              onOpenChat={(id) => { setCurrentClientData(mergeClient(clients.find(c => c.id === id)!)); setViewMode('CHAT'); }} 
               onArchiveClient={handleArchiveClient}
               onAddClient={() => { 
                 const newId = `client-${Date.now()}`;
