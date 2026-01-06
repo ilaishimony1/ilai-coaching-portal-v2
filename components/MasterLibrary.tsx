@@ -1,4 +1,5 @@
 
+import VideoUploader from './VideoUploader'; // adjust path if needed
 import React, { useState } from 'react';
 import { Library, Trash2, Edit3, ChevronRight, Dumbbell, Zap, Sparkles, X, Check, Eye, User, FileText, Info, UserPlus, Smartphone, Send, PlusCircle, Type } from 'lucide-react';
 import { useApp } from '../AppContext';
@@ -105,6 +106,8 @@ const MasterLibrary: React.FC = () => {
           <span className="text-xs font-black uppercase text-white">{savedWorkouts.length} Templates Stored</span>
         </div>
       </header>
+{/* Video Uploader */}
+<VideoUploader clientId="master" />
 
       {savedWorkouts.length === 0 ? (
         <div className="py-32 text-center border-2 border-dashed border-slate-900 rounded-[4rem] bg-slate-950/20">
