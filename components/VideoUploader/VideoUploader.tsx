@@ -1,12 +1,12 @@
 "use client";
+
 import React, { useState } from "react";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { /* whatever you need */ } from "../../FirebaseService";
-
+import { syncService } from "../../FirebaseService";
 
 interface VideoUploaderProps {
-  category: "exercise" | "tutorial"; // type of video
-  onUpload?: () => void; // optional callback after upload
+  category: "exercise" | "tutorial";
+  onUpload?: () => void;
 }
 
 const VideoUploader: React.FC<VideoUploaderProps> = ({ category, onUpload }) => {
@@ -17,34 +17,46 @@ const VideoUploader: React.FC<VideoUploaderProps> = ({ category, onUpload }) => 
   const storage = getStorage();
 
   const handleUpload = async () => {
-if (!videoFile) {
-  alert("No video selected");
-  return;
-}
+    if (!videoFile) {
+      alert("No video selected");
+      return;
+    }
 
-if (videoFile.type !== "video/mp4") {
-  alert("Only MP4 videos are allowed");
-  return;
-}
+    if (videoFile.type !== "video/mp4") {
+      alert("Only MP4 videos are allowed");
+      return;
+    }
 
-if (!thumbnailFile) {
-  alert("Select a thumbnail image");
-  return;
-}
+    if (!thumbnailFile) {
+      alert("Select a thumbnail image");
+      return;
+    }
 
+    setUploading(true);
+
+    try {
       const timestamp = Date.now();
-      const videoRef = ref(storage, `videoBank/${timestamp}-${videoFile.name}`);
+
+      // Upload video
+      const videoRef = ref(
+        storage,
+        `videoBank/${timestamp}-${videoFile.name}`
+      );
       await uploadBytes(videoRef, videoFile);
       const videoURL = await getDownloadURL(videoRef);
 
-      const thumbRef = ref(storage, `videoBank/thumb-${timestamp}-${thumbnailFile.name}`);
+      // Upload thumbnail
+      const thumbRef = ref(
+        storage,
+        `videoBank/thumb-${timestamp}-${thumbnailFile.name}`
+      );
       await uploadBytes(thumbRef, thumbnailFile);
       const thumbURL = await getDownloadURL(thumbRef);
 
-      // Save to Firestore
+      // Save metadata to Firestore
       const newVideo = {
         id: `vid-${timestamp}`,
-        title: videoFile.name.replace(/\.\w+$/, ""), // remove extension
+        title: videoFile.name.replace(/\.\w+$/, ""),
         category,
         videoURL,
         thumbURL,
@@ -54,16 +66,15 @@ if (!thumbnailFile) {
 
       await syncService.addDocument("videoBank", newVideo.id, newVideo);
 
-
       alert("Video uploaded successfully!");
+
       setVideoFile(null);
       setThumbnailFile(null);
 
       if (onUpload) onUpload();
-
-    } catch (err) {
-      console.error(err);
-      alert("Upload failed, check console");
+    } catch (error) {
+      console.error(error);
+      alert("Upload failed. Check console.");
     } finally {
       setUploading(false);
     }
@@ -72,23 +83,29 @@ if (!thumbnailFile) {
   return (
     <div className="space-y-4 p-4 border rounded-md bg-slate-800">
       <input
-  type="file"
-  accept="video/mp4"
-  onChange={(e) => {
-    const file = e.target.files?.[0] || null;
-    if (!file) return;
+        type="file"
+        accept="video/mp4"
+        onChange={(e) => {
+          const file = e.target.files?.[0] || null;
+          if (!file) return;
 
-    if (file.type !== "video/mp4") {
-      alert("Only MP4 videos are allowed");
-      return;
-    }
+          if (file.type !== "video/mp4") {
+            alert("Only MP4 videos are allowed");
+            return;
+          }
 
-    console.log("Selected video:", file.name, file.type);
-    setVideoFile(file);
-  }}
-/>
+          setVideoFile(file);
+        }}
+      />
 
-      <input type="file" accept="image/*" onChange={e => setThumbnailFile(e.target.files?.[0] || null)} />
+      <input
+        type="file"
+        accept="image/*"
+        onChange={(e) =>
+          setThumbnailFile(e.target.files?.[0] || null)
+        }
+      />
+
       <button
         disabled={uploading}
         onClick={handleUpload}
