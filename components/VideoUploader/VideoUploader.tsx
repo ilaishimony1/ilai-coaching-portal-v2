@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { syncService } from "../../FirebaseService";
+import { syncService } from "../../firebaseService";
 
 interface VideoUploaderProps {
   category: "exercise" | "tutorial";
