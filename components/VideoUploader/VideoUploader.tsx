@@ -17,16 +17,27 @@ const VideoUploader: React.FC<VideoUploaderProps> = ({ category, onUpload }) => 
   const storage = getStorage();
 
   const handleUpload = async () => {
-    if (!videoFile || !thumbnailFile) return alert("Select both video and thumbnail");
+if (!videoFile) {
+  alert("No video selected");
+  return;
+}
 
-    setUploading(true);
-    try {
+if (videoFile.type !== "video/mp4") {
+  alert("Only MP4 videos are allowed");
+  return;
+}
+
+if (!thumbnailFile) {
+  alert("Select a thumbnail image");
+  return;
+}
+
       const timestamp = Date.now();
-      const videoRef = ref(storage, `videos/${timestamp}-${videoFile.name}`);
+      const videoRef = ref(storage, `videoBank/${timestamp}-${videoFile.name}`);
       await uploadBytes(videoRef, videoFile);
       const videoURL = await getDownloadURL(videoRef);
 
-      const thumbRef = ref(storage, `videos/thumb-${timestamp}-${thumbnailFile.name}`);
+      const thumbRef = ref(storage, `videoBank/thumb-${timestamp}-${thumbnailFile.name}`);
       await uploadBytes(thumbRef, thumbnailFile);
       const thumbURL = await getDownloadURL(thumbRef);
 
@@ -41,7 +52,8 @@ const VideoUploader: React.FC<VideoUploaderProps> = ({ category, onUpload }) => 
         assignedTo: [],
       };
 
-      await syncService.addDocument("videos", newVideo.id, newVideo);
+      await syncService.addDocument("videoBank", newVideo.id, newVideo);
+
 
       alert("Video uploaded successfully!");
       setVideoFile(null);
@@ -59,7 +71,23 @@ const VideoUploader: React.FC<VideoUploaderProps> = ({ category, onUpload }) => 
 
   return (
     <div className="space-y-4 p-4 border rounded-md bg-slate-800">
-      <input type="file" accept="video/*" onChange={e => setVideoFile(e.target.files?.[0] || null)} />
+      <input
+  type="file"
+  accept="video/mp4"
+  onChange={(e) => {
+    const file = e.target.files?.[0] || null;
+    if (!file) return;
+
+    if (file.type !== "video/mp4") {
+      alert("Only MP4 videos are allowed");
+      return;
+    }
+
+    console.log("Selected video:", file.name, file.type);
+    setVideoFile(file);
+  }}
+/>
+
       <input type="file" accept="image/*" onChange={e => setThumbnailFile(e.target.files?.[0] || null)} />
       <button
         disabled={uploading}
