@@ -1,7 +1,8 @@
 "use client";
 import React, { useState } from "react";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { syncService } from "../FirebaseService"; // adjust path
+import { /* whatever you need */ } from "../../FirebaseService";
+
 
 interface VideoUploaderProps {
   category: "exercise" | "tutorial"; // type of video
