@@ -1,5 +1,5 @@
 
-import VideoUploader from './VideoUploader'; // adjust path if needed
+import VideoUploader from './videouploader/VideoUploader';
 import React, { useState } from 'react';
 import { Library, Trash2, Edit3, ChevronRight, Dumbbell, Zap, Sparkles, X, Check, Eye, User, FileText, Info, UserPlus, Smartphone, Send, PlusCircle, Type } from 'lucide-react';
 import { useApp } from '../AppContext';
