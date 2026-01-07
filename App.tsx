@@ -324,19 +324,6 @@ const resolvedClientAvatar =
         <div className="max-w-6xl mx-auto">
      {import.meta.env.DEV && (
 
-  <button
-    onClick={async () => {
-      await syncService.updateDocument("debug", "testDoc", {
-        works: true,
-        createdAt: new Date().toISOString(),
-      });
-      alert("Firestore write attempted – check Firebase");
-    }}
-  >
-    TEST FIREBASE WRITE
-  </button>
-)}
-
           {viewMode === 'ADMIN' && (
             <AdminDashboard 
               clients={clients} fullClients={clients} 
