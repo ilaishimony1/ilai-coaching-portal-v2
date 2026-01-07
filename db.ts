@@ -1,39 +1,32 @@
+import Dexie from "dexie";
+import type { Table } from "dexie";
 
-import Dexie from 'dexie';
-import type { Table } from 'dexie';
-
+/**
+ * Single source of truth for videos.
+ * Firebase stores the actual video file.
+ * IndexedDB (Dexie) stores metadata + URL.
+ */
 export interface VideoFile {
   id?: number;
   uid: string;
   name: string;
-  blob: Blob;
-  thumbnail?: string; // Base64 or Object URL for the custom thumbnail
-  category: 'explanation' | 'skill';
+  url: string; // 🔥 Firebase Storage download URL
+  category: "explanation" | "skill";
   subCategory: string;
   uploadDate: Date;
-  order: number; // For manual reordering within sub-categories
+  order: number;
+  thumbnail?: string;
 }
 
-export interface ClientSubmission {
-  id?: number;
-  uid: string;
-  blob: Blob;
-  createdAt: Date;
-}
-
-/**
- * AcademyDatabase manages technical video storage for the coaching portal.
- * Inherits from Dexie to provide IndexedDB functionality.
- */
 export class AcademyDatabase extends Dexie {
   videos!: Table<VideoFile>;
-  clientSubmissions!: Table<ClientSubmission>;
 
   constructor() {
-    super('IlaiShimonyAcademyDB');
-    (this as Dexie).version(3).stores({
-      videos: '++id, uid, name, category, subCategory, order',
-      clientSubmissions: '++id, uid'
+    super("IlaiShimonyAcademyDB");
+
+    // Version bump required because schema changed
+    this.version(4).stores({
+      videos: "++id, uid, name, category, subCategory, order"
     });
   }
 }

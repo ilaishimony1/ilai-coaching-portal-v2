@@ -196,3 +196,22 @@ export class FirebaseSyncService {
 
 /* ✅ THIS IS THE MISSING EXPORT THAT FIXES VERCEL */
 export const syncService = new FirebaseSyncService();
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+
+const storage = getStorage();
+
+/**
+ * Uploads an MP4 to Firebase Storage and returns a public URL
+ */
+export async function uploadVideoToFirebase(
+  file: File,
+  videoId: string
+): Promise<string> {
+  const videoRef = ref(storage, `videos/${videoId}.mp4`);
+
+  await uploadBytes(videoRef, file);
+
+  const downloadURL = await getDownloadURL(videoRef);
+
+  return downloadURL;
+}

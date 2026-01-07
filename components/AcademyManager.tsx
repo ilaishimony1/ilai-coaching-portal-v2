@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Upload, X, Video, Search, Plus, Info, Zap, ChevronRight, Folder, ArrowLeft, Edit3, Image as ImageIcon, Play, Pause, GripVertical, Layers, Check, Users, UserCheck, Smartphone, Link2Off } from 'lucide-react';
 import { db, VideoFile } from '../db';
 import { ClientData } from '../types';
+import { uploadVideoToFirebase } from "../firebaseService";
 
 interface Props {
   accentColor: string;
@@ -37,6 +38,7 @@ const AcademyManager: React.FC<Props> = ({ accentColor, clients, onToggleAssignm
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+
     if (!activeFolder) return;
     const file = e.target.files?.[0];
     if (!file) return;
@@ -46,15 +48,22 @@ const AcademyManager: React.FC<Props> = ({ accentColor, clients, onToggleAssignm
       const folderVideos = videos.filter(v => v.category === activeFolder.cat && v.subCategory === activeFolder.sub);
       const maxOrder = folderVideos.length > 0 ? Math.max(...folderVideos.map(v => v.order)) : 0;
 
-      const newVideo: VideoFile = {
-        uid: `v-${Date.now()}`,
-        name: file.name.split('.')[0].toUpperCase(),
-        blob: file,
-        category: activeFolder.cat,
-        subCategory: activeFolder.sub,
-        uploadDate: new Date(),
-        order: maxOrder + 1
-      };
+     const videoId = `v-${Date.now()}`;
+
+// 1️⃣ Upload to Firebase Storage
+const videoUrl = await uploadVideoToFirebase(file, videoId);
+
+// 2️⃣ Save URL (NOT blob)
+const newVideo: VideoFile = {
+  uid: videoId,
+  name: file.name.split('.')[0].toUpperCase(),
+  url: videoUrl, // ✅ THIS IS THE KEY
+  category: activeFolder.cat,
+  subCategory: activeFolder.sub,
+  uploadDate: new Date(),
+  order: maxOrder + 1
+};
+
       await db.videos.add(newVideo);
       await loadVideos();
     } finally {
@@ -360,7 +369,7 @@ const VideoManagementCard: React.FC<{
       <div className="aspect-video bg-black relative overflow-hidden">
         {isPlaying ? (
           <video 
-            src={URL.createObjectURL(video.blob)} 
+        src={video.url}
             controls 
             autoPlay 
             className="w-full h-full object-contain"
