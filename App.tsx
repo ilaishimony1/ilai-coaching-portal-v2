@@ -322,7 +322,7 @@ const resolvedClientAvatar =
 
       <main className="flex-1 overflow-y-auto p-4 md:p-12 pb-24 md:pb-12 no-scrollbar">
         <div className="max-w-6xl mx-auto">
-     {import.meta.env.DEV && (
+    
 
           {viewMode === 'ADMIN' && (
             <AdminDashboard 
@@ -340,7 +340,8 @@ const resolvedClientAvatar =
               onOpenBranding={() => setViewMode('LANDING_EDITOR')} 
               version={APP_VERSION} isMasterNode={true} 
             />
-          )}
+       )}
+
 
           {viewMode === 'SAVED_PROGRAMS' && (
             <MasterLibrary />
