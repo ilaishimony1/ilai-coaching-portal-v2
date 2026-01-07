@@ -1,7 +1,6 @@
 
 "use client";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
-import { FirebaseSyncService } from "./FirebaseService"; // or correct path
 import TestFirebaseEngine from "./components/TestFirebaseEngine";
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Home, LogOut, Palette, User, ChevronLeft, Archive, BookOpen, Video, BarChart2, Camera, Shield, Users, Upload, ClipboardCheck, X, Send, Sparkles, MessageCircle, Activity, CheckCircle2, Info, Play, Clock, Hash, Zap, MessageSquareText, Smartphone, Globe, Cloud, Cpu, Database, Binary, Timer as TimerIcon, RotateCcw, BrainCircuit, Maximize2, Trophy, RefreshCw, Library } from 'lucide-react';
@@ -323,6 +322,20 @@ const resolvedClientAvatar =
 
       <main className="flex-1 overflow-y-auto p-4 md:p-12 pb-24 md:pb-12 no-scrollbar">
         <div className="max-w-6xl mx-auto">
+          {process.env.NODE_ENV === "development" && (
+  <button
+    onClick={async () => {
+      await syncService.updateDocument("debug", "testDoc", {
+        works: true,
+        createdAt: new Date().toISOString(),
+      });
+      alert("Firestore write attempted – check Firebase");
+    }}
+  >
+    TEST FIREBASE WRITE
+  </button>
+)}
+
           {viewMode === 'ADMIN' && (
             <AdminDashboard 
               clients={clients} fullClients={clients} 

@@ -196,3 +196,5 @@ export class FirebaseSyncService {
 
 /* ✅ THIS IS THE MISSING EXPORT THAT FIXES VERCEL */
 export const syncService = new FirebaseSyncService();
+// 👇 SINGLETON EXPORT (THIS IS WHAT YOU WERE MISSING)
+export const syncService = new FirebaseSyncService();
