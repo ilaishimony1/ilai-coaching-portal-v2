@@ -322,7 +322,8 @@ const resolvedClientAvatar =
 
       <main className="flex-1 overflow-y-auto p-4 md:p-12 pb-24 md:pb-12 no-scrollbar">
         <div className="max-w-6xl mx-auto">
-          {process.env.NODE_ENV === "development" && (
+     {import.meta.env.DEV && (
+
   <button
     onClick={async () => {
       await syncService.updateDocument("debug", "testDoc", {
