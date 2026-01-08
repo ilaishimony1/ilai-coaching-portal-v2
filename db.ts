@@ -25,7 +25,7 @@ export class AcademyDatabase extends Dexie {
     super("IlaiShimonyAcademyDB");
 
     // Version bump required because schema changed
-    this.version(4).stores({
+  this.version(41).stores({
       videos: "++id, uid, name, category, subCategory, order"
     });
   }

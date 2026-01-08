@@ -349,13 +349,17 @@ const VideoManagementCard: React.FC<{
     setTempName("");
   };
 
-  const handleThumbnailUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => onUpdate({ thumbnail: reader.result as string });
-    reader.readAsDataURL(file);
+
+const handleThumbnailUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onloadend = () => {
+    onUpdate({ thumbnail: reader.result as string });
   };
+  reader.readAsDataURL(file);
+};
 
   return (
     <div 
@@ -440,7 +444,10 @@ const VideoManagementCard: React.FC<{
           <div className="flex justify-between items-start group/title">
             <div className="flex-1 min-w-0">
                <h4 className={`text-sm font-black brand-font uppercase truncate leading-none ${selectedClientId && isAssigned ? 'text-emerald-400' : 'text-slate-200'}`}>{video.name}</h4>
-               <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest mt-1.5">{video.uploadDate.toLocaleDateString()}</p>
+              <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest mt-1.5">
+  {new Date(video.uploadDate).toLocaleDateString()}
+</p>
+
             </div>
             {!isRearrangeMode && !isDeleting && (
               <button onClick={() => setIsEditing(true)} className="text-slate-700 hover:text-blue-500 opacity-0 group-hover/title:opacity-100 transition-all shrink-0 ml-2">
