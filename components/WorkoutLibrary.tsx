@@ -49,22 +49,21 @@ const WorkoutLibrary: React.FC<Props> = ({ workouts, clientData, accentColor }) 
   
   const current = workouts.find(w => w.id === selectedId) || workouts[0];
 
-  useEffect(() => {
-    const loadAcademyVideo = async () => {
-      if (activeVideoUrl?.startsWith('academy://')) {
-        const uid = activeVideoUrl.replace('academy://', '');
-        const video = await db.videos.where('uid').equals(uid).first();
-        if (video) {
-          const url = URL.createObjectURL(video.blob);
-          setAcademyBlobUrl(url);
-        }
-      } else {
-        setAcademyBlobUrl(null);
+ useEffect(() => {
+  const loadAcademyVideo = async () => {
+    if (activeVideoUrl?.startsWith('academy://')) {
+      const uid = activeVideoUrl.replace('academy://', '');
+      const video = await db.videos.where('uid').equals(uid).first();
+      if (video?.url) {
+        setAcademyBlobUrl(video.url);
       }
-    };
-    loadAcademyVideo();
-    return () => { if (academyBlobUrl) URL.revokeObjectURL(academyBlobUrl); };
-  }, [activeVideoUrl]);
+    } else {
+      setAcademyBlobUrl(null);
+    }
+  };
+  loadAcademyVideo();
+}, [activeVideoUrl]);
+
 
   const updateState = (exId: string, updates: Partial<SubmissionState>) => {
     setExerciseState(prev => ({
