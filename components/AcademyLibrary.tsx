@@ -123,7 +123,7 @@ const LibraryVideoCard: React.FC<{ video: VideoFile; onFullScreen: () => void }>
       <div className="aspect-video bg-black relative overflow-hidden">
         {isPlaying ? (
           <video 
-            src={URL.createObjectURL(video.blob)} 
+            src={URL.createObjectURL(video.url)} 
             controls 
             autoPlay 
             className="w-full h-full object-contain"
