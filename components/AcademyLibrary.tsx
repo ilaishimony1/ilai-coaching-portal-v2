@@ -86,12 +86,12 @@ const AcademyLibrary: React.FC<Props> = ({ accentColor, client }) => {
                <X size={24} />
              </button>
              <div className="bg-black flex items-center justify-center overflow-hidden">
-               <video 
-                 src={URL.createObjectURL(activeVideo.blob)} 
-                 controls 
-                 autoPlay 
-                 className="w-full h-auto max-h-[75vh] object-contain"
-               />
+              <video 
+  src={activeVideo.url}
+  controls
+  autoPlay
+  className="w-full h-auto max-h-[75vh] object-contain"
+/>
              </div>
              <div className="p-8 md:p-12 bg-slate-900 border-t border-slate-800 shrink-0">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -123,12 +123,13 @@ const LibraryVideoCard: React.FC<{ video: VideoFile; onFullScreen: () => void }>
       <div className="aspect-video bg-black relative overflow-hidden">
         {isPlaying ? (
           <video 
-            src={URL.createObjectURL(video.url)} 
-            controls 
-            autoPlay 
-            className="w-full h-full object-contain"
-            onEnded={() => setIsPlaying(false)}
-          />
+  src={video.url}
+  controls
+  autoPlay
+  className="w-full h-full object-contain"
+  onEnded={() => setIsPlaying(false)}
+/>
+
         ) : (
           <div className="w-full h-full">
             {video.thumbnail ? (
