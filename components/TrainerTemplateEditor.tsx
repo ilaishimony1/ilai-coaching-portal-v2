@@ -774,7 +774,6 @@ const TrainerTemplateEditor: React.FC<Props> = ({ client, onUpdate, onAddClient,
                          <InfoFieldInline label="Target" value={ex.reps || ''} onChange={(v: string) => updateExercise(activeWorkout.id, ex.id, 'reps', v)} placeholder="10-12" />
                          <InfoFieldInline label="Rest" value={ex.restTime || ''} onChange={(v: string) => updateExercise(activeWorkout.id, ex.id, 'restTime', v)} placeholder="90s" />
                       </div>
-                        </div>
                         <div className="space-y-1">
                           <label className="text-[8px] font-black text-slate-600 uppercase">Technical Cues</label>
                           <textarea value={ex.notes || ''} onChange={e => updateExercise(activeWorkout.id, ex.id, 'notes', e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-4 text-xs text-slate-400 outline-none resize-none h-14" placeholder="Cues..." />
