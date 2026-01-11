@@ -6,7 +6,7 @@ export interface Exercise {
   sets: string;
   duration?: string;
   notes: string;
-  videoUrl?: string;
+videoId?: string; // ✅ ONLY THIS
   restTime?: string;
   category?: 'strength' | 'mobility' | 'header';
 }
@@ -33,7 +33,7 @@ export interface WorkoutLog {
     actualReps: string;
     rpe: string; // Rate of Perceived Exertion
     clientNotes?: string;
-    clientVideoId?: string; // Reference to the blob in IndexedDB
+    clientVideoId?: string; // UID of client-uploaded video in Firebase
   }[];
   // Adding top-level clientNotes for weekly summaries or overall feedback
   clientNotes?: string;

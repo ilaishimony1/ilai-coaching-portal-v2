@@ -5,6 +5,8 @@ import { Workout, WorkoutLog, ClientData, Message, Exercise } from '../types';
 import { useApp } from '../AppContext';
 import ScheduleCalendar from './ScheduleCalendar';
 import { db } from '../db';
+import { doc, getDoc } from 'firebase/firestore';
+import { firestore } from '../firebase'; // use YOUR firestore export
 
 interface Props {
   workouts: Workout[];
@@ -48,22 +50,6 @@ const WorkoutLibrary: React.FC<Props> = ({ workouts, clientData, accentColor }) 
   const [exerciseState, setExerciseState] = useState<Record<string, SubmissionState>>({});
   
   const current = workouts.find(w => w.id === selectedId) || workouts[0];
-
- useEffect(() => {
-  const loadAcademyVideo = async () => {
-    if (activeVideoUrl?.startsWith('academy://')) {
-      const uid = activeVideoUrl.replace('academy://', '');
-      const video = await db.videos.where('uid').equals(uid).first();
-      if (video?.url) {
-        setAcademyBlobUrl(video.url);
-      }
-    } else {
-      setAcademyBlobUrl(null);
-    }
-  };
-  loadAcademyVideo();
-}, [activeVideoUrl]);
-
 
   const updateState = (exId: string, updates: Partial<SubmissionState>) => {
     setExerciseState(prev => ({

@@ -1,3 +1,6 @@
+// ===============================
+// Firebase Core Imports
+// ===============================
 import { initializeApp, getApps, getApp } from "firebase/app";
 import {
   getFirestore,
@@ -12,10 +15,16 @@ import {
   waitForPendingWrites,
   query,
   limit,
-  getDocs
+  getDocs,
+  getDoc
 } from "firebase/firestore";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+
 import { ClientData, LandingPageConfig, WorkoutTemplate } from "./types";
 
+// ===============================
+// Firebase Config
+// ===============================
 const firebaseConfig = {
   apiKey: "AIzaSyCK3MMANVameEK39oKGONkgjpqHyTIC0OM",
   authDomain: "ilai-portal.firebaseapp.com",
@@ -26,6 +35,9 @@ const firebaseConfig = {
   measurementId: "G-6T4QLBZ5FL"
 };
 
+// ===============================
+// Firebase Sync Service
+// ===============================
 export class FirebaseSyncService {
   private db;
 
@@ -38,6 +50,11 @@ export class FirebaseSyncService {
     );
 
     console.log("🚀 Firebase Engine Initialized");
+  }
+
+  // 🔑 Expose Firestore instance
+  getDb() {
+    return this.db;
   }
 
   async testConnection() {
@@ -126,28 +143,33 @@ export class FirebaseSyncService {
       { ...cleanData, lastSync: serverTimestamp() },
       { merge: true }
     );
+
     await waitForPendingWrites(this.db);
   }
 
   async archiveClient(client: ClientData) {
     if (!client.id) return;
+
     const batch = writeBatch(this.db);
     batch.delete(doc(this.db, "clients", client.id));
     batch.set(doc(this.db, "archived_clients", client.id), {
       ...client,
       lastSync: serverTimestamp()
     });
+
     await batch.commit();
   }
 
   async restoreClient(client: ClientData) {
     if (!client.id) return;
+
     const batch = writeBatch(this.db);
     batch.delete(doc(this.db, "archived_clients", client.id));
     batch.set(doc(this.db, "clients", client.id), {
       ...client,
       lastSync: serverTimestamp()
     });
+
     await batch.commit();
   }
 
@@ -194,24 +216,32 @@ export class FirebaseSyncService {
   }
 }
 
-/* ✅ THIS IS THE MISSING EXPORT THAT FIXES VERCEL */
+// ===============================
+// Singleton Export (IMPORTANT)
+// ===============================
 export const syncService = new FirebaseSyncService();
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
-const storage = getStorage();
+// ===============================
+// Firebase Storage (Videos)
+// ===============================
+const storage = getStorage(getApp());
 
-/**
- * Uploads an MP4 to Firebase Storage and returns a public URL
- */
 export async function uploadVideoToFirebase(
   file: File,
   videoId: string
 ): Promise<string> {
-  const videoRef = ref(storage, `videos/${videoId}.mp4`);
+  const videoRef = ref(storage, `academy/${videoId}.mp4`);
 
   await uploadBytes(videoRef, file);
+  return await getDownloadURL(videoRef);
+}
 
-  const downloadURL = await getDownloadURL(videoRef);
-
-  return downloadURL;
+// ===============================
+// 🔥 Academy Video Resolver (KEY FIX)
+// ===============================
+export async function resolveAcademyVideoUrl(
+  videoId: string
+): Promise<string> {
+  const videoRef = ref(storage, `academy/${videoId}.mp4`);
+  return await getDownloadURL(videoRef);
 }

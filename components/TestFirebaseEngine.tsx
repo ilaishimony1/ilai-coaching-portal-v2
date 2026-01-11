@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { firebaseEngine } from "../firebaseEngine";
+import { firebaseEngine } from "../FirebaseEngine";
 
 export default function TestFirebaseEngine() {
   const [status, setStatus] = useState("Testing connection...");

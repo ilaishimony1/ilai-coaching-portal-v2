@@ -255,14 +255,14 @@ const TrainerTemplateEditor: React.FC<Props> = ({ client, onUpdate, onAddClient,
   const addExercise = (workoutId: string) => {
     setLocalClient((prev: ClientData) => ({
       ...prev,
-      workouts: prev.workouts.map((w: Workout) => w.id === workoutId ? { ...w, exercises: [...w.exercises, { id: generateUniqueId('ex'), name: '', sets: '', reps: '', notes: '', restTime: '', videoUrl: '', category: 'strength' }] } : w)
+      workouts: prev.workouts.map((w: Workout) => w.id === workoutId ? { ...w, exercises: [...w.exercises, { id: generateUniqueId('ex'), name: '', sets: '', reps: '', notes: '', restTime: '', category: 'strength' }] } : w)
     }));
   };
 
   const addHeader = (workoutId: string) => {
     setLocalClient((prev: ClientData) => ({
       ...prev,
-      workouts: prev.workouts.map((w: Workout) => w.id === workoutId ? { ...w, exercises: [...w.exercises, { id: generateUniqueId('hd'), name: '', sets: '', reps: '', notes: '', restTime: '', videoUrl: '', category: 'header' }] } : w)
+      workouts: prev.workouts.map((w: Workout) => w.id === workoutId ? { ...w, exercises: [...w.exercises, { id: generateUniqueId('hd'), name: '', sets: '', reps: '', notes: '', restTime: '', category: 'header' }] } : w)
     }));
   };
 
@@ -276,7 +276,7 @@ const TrainerTemplateEditor: React.FC<Props> = ({ client, onUpdate, onAddClient,
 
   const updateExercise = async (workoutId: string, exerciseId: string, field: keyof Exercise, value: any) => {
     let updatedValue = value;
-    let autoVideoUrl: string | undefined = undefined;
+   
 
     if (field === 'name') {
       const searchVal = (value as string).trim().toUpperCase();
@@ -289,9 +289,7 @@ const TrainerTemplateEditor: React.FC<Props> = ({ client, onUpdate, onAddClient,
         setExerciseSuggestions(prev => ({ ...prev, [exerciseId]: matches.slice(0, 5) }));
         
         const skillVideo = matches.find(v => v.name.toUpperCase() === searchVal);
-        if (skillVideo) {
-          autoVideoUrl = `academy://${skillVideo.uid}`;
-        }
+        
       } else {
         setExerciseSuggestions(prev => {
           const newState = { ...prev };
@@ -310,7 +308,6 @@ const TrainerTemplateEditor: React.FC<Props> = ({ client, onUpdate, onAddClient,
           exercises: w.exercises.map((ex: Exercise) => {
             if (ex.id !== exerciseId) return ex;
             const updates: Partial<Exercise> = { [field]: updatedValue };
-            if (autoVideoUrl) updates.videoUrl = autoVideoUrl;
             return { ...ex, ...updates };
           })
         };
@@ -327,7 +324,12 @@ const TrainerTemplateEditor: React.FC<Props> = ({ client, onUpdate, onAddClient,
           ...w,
           exercises: w.exercises.map((ex: Exercise) => {
             if (ex.id !== exerciseId) return ex;
-            return { ...ex, name: video.name, videoUrl: `academy://${video.uid}` };
+          return { 
+  ...ex, 
+  name: video.name, 
+  videoId: video.uid 
+};
+
           })
         };
       })
@@ -772,10 +774,6 @@ const TrainerTemplateEditor: React.FC<Props> = ({ client, onUpdate, onAddClient,
                          <InfoFieldInline label="Target" value={ex.reps || ''} onChange={(v: string) => updateExercise(activeWorkout.id, ex.id, 'reps', v)} placeholder="10-12" />
                          <InfoFieldInline label="Rest" value={ex.restTime || ''} onChange={(v: string) => updateExercise(activeWorkout.id, ex.id, 'restTime', v)} placeholder="90s" />
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                          <label className="text-[8px] font-black text-slate-600 uppercase">Video URL</label>
-                          <input value={ex.videoUrl || ''} onChange={e => updateExercise(activeWorkout.id, ex.id, 'videoUrl', e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-4 text-xs font-bold text-blue-400 outline-none" placeholder="Link..." />
                         </div>
                         <div className="space-y-1">
                           <label className="text-[8px] font-black text-slate-600 uppercase">Technical Cues</label>
