@@ -324,11 +324,14 @@ const TrainerTemplateEditor: React.FC<Props> = ({ client, onUpdate, onAddClient,
           ...w,
           exercises: w.exercises.map((ex: Exercise) => {
             if (ex.id !== exerciseId) return ex;
-          return { 
-  ...ex, 
-  name: video.name, 
-  videoId: video.uid 
+         return {
+  ...ex,
+  name: video.name,
+  videoId: video.uid,
+  videoUrl: video.videoUrl || video.url,
+  videoThumbnail: video.thumbnail || null,
 };
+
 
           })
         };
