@@ -101,8 +101,10 @@ const [search, setSearch] = useState("");
       </div>
 
       {/* FULLSCREEN MODAL */}
-      {activeVideo && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center">
+     <div
+  className="fixed inset-0 z-[100] flex items-center justify-center"
+  style={{ display: activeVideo ? "flex" : "none" }}
+>
           <div
             className="absolute inset-0 bg-black/90"
             onClick={() => setActiveVideo(null)}
@@ -116,14 +118,15 @@ const [search, setSearch] = useState("");
               <X size={20} />
             </button>
 
-            {activeVideoUrl && (
-              <video
-                src={activeVideoUrl}
-                controls
-                autoPlay
-                className="w-full max-h-[80vh] object-contain"
-              />
-            )}
+           <video
+  src={activeVideoUrl || undefined}
+  controls
+  playsInline
+  webkit-playsinline
+  preload="metadata"
+  className="w-full max-h-[80vh] object-contain"
+  style={{ display: activeVideoUrl ? "block" : "none" }}
+/>
           </div>
         </div>
       )}
@@ -148,57 +151,46 @@ const LibraryVideoCard: React.FC<{
   return (
     <div className="rounded-3xl overflow-hidden border border-slate-800 bg-slate-900">
       <div className="aspect-video bg-black relative">
-        {isInlinePlaying && inlineVideoUrl ? (
+      <>
   <video
-    src={inlineVideoUrl}
+    src={inlineVideoUrl || undefined}
     controls
-    autoPlay
     playsInline
-    className="w-full h-full object-contain"
+    webkit-playsinline
+    preload="metadata"
+    className="w-full h-full"
+    style={{ display: isInlinePlaying ? "block" : "none" }}
   />
-) : (
 
-          <>
-            {video.thumbnail ? (
-              <img
-                src={video.thumbnail}
-                alt={video.name}
-                className="w-full h-full object-contain"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <Play size={32} />
-              </div>
-            )}
-
-            <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition flex items-center justify-center gap-4">
-              <button
-                onClick={onPlay}
-                className="p-3 bg-blue-600 rounded-full text-white"
-              >
-                <Play size={18} />
-              </button>
-
-              <button
-                onClick={onFullScreen}
-                className="p-3 bg-white/20 rounded-full text-white"
-              >
-                <Maximize2 size={18} />
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-
-      <div className="p-4">
-        <h4 className="text-sm font-bold uppercase text-white truncate">
-          {video.name}
-        </h4>
-        <div className="flex items-center gap-2 mt-2 text-slate-500 text-[10px] uppercase">
-          <Info size={10} />
-          Technique Guide
+  {!isInlinePlaying && (
+    <>
+      {video.thumbnail ? (
+        <img
+          src={video.thumbnail}
+          alt={video.name}
+          className="w-full h-full object-contain"
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center">
+          <Play size={32} />
         </div>
+      )}
+
+      <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition flex items-center justify-center gap-4">
+        <button
+          onClick={onPlay}
+          className="p-3 bg-blue-600 rounded-full text-white"
+        >
+          <Play size={18} />
+        </button>
+
+        <button
+          onClick={onFullScreen}
+          className="p-3 bg-white/20 rounded-full text-white"
+        >
+          <Maximize2 size={18} />
+        </button>
       </div>
-    </div>
-  );
-};
+    </>
+  )}
+</>
