@@ -148,49 +148,52 @@ const LibraryVideoCard: React.FC<{
   onFullScreen: () => void;
 }> = ({ video, isInlinePlaying, inlineVideoUrl, onPlay, onFullScreen }) => {
 
-  return (
-    <div className="rounded-3xl overflow-hidden border border-slate-800 bg-slate-900">
-      <div className="aspect-video bg-black relative">
-      <>
-  <video
-    src={inlineVideoUrl || undefined}
-    controls
-    playsInline
-    webkit-playsinline
-    preload="metadata"
-    className="w-full h-full"
-    style={{ display: isInlinePlaying ? "block" : "none" }}
-  />
+return (
+  <div className="rounded-3xl overflow-hidden border border-slate-800 bg-slate-900">
+    <div className="aspect-video bg-black relative">
 
-  {!isInlinePlaying && (
-    <>
-      {video.thumbnail ? (
-        <img
-          src={video.thumbnail}
-          alt={video.name}
-          className="w-full h-full object-contain"
-        />
-      ) : (
-        <div className="w-full h-full flex items-center justify-center">
-          <Play size={32} />
-        </div>
+      <video
+        src={inlineVideoUrl || undefined}
+        controls
+        playsInline
+        webkit-playsinline
+        preload="metadata"
+        className="w-full h-full"
+        style={{ display: isInlinePlaying ? "block" : "none" }}
+      />
+
+      {!isInlinePlaying && (
+        <>
+          {video.thumbnail ? (
+            <img
+              src={video.thumbnail}
+              alt={video.name}
+              className="w-full h-full object-contain"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <Play size={32} />
+            </div>
+          )}
+
+          <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition flex items-center justify-center gap-4">
+            <button
+              onClick={onPlay}
+              className="p-3 bg-blue-600 rounded-full text-white"
+            >
+              <Play size={18} />
+            </button>
+
+            <button
+              onClick={onFullScreen}
+              className="p-3 bg-white/20 rounded-full text-white"
+            >
+              <Maximize2 size={18} />
+            </button>
+          </div>
+        </>
       )}
 
-      <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition flex items-center justify-center gap-4">
-        <button
-          onClick={onPlay}
-          className="p-3 bg-blue-600 rounded-full text-white"
-        >
-          <Play size={18} />
-        </button>
-
-        <button
-          onClick={onFullScreen}
-          className="p-3 bg-white/20 rounded-full text-white"
-        >
-          <Maximize2 size={18} />
-        </button>
-      </div>
-    </>
-  )}
-</>
+    </div>
+  </div>
+);
