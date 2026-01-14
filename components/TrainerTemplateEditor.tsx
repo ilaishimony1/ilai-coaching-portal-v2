@@ -594,7 +594,7 @@ const TrainerTemplateEditor: React.FC<Props> = ({ client, onUpdate, onAddClient,
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
           {DAYS_OF_WEEK.map((day, idx) => (
-            <div key={day} className="space-y-3">
+            <div key={day} className="">
               <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest text-center block w-full">{day}</label>
               <select value={localClient.weeklySchedule?.[idx] || ''} onChange={e => setLocalClient((prev: ClientData) => ({ ...prev, weeklySchedule: { ...(prev.weeklySchedule || {}), [idx]: e.target.value } }))} className="w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl text-[10px] font-black uppercase text-white outline-none cursor-pointer">
                 <option value="">Rest Day</option>
@@ -778,7 +778,6 @@ const TrainerTemplateEditor: React.FC<Props> = ({ client, onUpdate, onAddClient,
                           <label className="text-[8px] font-black text-slate-600 uppercase">Technical Cues</label>
                           <textarea value={ex.notes || ''} onChange={e => updateExercise(activeWorkout.id, ex.id, 'notes', e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-4 text-xs text-slate-400 outline-none resize-none h-14" placeholder="Cues..." />
                         </div>
-                      </div>
                     </>
                   )}
                 </div>
