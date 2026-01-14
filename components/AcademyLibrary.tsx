@@ -97,7 +97,6 @@ const [search, setSearch] = useState("");
   onFullScreen={() => setActiveVideo(video)}
 />
           ))
-        )}
       </div>
 
       {/* FULLSCREEN MODAL */}
