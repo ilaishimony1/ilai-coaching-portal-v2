@@ -82,21 +82,22 @@ const [search, setSearch] = useState("");
             No results
           </div>
         ) : (
-          filteredVideos.map(video => (
-          <LibraryVideoCard
-  key={video.id}
-  video={video}
-  isInlinePlaying={inlinePlayingUid === video.uid}
-  inlineVideoUrl={
-    inlinePlayingUid === video.uid ? activeVideoUrl : null
-  }
-  onPlay={() => {
-    setInlinePlayingUid(video.uid);
-    setActiveVideo(video); // needed to resolve Firebase URL
-  }}
-  onFullScreen={() => setActiveVideo(video)}
-/>
-          ))
+  {filteredVideos.map(video => (
+  <LibraryVideoCard
+    key={video.id}
+    video={video}
+    isInlinePlaying={inlinePlayingUid === video.uid}
+    inlineVideoUrl={
+      inlinePlayingUid === video.uid ? activeVideoUrl : null
+    }
+    onPlay={() => {
+      setInlinePlayingUid(video.uid);
+      setActiveVideo(video);
+    }}
+    onFullScreen={() => setActiveVideo(video)}
+  />
+))}
+
       </div>
 
       {/* FULLSCREEN MODAL */}
