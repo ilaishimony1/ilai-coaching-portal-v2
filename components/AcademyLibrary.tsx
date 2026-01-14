@@ -68,37 +68,38 @@ const [search, setSearch] = useState("");
         </div>
       </header>
 
-      {/* GRID */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-        {assignedVideos.length === 0 ? (
-          <div className="col-span-full py-32 text-center border border-dashed border-slate-800 rounded-3xl">
-            <Lock size={48} className="mx-auto text-slate-700 mb-4" />
-            <p className="text-slate-600 uppercase text-xs font-bold">
-              No videos assigned yet
-            </p>
-          </div>
-        ) : filteredVideos.length === 0 ? (
-          <div className="col-span-full text-center text-slate-600 uppercase text-xs">
-            No results
-          </div>
-        ) : (
-  {filteredVideos.map(video => (
-  <LibraryVideoCard
-    key={video.id}
-    video={video}
-    isInlinePlaying={inlinePlayingUid === video.uid}
-    inlineVideoUrl={
-      inlinePlayingUid === video.uid ? activeVideoUrl : null
-    }
-    onPlay={() => {
-      setInlinePlayingUid(video.uid);
-      setActiveVideo(video);
-    }}
-    onFullScreen={() => setActiveVideo(video)}
-  />
-))}
+    {/* GRID */}
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+  {assignedVideos.length === 0 ? (
+    <div className="col-span-full py-32 text-center border border-dashed border-slate-800 rounded-3xl">
+      <Lock size={48} className="mx-auto text-slate-700 mb-4" />
+      <p className="text-slate-600 uppercase text-xs font-bold">
+        No videos assigned yet
+      </p>
+    </div>
+  ) : filteredVideos.length === 0 ? (
+    <div className="col-span-full text-center text-slate-600 uppercase text-xs">
+      No results
+    </div>
+  ) : (
+    filteredVideos.map(video => (
+      <LibraryVideoCard
+        key={video.id}
+        video={video}
+        isInlinePlaying={inlinePlayingUid === video.uid}
+        inlineVideoUrl={
+          inlinePlayingUid === video.uid ? activeVideoUrl : null
+        }
+        onPlay={() => {
+          setInlinePlayingUid(video.uid);
+          setActiveVideo(video);
+        }}
+        onFullScreen={() => setActiveVideo(video)}
+      />
+    ))
+  )}
+</div>
 
-      </div>
 
       {/* FULLSCREEN MODAL */}
      <div
@@ -129,7 +130,6 @@ const [search, setSearch] = useState("");
 />
           </div>
         </div>
-      )}
     </div>
   );
 };
