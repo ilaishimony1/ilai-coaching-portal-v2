@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Play, Search, X, Maximize2, Info, Lock } from "lucide-react";
+import { Play, Search, X, Lock } from "lucide-react";
 import { db, VideoFile } from "../db";
 import { ClientData } from "../types";
 import { resolveAcademyVideoUrl } from "../firebaseService";
@@ -83,19 +83,19 @@ const [search, setSearch] = useState("");
     </div>
   ) : (
     filteredVideos.map(video => (
-      <LibraryVideoCard
-        key={video.id}
-        video={video}
-        isInlinePlaying={inlinePlayingUid === video.uid}
-        inlineVideoUrl={
-          inlinePlayingUid === video.uid ? activeVideoUrl : null
-        }
-        onPlay={() => {
-          setInlinePlayingUid(video.uid);
-          setActiveVideo(video);
-        }}
-        onFullScreen={() => setActiveVideo(video)}
-      />
+     <LibraryVideoCard
+  key={video.id}
+  video={video}
+  isInlinePlaying={inlinePlayingUid === video.uid}
+  inlineVideoUrl={
+    inlinePlayingUid === video.uid ? activeVideoUrl : null
+  }
+  onPlay={() => {
+    setInlinePlayingUid(video.uid);
+    setActiveVideo(video);
+  }}
+/>
+
     ))
   )}
 </div>
@@ -145,8 +145,7 @@ const LibraryVideoCard: React.FC<{
   isInlinePlaying: boolean;
   inlineVideoUrl: string | null;
   onPlay: () => void;
-  onFullScreen: () => void;
-}> = ({ video, isInlinePlaying, inlineVideoUrl, onPlay, onFullScreen }) => {
+}> = ({ video, isInlinePlaying, inlineVideoUrl, onPlay }) => {
 
 return (
   <div className="rounded-3xl overflow-hidden border border-slate-800 bg-slate-900">
@@ -184,12 +183,7 @@ return (
               <Play size={18} />
             </button>
 
-            <button
-              onClick={onFullScreen}
-              className="p-3 bg-white/20 rounded-full text-white"
-            >
-              <Maximize2 size={18} />
-            </button>
+            
           </div>
         </>
       )}
