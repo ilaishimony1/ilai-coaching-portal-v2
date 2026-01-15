@@ -146,38 +146,45 @@ const LibraryVideoCard: React.FC<{
   inlineVideoUrl: string | null;
   onPlay: () => void;
 }> = ({ video, isInlinePlaying, inlineVideoUrl, onPlay }) => {
+  return (
+    <div className="rounded-3xl overflow-hidden border border-slate-800 bg-slate-900">
+      <div className="aspect-video bg-black relative">
+        {/* Inline video */}
+        {inlineVideoUrl && isInlinePlaying && (
+          <video
+            src={inlineVideoUrl}
+            controls
+            playsInline
+            webkit-playsinline
+            preload="metadata"
+            className="w-full h-full"
+          />
+        )}
 
-return (
-  <div className="rounded-3xl overflow-hidden border border-slate-800 bg-slate-900">
-    <div className="aspect-video bg-black relative">
-
-      <video
-        src={inlineVideoUrl || undefined}
-        controls
-        playsInline
-        webkit-playsinline
-        preload="metadata"
-        className="w-full h-full"
-        style={{ display: isInlinePlaying ? "block" : "none" }}
-      />
-
-      {!isInlinePlaying && (
-        <>
-          {video.thumbnail ? (
-            <img
-              src={video.thumbnail}
-              alt={video.name}
-              className="w-full h-full object-contain"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <Play size={32} />
-            </div>
-          )}
-        </>
-      )}
-
-    </div>
+        {/* Thumbnail + blue play button */}
+        {!isInlinePlaying && (
+          <>
+           {video.thumbnail ? (
+  <img
+    src={video.thumbnail}
+    alt={video.name}
+    className="w-full h-full object-cover cursor-pointer"
+    onClick={onPlay}
+  />
+) : (
+  <div
+    onClick={onPlay}
+    className="w-full h-full flex items-center justify-center cursor-pointer"
+  >
+    <Play size={32} className="text-blue-500" />
   </div>
-);
+)}
+
+          </>
+        )}
+
+        {/* ✅ No extra buttons/icons for clients */}
+      </div>
+    </div>
+  );
 };
