@@ -174,17 +174,6 @@ return (
               <Play size={32} />
             </div>
           )}
-
-          <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition flex items-center justify-center gap-4">
-            <button
-              onClick={onPlay}
-              className="p-3 bg-blue-600 rounded-full text-white"
-            >
-              <Play size={18} />
-            </button>
-
-            
-          </div>
         </>
       )}
 
