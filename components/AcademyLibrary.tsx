@@ -94,15 +94,17 @@ const closeVideo = () => {
       No results
     </div>
   ) : (
-    filteredVideos.map(video => (
-  <LibraryVideoCard
-  key={video.id}
-  video={video}
-  onPlay={() => setActiveVideo(video)}
-/>
+  filteredVideos.map(video => {
+  console.log("CLIENT VIDEO:", video);
 
-
-    ))
+  return (
+    <LibraryVideoCard
+      key={video.id}
+      video={video}
+      onPlay={() => setActiveVideo(video)}
+    />
+  );
+})
   )}
 </div>
 
