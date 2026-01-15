@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Play, Search, X, Lock } from "lucide-react";
 import { db, VideoFile } from "../db";
 import { ClientData } from "../types";
@@ -13,8 +13,20 @@ const AcademyLibrary: React.FC<Props> = ({ client }) => {
   const [allVideos, setAllVideos] = useState<VideoFile[]>([]);
 const [activeVideo, setActiveVideo] = useState<VideoFile | null>(null);
 const [activeVideoUrl, setActiveVideoUrl] = useState<string | null>(null);
-const [inlinePlayingUid, setInlinePlayingUid] = useState<string | null>(null);
 const [search, setSearch] = useState("");
+const fullscreenVideoRef = useRef<HTMLVideoElement | null>(null);
+
+
+const closeVideo = () => {
+  if (fullscreenVideoRef.current) {
+    fullscreenVideoRef.current.pause();
+    fullscreenVideoRef.current.removeAttribute("src");
+    fullscreenVideoRef.current.load();
+  }
+
+  setActiveVideo(null);
+  setActiveVideoUrl(null);
+};
 
   // Resolve Firebase URL when active video changes
   useEffect(() => {
@@ -83,18 +95,12 @@ const [search, setSearch] = useState("");
     </div>
   ) : (
     filteredVideos.map(video => (
-     <LibraryVideoCard
+  <LibraryVideoCard
   key={video.id}
   video={video}
-  isInlinePlaying={inlinePlayingUid === video.uid}
-  inlineVideoUrl={
-    inlinePlayingUid === video.uid ? activeVideoUrl : null
-  }
-  onPlay={() => {
-    setInlinePlayingUid(video.uid);
-    setActiveVideo(video);
-  }}
+  onPlay={() => setActiveVideo(video)}
 />
+
 
     ))
   )}
@@ -108,26 +114,27 @@ const [search, setSearch] = useState("");
 >
           <div
             className="absolute inset-0 bg-black/90"
-            onClick={() => setActiveVideo(null)}
+            onClick={closeVideo}
+
           />
 
           <div className="relative w-full max-w-5xl bg-black rounded-3xl overflow-hidden">
             <button
-              onClick={() => setActiveVideo(null)}
+              onClick={closeVideo}
               className="absolute top-4 right-4 z-10 p-3 bg-black/60 rounded-full text-white"
             >
               <X size={20} />
             </button>
 
-           <video
+    <video
+  ref={fullscreenVideoRef}
   src={activeVideoUrl || undefined}
   controls
   playsInline
-  webkit-playsinline
   preload="metadata"
   className="w-full max-h-[80vh] object-contain"
-  style={{ display: activeVideoUrl ? "block" : "none" }}
 />
+
           </div>
         </div>
     </div>
@@ -142,29 +149,16 @@ export default AcademyLibrary;
 
 const LibraryVideoCard: React.FC<{
   video: VideoFile;
-  isInlinePlaying: boolean;
-  inlineVideoUrl: string | null;
   onPlay: () => void;
-}> = ({ video, isInlinePlaying, inlineVideoUrl, onPlay }) => {
+}> = ({ video, onPlay }) => {
   return (
     <div className="rounded-3xl overflow-hidden border border-slate-800 bg-slate-900">
       <div className="aspect-video bg-black relative">
         {/* Inline video */}
-        {inlineVideoUrl && isInlinePlaying && (
-          <video
-            src={inlineVideoUrl}
-            controls
-            playsInline
-            webkit-playsinline
-            preload="metadata"
-            className="w-full h-full"
-          />
-        )}
 
         {/* Thumbnail + blue play button */}
-        {!isInlinePlaying && (
-          <>
-           {video.thumbnail ? (
+     
+ {video.thumbnail ? (
   <img
     src={video.thumbnail}
     alt={video.name}
@@ -180,8 +174,6 @@ const LibraryVideoCard: React.FC<{
   </div>
 )}
 
-          </>
-        )}
 
         {/* ✅ No extra buttons/icons for clients */}
       </div>
