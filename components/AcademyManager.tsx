@@ -3,6 +3,7 @@ import { Upload, X, Video, Search, Plus, Info, Zap, ChevronRight, Folder, ArrowL
 import { db, VideoFile } from '../db';
 import { ClientData } from '../types';
 import { uploadVideoToFirebase } from "../firebaseService";
+import CoachGallery from "./CoachGallery";
 
 interface Props {
   accentColor: string;
@@ -199,6 +200,8 @@ const newVideo: VideoFile = {
 
       {/* Main Content Area */}
       <div className="flex-1 space-y-12">
+        {/* 🔥 Coach Gallery (Firestore / Storage driven) */}
+<CoachGallery />
         {!activeFolder ? (
           <div className="space-y-12">
             <header className="flex flex-col md:flex-row justify-between items-center gap-6">

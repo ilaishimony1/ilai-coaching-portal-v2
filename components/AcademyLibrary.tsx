@@ -168,12 +168,15 @@ const LibraryVideoCard: React.FC<{
     onClick={onPlay}
   />
 ) : (
-  <div
-    onClick={onPlay}
-    className="w-full h-full flex items-center justify-center cursor-pointer"
-  >
-    <Play size={32} className="text-blue-500" />
-  </div>
+  <video
+  src={video.url + "#t=0.01"}
+  muted
+  playsInline
+  preload="metadata"
+  className="w-full h-full object-cover cursor-pointer"
+  onClick={onPlay}
+/>
+
 )}
 
 
