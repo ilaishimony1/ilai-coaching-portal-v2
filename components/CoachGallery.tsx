@@ -50,6 +50,9 @@ export default function CoachGallery() {
   return (
     <div className="space-y-8">
       <h2 className="text-xl font-bold">Explanation Videos</h2>
+<p className="text-sm text-red-500">
+  UPLOAD TEST BUILD
+</p>
 
       {/* 🔼 TEMP UPLOAD UI */}
       <div className="space-y-2 border p-4 rounded">
