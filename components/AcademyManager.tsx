@@ -171,7 +171,7 @@ const filteredVideos =
           id: undefined,               // Firestore only
           uid: v.id,                   // ✅ REQUIRED
           name: v.name,
-          url: v.videoUrl,             // ✅ FIX
+         url: v.downloadURL || v.url,  // ✅ FIX
           thumbnail: v.thumbnail || "",
           category: "explanation",
           subCategory: v.subCategory,

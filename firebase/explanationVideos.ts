@@ -16,10 +16,10 @@ import { syncService } from "../firebaseService";
    TYPES
 ========================= */
 export type ExplanationVideo = {
-  id: string;              // Firestore doc ID (REQUIRED)
-  title: string;
-  downloadURL: string;
-  storagePath: string;
+  id: string;            // Firestore doc ID
+  name: string;          // TITLE used by AcademyManager
+  downloadURL: string;   // VIDEO SRC
+  subCategory: string;   // REQUIRED for filtering
   createdAt?: any;
 };
 
@@ -34,7 +34,7 @@ export async function getExplanationVideos(): Promise<ExplanationVideo[]> {
   );
 
   return snapshot.docs.map((doc) => ({
-    id: doc.id, // 🔥 THIS IS THE KEY FIX
+    id: doc.id,
     ...(doc.data() as Omit<ExplanationVideo, "id">),
   }));
 }
@@ -44,36 +44,36 @@ export async function getExplanationVideos(): Promise<ExplanationVideo[]> {
 ========================= */
 export async function uploadExplanationVideo(
   file: File,
-  title: string
+  title: string,
+  subCategory: string
 ) {
   const db = syncService.getDb();
   const storage = getStorage();
 
-  // 1️⃣ Generate stable unique ID
+  // 1️⃣ Stable ID (same pattern as skills)
   const fileId = `v-${Date.now()}`;
 
-  // 2️⃣ Storage path (KEEP THIS — works with your rules)
+  // 2️⃣ Storage path
   const storagePath = `videos/explanations/${fileId}.mp4`;
 
-  // 3️⃣ Upload to Firebase Storage
+  // 3️⃣ Upload video
   const storageRef = ref(storage, storagePath);
   await uploadBytes(storageRef, file);
 
-  // 4️⃣ Get download URL
+  // 4️⃣ Get playable URL
   const downloadURL = await getDownloadURL(storageRef);
 
   // 5️⃣ Save Firestore document
   await addDoc(collection(db, "explanation_videos"), {
-    title,
+    name: title.toUpperCase(), // 🔥 MUST BE "name"
     downloadURL,
-    storagePath,
+    subCategory,               // 🔥 THIS FIXES VISIBILITY
     createdAt: serverTimestamp(),
   });
 
-  // Optional return (useful later)
   return {
-    title,
+    name: title,
     downloadURL,
-    storagePath,
+    subCategory,
   };
 }
