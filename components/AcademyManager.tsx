@@ -5,6 +5,7 @@ import { ClientData } from '../types';
 import { uploadVideoToFirebase } from "../firebaseService";
 import CoachGallery from "./CoachGallery";
 import { uploadExplanationVideo } from "../firebase/explanationVideos";
+import { getExplanationVideos } from "../firebase/explanationVideos";
 interface Props {
   accentColor: string;
   clients: ClientData[];
@@ -28,15 +29,27 @@ const AcademyManager: React.FC<Props> = ({ accentColor, clients, onToggleAssignm
   const [draggedId, setDraggedId] = useState<number | null>(null);
   const [isRearrangeMode, setIsRearrangeMode] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+const [explanationVideos, setExplanationVideos] = useState<any[]>([]);
 
-  useEffect(() => {
-    loadVideos();
-  }, []);
 
-  const loadVideos = async () => {
-    const all = await db.videos.orderBy('order').toArray();
-    setVideos(all);
-  };
+
+const loadVideos = async () => {
+  const all = await db.videos.orderBy('order').toArray();
+  setVideos(all);
+};
+
+const loadExplanationVideos = async () => {
+  const vids = await getExplanationVideos();
+  setExplanationVideos(vids);
+};
+
+useEffect(() => {
+  loadVideos();
+  loadExplanationVideos();
+}, []);
+
+
+
 
 const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
   if (!activeFolder) return;
@@ -57,9 +70,11 @@ const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     activeFolder.sub
   );
 
+  await loadExplanationVideos(); // ✅ THIS LINE
   setIsUploading(false);
   return;
 }
+
 
 
     /* ============================
@@ -143,10 +158,16 @@ const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
 const filteredVideos =
   activeFolder?.cat === 'skill'
     ? videos.filter(v =>
-        v.name.toLowerCase().includes(search.toLowerCase()) &&
-        v.subCategory === activeFolder.sub
+        v.subCategory === activeFolder.sub &&
+        v.name.toLowerCase().includes(search.toLowerCase())
+      )
+    : activeFolder?.cat === 'explanation'
+    ? explanationVideos.filter(v =>
+        v.subCategory === activeFolder.sub &&
+        v.name.toLowerCase().includes(search.toLowerCase())
       )
     : [];
+
 
 
   const selectedClient = clients.find(c => c.id === selectedClientId);
@@ -338,15 +359,25 @@ const filteredVideos =
               )}
               {filteredVideos.map(video => (
                 <VideoManagementCard 
-                  key={video.id} 
+               key={video.uid}
                   video={video} 
                   isRearrangeMode={isRearrangeMode}
                   selectedClientId={selectedClientId}
                   selectedClientName={selectedClient?.name.split(' ')[0]}
                   isAssigned={selectedClient?.assignedVideoUids?.includes(video.uid) || false}
                   onToggleAssignment={() => selectedClientId && onToggleAssignment(selectedClientId, video.uid)}
-                  onDelete={() => deleteVideo(video.id)} 
-                  onUpdate={(updates) => updateVideo(video.id!, updates)}
+                  onDelete={() => {
+  if (activeFolder?.cat === 'skill') {
+    deleteVideo(video.id);
+  }
+}}
+
+onUpdate={(updates) => {
+  if (activeFolder?.cat === 'skill') {
+    updateVideo(video.id!, updates);
+  }
+}}
+
                   onDragStart={() => onDragStart(video.id!)}
                   onDragOver={(e) => onDragOver(e, video.id!)}
                   onDragEnd={onDragEnd}
@@ -482,7 +513,13 @@ const handleThumbnailUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
             <div className="flex-1 min-w-0">
                <h4 className={`text-sm font-black brand-font uppercase truncate leading-none ${selectedClientId && isAssigned ? 'text-emerald-400' : 'text-slate-200'}`}>{video.name}</h4>
               <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest mt-1.5">
-  {new Date(video.uploadDate).toLocaleDateString()}
+{video.uploadDate
+  ? new Date(
+      video.uploadDate.seconds
+        ? video.uploadDate.seconds * 1000
+        : video.uploadDate
+    ).toLocaleDateString()
+  : ""}
 </p>
 
             </div>
