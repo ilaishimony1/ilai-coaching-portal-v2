@@ -5,7 +5,6 @@ import { ClientData } from '../types';
 import { uploadVideoToFirebase } from "../firebaseService";
 import CoachGallery from "./CoachGallery";
 import { uploadExplanationVideo } from "../firebase/explanationVideos";
-
 interface Props {
   accentColor: string;
   clients: ClientData[];
@@ -39,39 +38,69 @@ const AcademyManager: React.FC<Props> = ({ accentColor, clients, onToggleAssignm
     setVideos(all);
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  if (!activeFolder) return;
 
-    if (!activeFolder) return;
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const file = e.target.files?.[0];
+  if (!file) return;
 
-    setIsUploading(true);
-    try {
-      const folderVideos = videos.filter(v => v.category === activeFolder.cat && v.subCategory === activeFolder.sub);
-      const maxOrder = folderVideos.length > 0 ? Math.max(...folderVideos.map(v => v.order)) : 0;
+  setIsUploading(true);
 
-     const videoId = `v-${Date.now()}`;
+  try {
+    /* ============================
+       EXPLANATIONS → FIRESTORE
+       ============================ */
+   if (activeFolder.cat === "explanation") {
+  await uploadExplanationVideo(
+    file,
+    file.name.split(".")[0].toUpperCase(),
+    activeFolder.sub
+  );
 
-// 1️⃣ Upload to Firebase Storage
-const videoUrl = await uploadVideoToFirebase(file, videoId);
+  setIsUploading(false);
+  return;
+}
 
-// 2️⃣ Save URL (NOT blob)
-const newVideo: VideoFile = {
-  uid: videoId,
-  name: file.name.split('.')[0].toUpperCase(),
-  url: videoUrl, // ✅ THIS IS THE KEY
-  category: activeFolder.cat,
-  subCategory: activeFolder.sub,
-  uploadDate: new Date(),
-  order: maxOrder + 1
+
+    /* ============================
+       SKILLS → UNCHANGED
+       ============================ */
+    const folderVideos = videos.filter(
+      v => v.category === activeFolder.cat && v.subCategory === activeFolder.sub
+    );
+
+    const maxOrder =
+      folderVideos.length > 0
+        ? Math.max(...folderVideos.map(v => v.order))
+        : 0;
+
+    const videoId = `v-${Date.now()}`;
+
+    const videoUrl = await uploadVideoToFirebase(file, videoId);
+
+    const newVideo: VideoFile = {
+      uid: videoId,
+      name: file.name.split('.')[0].toUpperCase(),
+      url: videoUrl,
+      category: activeFolder.cat,
+      subCategory: activeFolder.sub,
+      uploadDate: new Date(),
+      order: maxOrder + 1
+    };
+
+    await db.videos.add(newVideo);
+    await loadVideos();
+
+  } catch (err) {
+    console.error("UPLOAD ERROR:", err);
+    alert("Upload failed");
+  } finally {
+    setIsUploading(false);
+  }
 };
 
-      await db.videos.add(newVideo);
-      await loadVideos();
-    } finally {
-      setIsUploading(false);
-    }
-  };
+
+   
 
   const deleteVideo = async (id?: number) => {
     if (id !== undefined) {
@@ -111,10 +140,14 @@ const newVideo: VideoFile = {
     setDraggedId(null);
   };
 
-  const filteredVideos = videos.filter(v => 
-    v.name.toLowerCase().includes(search.toLowerCase()) &&
-    (!activeFolder || (v.category === activeFolder.cat && v.subCategory === activeFolder.sub))
-  );
+const filteredVideos =
+  activeFolder?.cat === 'skill'
+    ? videos.filter(v =>
+        v.name.toLowerCase().includes(search.toLowerCase()) &&
+        v.subCategory === activeFolder.sub
+      )
+    : [];
+
 
   const selectedClient = clients.find(c => c.id === selectedClientId);
 
@@ -202,7 +235,7 @@ const newVideo: VideoFile = {
       {/* Main Content Area */}
       <div className="flex-1 space-y-12">
         {/* 🔥 Coach Gallery (Firestore / Storage driven) */}
-<CoachGallery />
+
         {!activeFolder ? (
           <div className="space-y-12">
             <header className="flex flex-col md:flex-row justify-between items-center gap-6">
@@ -232,7 +265,7 @@ const newVideo: VideoFile = {
                     <FolderCard 
                       key={sub} 
                       title={sub} 
-                      count={videos.filter(v => v.category === 'explanation' && v.subCategory === sub).length}
+
                       onClick={() => setActiveFolder({ cat: 'explanation', sub })}
                       icon={<Info size={18} />}
                       accent="blue"
@@ -506,7 +539,11 @@ const FolderCard = ({ title, count, onClick, icon, accent }: any) => (
       </div>
       <div>
         <h4 className="text-lg font-black brand-font text-white uppercase tracking-tight">{title}</h4>
-        <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">{count} Assets Sync'd</p>
+        {typeof count === 'number' && (
+  <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">
+    {count} Assets Sync'd
+  </p>
+)}
       </div>
     </div>
     <ChevronRight className="text-slate-800 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" size={20} />
