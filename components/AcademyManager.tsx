@@ -162,11 +162,24 @@ const filteredVideos =
         v.name.toLowerCase().includes(search.toLowerCase())
       )
     : activeFolder?.cat === 'explanation'
-    ? explanationVideos.filter(v =>
-        v.subCategory === activeFolder.sub &&
-        v.name.toLowerCase().includes(search.toLowerCase())
-      )
+    ? explanationVideos
+        .filter(v =>
+          v.subCategory === activeFolder.sub &&
+          v.name.toLowerCase().includes(search.toLowerCase())
+        )
+        .map(v => ({
+          id: undefined,               // Firestore only
+          uid: v.id,                   // ✅ REQUIRED
+          name: v.name,
+          url: v.videoUrl,             // ✅ FIX
+          thumbnail: v.thumbnail || "",
+          category: "explanation",
+          subCategory: v.subCategory,
+          uploadDate: v.createdAt,     // Timestamp is OK
+          order: 0
+        }))
     : [];
+
 
 
 

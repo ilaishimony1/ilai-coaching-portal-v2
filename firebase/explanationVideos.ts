@@ -12,10 +12,15 @@ import {
 } from "firebase/storage";
 import { syncService } from "../firebaseService";
 
+/* =========================
+   TYPES
+========================= */
 export type ExplanationVideo = {
-  id: string;
+  id: string;              // Firestore doc ID (REQUIRED)
   title: string;
   downloadURL: string;
+  storagePath: string;
+  createdAt?: any;
 };
 
 /* =========================
@@ -29,7 +34,7 @@ export async function getExplanationVideos(): Promise<ExplanationVideo[]> {
   );
 
   return snapshot.docs.map((doc) => ({
-    id: doc.id,
+    id: doc.id, // 🔥 THIS IS THE KEY FIX
     ...(doc.data() as Omit<ExplanationVideo, "id">),
   }));
 }
@@ -44,22 +49,31 @@ export async function uploadExplanationVideo(
   const db = syncService.getDb();
   const storage = getStorage();
 
-  // 1️⃣ Generate unique filename
-  const fileId = crypto.randomUUID();
+  // 1️⃣ Generate stable unique ID
+  const fileId = `v-${Date.now()}`;
+
+  // 2️⃣ Storage path (KEEP THIS — works with your rules)
   const storagePath = `videos/explanations/${fileId}.mp4`;
 
-  // 2️⃣ Upload video to Firebase Storage
+  // 3️⃣ Upload to Firebase Storage
   const storageRef = ref(storage, storagePath);
   await uploadBytes(storageRef, file);
 
-  // 3️⃣ Get public download URL
+  // 4️⃣ Get download URL
   const downloadURL = await getDownloadURL(storageRef);
 
-  // 4️⃣ Save metadata in Firestore
+  // 5️⃣ Save Firestore document
   await addDoc(collection(db, "explanation_videos"), {
     title,
     downloadURL,
     storagePath,
     createdAt: serverTimestamp(),
   });
+
+  // Optional return (useful later)
+  return {
+    title,
+    downloadURL,
+    storagePath,
+  };
 }
