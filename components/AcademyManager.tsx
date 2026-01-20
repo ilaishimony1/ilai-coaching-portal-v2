@@ -4,6 +4,7 @@ import { db, VideoFile } from '../db';
 import { ClientData } from '../types';
 import { uploadVideoToFirebase } from "../firebaseService";
 import CoachGallery from "./CoachGallery";
+import { uploadExplanationVideo } from "../firebase/explanationVideos";
 
 interface Props {
   accentColor: string;
