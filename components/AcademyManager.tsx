@@ -158,8 +158,10 @@ const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
 const filteredVideos =
   activeFolder?.cat === 'skill'
     ? videos.filter(v =>
-        v.subCategory === activeFolder.sub &&
-        v.name.toLowerCase().includes(search.toLowerCase())
+  v.subCategory === activeFolder.sub &&
+  (v.title ?? "").toLowerCase().includes(search.toLowerCase())
+)
+
       )
     : activeFolder?.cat === 'explanation'
     ? explanationVideos
@@ -168,22 +170,27 @@ const filteredVideos =
           v.name.toLowerCase().includes(search.toLowerCase())
         )
         .map(v => ({
-          id: undefined,               // Firestore only
-          uid: v.id,                   // ✅ REQUIRED
-          name: v.name,
-         url: v.downloadURL || v.url,  // ✅ FIX
-          thumbnail: v.thumbnail || "",
+          id: undefined,            // Firestore-only
+          uid: v.id,                // 🔥 REQUIRED for assignment
+          name: v.title ?? v.name,  // 🔥 FIX (Firestore uses title)
+          url: v.downloadURL,
+          thumbnail: "",
           category: "explanation",
           subCategory: v.subCategory,
-          uploadDate: v.createdAt,     // Timestamp is OK
+          uploadDate: v.createdAt,
           order: 0
         }))
     : [];
 
+const selectedClient = clients.find(c => c.id === selectedClientId);
 
+const visibleVideos =
+  selectedClient
+    ? filteredVideos.filter(v =>
+        selectedClient.assignedVideoUids?.includes(v.uid)
+      )
+    : filteredVideos;
 
-
-  const selectedClient = clients.find(c => c.id === selectedClientId);
 
   return (
     <div className="flex flex-col lg:flex-row gap-10 animate-in fade-in duration-700 pb-20">
@@ -370,7 +377,7 @@ const filteredVideos =
                   <p className="text-slate-600 font-black uppercase text-xs tracking-widest">No assets found in this sector</p>
                 </div>
               )}
-              {filteredVideos.map(video => (
+           {visibleVideos.map(video => (
                 <VideoManagementCard 
                key={video.uid}
                   video={video} 
@@ -391,9 +398,24 @@ onUpdate={(updates) => {
   }
 }}
 
-                  onDragStart={() => onDragStart(video.id!)}
-                  onDragOver={(e) => onDragOver(e, video.id!)}
-                  onDragEnd={onDragEnd}
+                onDragStart={() => {
+  if (activeFolder?.cat === "skill") {
+    onDragStart(video.id!)
+  }
+}}
+
+onDragOver={(e) => {
+  if (activeFolder?.cat === "skill") {
+    onDragOver(e, video.id!)
+  }
+}}
+
+onDragEnd={() => {
+  if (activeFolder?.cat === "skill") {
+    onDragEnd()
+  }
+}}
+
                 />
               ))}
             </div>

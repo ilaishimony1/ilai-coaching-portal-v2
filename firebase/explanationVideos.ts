@@ -17,7 +17,8 @@ import { syncService } from "../firebaseService";
 ========================= */
 export type ExplanationVideo = {
   id: string;            // Firestore doc ID
-  name: string;          // ✅ SINGLE SOURCE OF TRUTH
+  uid: string;           // 🔥 ASSIGNMENT ID (REQUIRED)
+  name: string;
   downloadURL: string;
   subCategory: string;
   createdAt?: any;
@@ -50,16 +51,21 @@ export async function uploadExplanationVideo(
   const db = syncService.getDb();
   const storage = getStorage();
 
-  const fileId = `v-${Date.now()}`;
-  const storagePath = `videos/explanations/${fileId}.mp4`;
+  // 🔥 SINGLE SOURCE OF TRUTH
+  const uid = `v-${Date.now()}`;
+  const storagePath = `videos/explanations/${uid}.mp4`;
 
+  // Upload to storage
   const storageRef = ref(storage, storagePath);
   await uploadBytes(storageRef, file);
 
+  // Get playable URL
   const downloadURL = await getDownloadURL(storageRef);
 
+  // 🔥 SAVE uid TO FIRESTORE
   await addDoc(collection(db, "explanation_videos"), {
-    name,                // ✅ FIXED
+    uid,                 // ✅ THIS WAS MISSING
+    name,
     subCategory,
     downloadURL,
     storagePath,
@@ -67,6 +73,7 @@ export async function uploadExplanationVideo(
   });
 
   return {
+    uid,
     name,
     downloadURL,
     subCategory,
