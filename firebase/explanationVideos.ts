@@ -64,12 +64,14 @@ export async function uploadExplanationVideo(
   const downloadURL = await getDownloadURL(storageRef);
 
   // 5️⃣ Save Firestore document
-  await addDoc(collection(db, "explanation_videos"), {
-    name: title.toUpperCase(), // 🔥 MUST BE "name"
-    downloadURL,
-    subCategory,               // 🔥 THIS FIXES VISIBILITY
-    createdAt: serverTimestamp(),
-  });
+ await addDoc(collection(db, "explanation_videos"), {
+  title,
+  subCategory,          // 🔥 THIS IS THE FIX
+  downloadURL,
+  storagePath,
+  createdAt: serverTimestamp(),
+});
+
 
   return {
     name: title,
