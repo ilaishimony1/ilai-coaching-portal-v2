@@ -408,28 +408,35 @@ const selectedClient = clients.find(c => c.id === selectedClientId);
 }}
 
 onUpdate={(updates) => {
-  if (activeFolder?.cat === 'skill') {
+ if (activeFolder?.cat === 'explanation') {
+  deleteVideo(video.id);
+}
+}}
+
+onUpdate={(updates) => {
+  if (activeFolder?.cat === 'explanation') {
     updateVideo(video.id!, updates);
   }
 }}
 
-                onDragStart={() => {
-  if (activeFolder?.cat === "skill") {
+onDragStart={() => {
+  if (activeFolder?.cat === "explanation") {
     onDragStart(video.id!)
   }
 }}
 
 onDragOver={(e) => {
-  if (activeFolder?.cat === "skill") {
+  if (activeFolder?.cat === "explanation") {
     onDragOver(e, video.id!)
   }
 }}
 
 onDragEnd={() => {
-  if (activeFolder?.cat === "skill") {
+  if (activeFolder?.cat === "explanation") {
     onDragEnd()
   }
 }}
+
 
                 />
               ))}
