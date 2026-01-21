@@ -17,9 +17,9 @@ import { syncService } from "../firebaseService";
 ========================= */
 export type ExplanationVideo = {
   id: string;            // Firestore doc ID
-  name: string;          // TITLE used by AcademyManager
-  downloadURL: string;   // VIDEO SRC
-  subCategory: string;   // REQUIRED for filtering
+  name: string;          // ✅ SINGLE SOURCE OF TRUTH
+  downloadURL: string;
+  subCategory: string;
   createdAt?: any;
 };
 
@@ -44,37 +44,30 @@ export async function getExplanationVideos(): Promise<ExplanationVideo[]> {
 ========================= */
 export async function uploadExplanationVideo(
   file: File,
-  title: string,
+  name: string,
   subCategory: string
 ) {
   const db = syncService.getDb();
   const storage = getStorage();
 
-  // 1️⃣ Stable ID (same pattern as skills)
   const fileId = `v-${Date.now()}`;
-
-  // 2️⃣ Storage path
   const storagePath = `videos/explanations/${fileId}.mp4`;
 
-  // 3️⃣ Upload video
   const storageRef = ref(storage, storagePath);
   await uploadBytes(storageRef, file);
 
-  // 4️⃣ Get playable URL
   const downloadURL = await getDownloadURL(storageRef);
 
-  // 5️⃣ Save Firestore document
- await addDoc(collection(db, "explanation_videos"), {
-  title,
-  subCategory,          // 🔥 THIS IS THE FIX
-  downloadURL,
-  storagePath,
-  createdAt: serverTimestamp(),
-});
-
+  await addDoc(collection(db, "explanation_videos"), {
+    name,                // ✅ FIXED
+    subCategory,
+    downloadURL,
+    storagePath,
+    createdAt: serverTimestamp(),
+  });
 
   return {
-    name: title,
+    name,
     downloadURL,
     subCategory,
   };
