@@ -47,6 +47,50 @@ useEffect(() => {
   loadVideos();
   loadExplanationVideos();
 }, []);
+/* =========================
+   NORMALIZE EXPLANATION VIDEOS (Firestore → VideoFile)
+========================= */
+const mappedExplanationVideos: VideoFile[] = explanationVideos.map((v) => ({
+  id: undefined,               // Firestore-only
+  uid: v.id,                   // 🔥 REQUIRED for assignment
+  name: v.name,
+  url: v.downloadURL,
+  thumbnail: "",
+  category: "explanation",
+  subCategory: v.subCategory,
+  uploadDate: v.createdAt,
+  order: 0,
+}));
+
+/* =========================
+   FILTERED GALLERIES
+========================= */
+const skillVideos = videos.filter(
+  (v) =>
+    v.category === "skill" &&
+    v.subCategory === activeFolder?.sub &&
+    v.name.toLowerCase().includes(search.toLowerCase())
+);
+
+const explanationGalleryVideos = mappedExplanationVideos.filter(
+  (v) =>
+    v.subCategory === activeFolder?.sub &&
+    v.name.toLowerCase().includes(search.toLowerCase())
+);
+
+/* =========================
+   FINAL VISIBLE VIDEOS (Coach vs Client)
+========================= */
+const baseVisibleVideos =
+  activeFolder?.cat === "skill"
+    ? skillVideos
+    : explanationGalleryVideos;
+
+const visibleVideos = selectedClient
+  ? baseVisibleVideos.filter((v) =>
+      selectedClient.assignedVideoUids?.includes(v.uid)
+    )
+  : baseVisibleVideos;
 
 
 
@@ -155,41 +199,12 @@ const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setDraggedId(null);
   };
 
-const filteredVideos =
-  activeFolder?.cat === 'skill'
-    ? videos.filter(v =>
-  v.subCategory === activeFolder.sub &&
-  (v.title ?? "").toLowerCase().includes(search.toLowerCase())
-)
 
-      )
-    : activeFolder?.cat === 'explanation'
-    ? explanationVideos
-        .filter(v =>
-          v.subCategory === activeFolder.sub &&
-          v.name.toLowerCase().includes(search.toLowerCase())
-        )
-        .map(v => ({
-          id: undefined,            // Firestore-only
-          uid: v.id,                // 🔥 REQUIRED for assignment
-          name: v.title ?? v.name,  // 🔥 FIX (Firestore uses title)
-          url: v.downloadURL,
-          thumbnail: "",
-          category: "explanation",
-          subCategory: v.subCategory,
-          uploadDate: v.createdAt,
-          order: 0
-        }))
-    : [];
+  
 
 const selectedClient = clients.find(c => c.id === selectedClientId);
 
-const visibleVideos =
-  selectedClient
-    ? filteredVideos.filter(v =>
-        selectedClient.assignedVideoUids?.includes(v.uid)
-      )
-    : filteredVideos;
+
 
 
   return (
