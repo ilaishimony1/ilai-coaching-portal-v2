@@ -367,12 +367,11 @@ const resolvedClientAvatar =
           )}
 
           {viewMode === 'ACADEMY' && authStatus.type === 'COACH' && (
-            <AcademyManager 
-              accentColor={landingConfig.accentColor} 
-              clients={clients} 
-              onToggleAssignment={handleToggleAssignment} 
-              onUnsyncAll={handleUnsyncAll} 
-            />
+        <AcademyManager 
+  accentColor={landingConfig.accentColor} 
+  clients={clients} 
+/>
+
           )}
 
           {viewMode === 'ACADEMY' && authStatus.type === 'CLIENT' && currentClientData && (

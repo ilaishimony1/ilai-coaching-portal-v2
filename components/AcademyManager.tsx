@@ -3,8 +3,16 @@ import { Upload, X, Video, Search, Plus, Info, Zap, ChevronRight, Folder, ArrowL
 import { db, VideoFile } from '../db';
 import { ClientData } from '../types';
 import { uploadVideoToFirebase } from "../firebaseService";
-import { uploadExplanationVideo } from "../firebase/explanationVideos";
-import { getExplanationVideos } from "../firebase/explanationVideos";
+import {
+  uploadExplanationVideo,
+  assignExplanationToClient,
+  deleteExplanationVideo,
+} from "../firebase/explanationVideos";
+import {
+  getExplanationVideos,
+  getAssignedExplanationUids,
+} from "@/firebase/explanations";
+
 interface Props {
   accentColor: string;
   clients: ClientData[];
@@ -29,6 +37,7 @@ const AcademyManager: React.FC<Props> = ({ accentColor, clients, onToggleAssignm
   const [draggedId, setDraggedId] = useState<number | null>(null);
   const [isRearrangeMode, setIsRearrangeMode] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+const [assignedExplanationUids, setAssignedExplanationUids] = useState<string[]>([]);
 
 
 
@@ -51,18 +60,28 @@ const safeVids = vids.map(v => ({
 setExplanationVideos(safeVids);
 };
 
+// Load galleries once
 useEffect(() => {
   loadVideos();
   loadExplanationVideos();
-
 }, []);
+
+// Load assigned explanations when client changes
+useEffect(() => {
+  if (!selectedClientId) {
+    setAssignedExplanationUids([]);
+    return;
+  }
+
+  getAssignedExplanationUids(selectedClientId).then(setAssignedExplanationUids);
+}, [selectedClientId]);
 
 /* =========================
    NORMALIZE EXPLANATION VIDEOS (Firestore → VideoFile)
 ========================= */
 const mappedExplanationVideos: VideoFile[] = explanationVideos.map((v) => ({
   id: undefined,               // Firestore-only
-  uid: v.id,                   // 🔥 REQUIRED for assignment
+  uid: v.uid,                   // 🔥 REQUIRED for assignment
   name: v.name,
   url: v.downloadURL,
   thumbnail: "",
@@ -95,16 +114,13 @@ const explanationGalleryVideos = mappedExplanationVideos.filter(
 ========================= */
 const selectedClient = clients.find(c => c.id === selectedClientId);
 
-const baseVisibleVideos =
-  activeFolder?.cat === "skill"
-    ? skillVideos
-    : explanationGalleryVideos;
-
 /* =========================
    FINAL VISIBLE VIDEOS (Show all for now)
 ========================= */
-const visibleVideos = baseVisibleVideos; // show all videos in the folder
-
+const visibleVideos =
+  activeFolder?.cat === "skill"
+    ? skillVideos
+    : explanationGalleryVideos;
 
 const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
   if (!activeFolder) return;
@@ -251,7 +267,12 @@ const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
               </button>
               <div className="h-[1px] bg-white/5 my-2"></div>
               {clients.map(c => {
-                const assignedCount = c.assignedVideoUids?.length || 0;
+                {assignedCount > 0 && (
+  <span className="text-[7px] font-black text-emerald-500 uppercase tracking-tighter">
+    {assignedCount} Skill Assets
+  </span>
+)}
+
                 const isClientSelected = selectedClientId === c.id;
 
                 return (
@@ -410,8 +431,25 @@ const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
                   isRearrangeMode={isRearrangeMode}
                   selectedClientId={selectedClientId}
                   selectedClientName={selectedClient?.name.split(' ')[0]}
-                  isAssigned={selectedClient?.assignedVideoUids?.includes(video.uid) || false}
-                  onToggleAssignment={() => selectedClientId && onToggleAssignment(selectedClientId, video.uid)}
+                  isAssigned={assignedExplanationUids.includes(video.uid)}
+                  onToggleAssignment={async () => {
+  if (!selectedClientId) return;
+
+ if (activeFolder?.cat === "explanation") {
+  if (assignedExplanationUids.includes(video.uid)) {
+    await unassignExplanationFromClient(video.uid, selectedClientId);
+  } else {
+    await assignExplanationToClient(video.uid, selectedClientId);
+  }
+
+  const updated = await getAssignedExplanationUids(selectedClientId);
+  setAssignedExplanationUids(updated);
+}
+else {
+    onToggleAssignment(selectedClientId, video.uid);
+  }
+}}
+
                 onDelete={() => {
   if (activeFolder?.cat === 'skill' && video.id) {
     deleteVideo(video.id);

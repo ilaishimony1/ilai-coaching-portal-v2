@@ -106,3 +106,29 @@ export async function assignExplanationToClient(
     assignedAt: serverTimestamp(),
   });
 }
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  deleteDoc,
+} from "firebase/firestore";
+
+export async function unassignExplanationFromClient(
+  videoUid: string,
+  clientId: string
+) {
+  const db = syncService.getDb();
+
+  const q = query(
+    collection(db, "explanation_assignments"),
+    where("videoUid", "==", videoUid),
+    where("clientId", "==", clientId)
+  );
+
+  const snapshot = await getDocs(q);
+
+  for (const docSnap of snapshot.docs) {
+    await deleteDoc(docSnap.ref);
+  }
+}

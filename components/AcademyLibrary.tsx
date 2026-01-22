@@ -3,6 +3,7 @@ import { Play, Search, X, Lock } from "lucide-react";
 import { db, VideoFile } from "../db";
 import { ClientData } from "../types";
 import { resolveAcademyVideoUrl } from "../firebaseService";
+import { getAssignedExplanationUids } from "../db/academyAssignments";
 
 interface Props {
   accentColor: string;
@@ -15,7 +16,8 @@ const [activeVideo, setActiveVideo] = useState<VideoFile | null>(null);
 const [activeVideoUrl, setActiveVideoUrl] = useState<string | null>(null);
 const [search, setSearch] = useState("");
 const fullscreenVideoRef = useRef<HTMLVideoElement | null>(null);
-
+const [assignedUids, setAssignedUids] = useState<Set<string>>(new Set());
+const [assignmentsLoaded, setAssignmentsLoaded] = useState(false);
 
 const closeVideo = () => {
   if (fullscreenVideoRef.current) {
@@ -27,6 +29,17 @@ const closeVideo = () => {
   setActiveVideo(null);
   setActiveVideoUrl(null);
 };
+useEffect(() => {
+  if (!client?.id) return;
+
+  setAssignmentsLoaded(false);
+
+  getAssignedExplanationUids(client.id).then(uids => {
+    setAssignedUids(new Set(uids));
+    setAssignmentsLoaded(true);
+  });
+}, [client?.id]);
+
 
   // Resolve Firebase URL when active video changes
   useEffect(() => {
@@ -43,12 +56,13 @@ const closeVideo = () => {
     db.videos.orderBy("order").toArray().then(setAllVideos);
   }, []);
 
-  const assignedVideos = useMemo(() => {
-    const assignedUids = new Set(client?.assignedVideoUids || []);
-    return allVideos.filter(
-      v => v.category === "explanation" && assignedUids.has(v.uid)
-    );
-  }, [allVideos, client?.assignedVideoUids]);
+const assignedVideos = useMemo(() => {
+  return allVideos.filter(
+    v => v.category === "explanation" && assignedUids.has(v.uid)
+  );
+}, [allVideos, assignedUids]);
+
+
 
   const filteredVideos = useMemo(() => {
     return assignedVideos.filter(v =>
@@ -82,7 +96,7 @@ const closeVideo = () => {
 
     {/* GRID */}
 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-  {assignedVideos.length === 0 ? (
+  {assignmentsLoaded && assignedVideos.length === 0 ? (
     <div className="col-span-full py-32 text-center border border-dashed border-slate-800 rounded-3xl">
       <Lock size={48} className="mx-auto text-slate-700 mb-4" />
       <p className="text-slate-600 uppercase text-xs font-bold">
