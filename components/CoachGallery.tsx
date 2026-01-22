@@ -34,7 +34,7 @@ export default function CoachGallery() {
     setUploading(true);
 
     try {
-      await uploadExplanationVideo(file, title);
+      await uploadExplanationVideo(file, title, "general");
       setFile(null);
       setTitle("");
       await loadVideos();
@@ -89,7 +89,7 @@ export default function CoachGallery() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {explanationVideos.map((video) => (
           <div key={video.id} className="space-y-2">
-            <p className="font-semibold">{video.title}</p>
+            <p className="font-semibold">{video.name}</p>
             <video
               src={video.downloadURL}
               controls
