@@ -3,7 +3,6 @@ import { Upload, X, Video, Search, Plus, Info, Zap, ChevronRight, Folder, ArrowL
 import { db, VideoFile } from '../db';
 import { ClientData } from '../types';
 import { uploadVideoToFirebase } from "../firebaseService";
-import CoachGallery from "./CoachGallery";
 import { uploadExplanationVideo } from "../firebase/explanationVideos";
 import { getExplanationVideos } from "../firebase/explanationVideos";
 interface Props {
@@ -81,19 +80,18 @@ const explanationGalleryVideos = mappedExplanationVideos.filter(
 /* =========================
    FINAL VISIBLE VIDEOS (Coach vs Client)
 ========================= */
+const selectedClient = clients.find(c => c.id === selectedClientId);
+
 const baseVisibleVideos =
   activeFolder?.cat === "skill"
     ? skillVideos
     : explanationGalleryVideos;
 
 const visibleVideos = selectedClient
-  ? baseVisibleVideos.filter((v) =>
+  ? baseVisibleVideos.filter(v =>
       selectedClient.assignedVideoUids?.includes(v.uid)
     )
   : baseVisibleVideos;
-
-
-
 
 const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
   if (!activeFolder) return;
@@ -202,7 +200,7 @@ const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
 
   
 
-const selectedClient = clients.find(c => c.id === selectedClientId);
+
 
 
 
@@ -386,7 +384,7 @@ const selectedClient = clients.find(c => c.id === selectedClientId);
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filteredVideos.length === 0 && !isUploading && (
+              {visibleVideos.length === 0 && !isUploading && (
                 <div className="col-span-full py-20 text-center border-2 border-dashed border-slate-900 rounded-[3rem]">
                   <Folder className="mx-auto text-slate-800 mb-4" size={48} />
                   <p className="text-slate-600 font-black uppercase text-xs tracking-widest">No assets found in this sector</p>
@@ -401,42 +399,36 @@ const selectedClient = clients.find(c => c.id === selectedClientId);
                   selectedClientName={selectedClient?.name.split(' ')[0]}
                   isAssigned={selectedClient?.assignedVideoUids?.includes(video.uid) || false}
                   onToggleAssignment={() => selectedClientId && onToggleAssignment(selectedClientId, video.uid)}
-                  onDelete={() => {
-  if (activeFolder?.cat === 'skill') {
+                 onDelete={() => {
+  if (activeFolder?.cat === 'skill' && video.id) {
     deleteVideo(video.id);
   }
 }}
 
 onUpdate={(updates) => {
- if (activeFolder?.cat === 'explanation') {
-  deleteVideo(video.id);
-}
-}}
-
-onUpdate={(updates) => {
-  if (activeFolder?.cat === 'explanation') {
-    updateVideo(video.id!, updates);
+  if (activeFolder?.cat === 'skill' && video.id) {
+    updateVideo(video.id, updates);
   }
 }}
 
+
 onDragStart={() => {
-  if (activeFolder?.cat === "explanation") {
-    onDragStart(video.id!)
+  if (activeFolder?.cat === "skill" && video.id) {
+    onDragStart(video.id)
   }
 }}
 
 onDragOver={(e) => {
-  if (activeFolder?.cat === "explanation") {
-    onDragOver(e, video.id!)
+  if (activeFolder?.cat === "skill" && video.id) {
+    onDragOver(e, video.id)
   }
 }}
 
 onDragEnd={() => {
-  if (activeFolder?.cat === "explanation") {
+  if (activeFolder?.cat === "skill") {
     onDragEnd()
   }
 }}
-
 
                 />
               ))}
