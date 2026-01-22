@@ -22,13 +22,14 @@ const SUB_CATEGORIES = [
 
 const AcademyManager: React.FC<Props> = ({ accentColor, clients, onToggleAssignment, onUnsyncAll }) => {
   const [videos, setVideos] = useState<VideoFile[]>([]);
+  const [explanationVideos, setExplanationVideos] = useState<ExplanationVideo[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [search, setSearch] = useState('');
   const [activeFolder, setActiveFolder] = useState<{cat: 'explanation' | 'skill', sub: string} | null>(null);
   const [draggedId, setDraggedId] = useState<number | null>(null);
   const [isRearrangeMode, setIsRearrangeMode] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
-const [explanationVideos, setExplanationVideos] = useState<any[]>([]);
+
 
 
 
@@ -53,7 +54,9 @@ setExplanationVideos(safeVids);
 useEffect(() => {
   loadVideos();
   loadExplanationVideos();
+
 }, []);
+
 /* =========================
    NORMALIZE EXPLANATION VIDEOS (Firestore → VideoFile)
 ========================= */
@@ -97,11 +100,11 @@ const baseVisibleVideos =
     ? skillVideos
     : explanationGalleryVideos;
 
-const visibleVideos = selectedClient
-  ? baseVisibleVideos.filter(v =>
-      selectedClient.assignedVideoUids?.includes(v.uid)
-    )
-  : baseVisibleVideos;
+/* =========================
+   FINAL VISIBLE VIDEOS (Show all for now)
+========================= */
+const visibleVideos = baseVisibleVideos; // show all videos in the folder
+
 
 const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
   if (!activeFolder) return;
@@ -409,11 +412,15 @@ const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
                   selectedClientName={selectedClient?.name.split(' ')[0]}
                   isAssigned={selectedClient?.assignedVideoUids?.includes(video.uid) || false}
                   onToggleAssignment={() => selectedClientId && onToggleAssignment(selectedClientId, video.uid)}
-                 onDelete={() => {
+                onDelete={() => {
   if (activeFolder?.cat === 'skill' && video.id) {
     deleteVideo(video.id);
+  } else if (activeFolder?.cat === 'explanation') {
+    deleteExplanationVideo(video.uid); // You need to implement this in firebase/explanationVideos.ts
+    loadExplanationVideos();
   }
 }}
+
 
 onUpdate={(updates) => {
   if (activeFolder?.cat === 'skill' && video.id) {
