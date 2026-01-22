@@ -38,8 +38,16 @@ const loadVideos = async () => {
 };
 
 const loadExplanationVideos = async () => {
-  const vids = await getExplanationVideos();
-  setExplanationVideos(vids);
+ const vids = await getExplanationVideos();
+
+const safeVids = vids.map(v => ({
+  ...v,
+  name: v.name ?? "UNTITLED",
+  subCategory: v.subCategory ?? "General",
+  uid: v.uid ?? v.id,
+}));
+
+setExplanationVideos(safeVids);
 };
 
 useEffect(() => {
@@ -68,13 +76,15 @@ const skillVideos = videos.filter(
   (v) =>
     v.category === "skill" &&
     v.subCategory === activeFolder?.sub &&
-    v.name.toLowerCase().includes(search.toLowerCase())
+    (v.name ?? "").toLowerCase().includes(search.toLowerCase())
+
 );
 
 const explanationGalleryVideos = mappedExplanationVideos.filter(
   (v) =>
     v.subCategory === activeFolder?.sub &&
-    v.name.toLowerCase().includes(search.toLowerCase())
+    (v.name ?? "").toLowerCase().includes(search.toLowerCase())
+
 );
 
 /* =========================
