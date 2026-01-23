@@ -10,8 +10,10 @@ import {
 } from "../firebase/explanationVideos";
 import {
   getExplanationVideos,
-  getAssignedExplanationUids,
-} from "@/firebase/explanations";
+  assignExplanationToClient,
+  unassignExplanationFromClient,
+} from "../firebase/explanationVideos";
+
 
 interface Props {
   accentColor: string;
