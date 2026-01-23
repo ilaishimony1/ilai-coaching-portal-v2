@@ -6,8 +6,8 @@ import { uploadVideoToFirebase } from "../firebaseService";
 import {
   uploadExplanationVideo,
   assignExplanationToClient,
-  deleteExplanationVideo,
 } from "../firebase/explanationVideos";
+
 import {
   getExplanationVideos,
   assignExplanationToClient,
@@ -451,16 +451,6 @@ else {
     onToggleAssignment(selectedClientId, video.uid);
   }
 }}
-
-                onDelete={() => {
-  if (activeFolder?.cat === 'skill' && video.id) {
-    deleteVideo(video.id);
-  } else if (activeFolder?.cat === 'explanation') {
-    deleteExplanationVideo(video.uid); // You need to implement this in firebase/explanationVideos.ts
-    loadExplanationVideos();
-  }
-}}
-
 
 onUpdate={(updates) => {
   if (activeFolder?.cat === 'skill' && video.id) {
