@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Play, Search, X, Lock } from "lucide-react";
-import { db, VideoFile } from "../db";
+import { VideoFile } from "../db";
 import { ClientData } from "../types";
 import { resolveAcademyVideoUrl } from "../firebaseService";
 import { getAssignedExplanationUids } from "../firebase/explanationVideos";
-
+import { getExplanationVideos } from "../firebase/explanationVideos";
 
 interface Props {
-  accentColor: string;
   client: ClientData;
 }
 
@@ -53,9 +52,24 @@ useEffect(() => {
   }, [activeVideo]);
 
   // Load local DB videos
-  useEffect(() => {
-    db.videos.orderBy("order").toArray().then(setAllVideos);
-  }, []);
+useEffect(() => {
+  getExplanationVideos().then((vids) => {
+    const mapped = vids.map(v => ({
+      id: undefined,
+      uid: v.uid,
+      name: v.name,
+      url: v.downloadURL,
+      thumbnail: "",
+      category: "explanation",
+      subCategory: v.subCategory,
+      uploadDate: v.createdAt,
+      order: 0,
+    }));
+
+    setAllVideos(mapped);
+  });
+}, []);
+
 
 const assignedVideos = useMemo(() => {
   return allVideos.filter(
@@ -95,7 +109,7 @@ const assignedVideos = useMemo(() => {
         </div>
       </header>
 
-  {/* GRID */}
+{/* GRID */}
 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
   {!assignmentsLoaded ? (
     <div className="col-span-full text-center text-slate-500 uppercase text-xs">
@@ -115,7 +129,7 @@ const assignedVideos = useMemo(() => {
   ) : (
     filteredVideos.map(video => (
       <LibraryVideoCard
-        key={video.id}
+        key={video.uid}
         video={video}
         onPlay={() => setActiveVideo(video)}
       />
