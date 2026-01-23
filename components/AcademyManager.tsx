@@ -5,14 +5,12 @@ import { ClientData } from '../types';
 import { uploadVideoToFirebase } from "../firebaseService";
 import {
   uploadExplanationVideo,
-  assignExplanationToClient,
-} from "../firebase/explanationVideos";
-
-import {
   getExplanationVideos,
   assignExplanationToClient,
   unassignExplanationFromClient,
+  getAssignedExplanationUids,
 } from "../firebase/explanationVideos";
+
 
 
 interface Props {
@@ -269,11 +267,7 @@ const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
               </button>
               <div className="h-[1px] bg-white/5 my-2"></div>
               {clients.map(c => {
-                {assignedCount > 0 && (
-  <span className="text-[7px] font-black text-emerald-500 uppercase tracking-tighter">
-    {assignedCount} Skill Assets
-  </span>
-)}
+
 
                 const isClientSelected = selectedClientId === c.id;
 
@@ -288,26 +282,13 @@ const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
                       </div>
                       <div className="flex flex-col items-start min-w-0">
                         <span className="text-[10px] font-black uppercase tracking-widest truncate w-full">{c.name.split(' ')[0]}</span>
-                        {assignedCount > 0 && <span className="text-[7px] font-black text-emerald-500 uppercase tracking-tighter">{assignedCount} Synced</span>}
+                        
                       </div>
                       {isClientSelected && <UserCheck size={12} className="ml-auto text-emerald-500" />}
                     </button>
                     
                     {/* Unsync All Button */}
-                    {assignedCount > 0 && (
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (window.confirm(`Unsync all technical assets for ${c.name}?`)) {
-                            onUnsyncAll(c.id);
-                          }
-                        }}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-slate-900 text-slate-700 hover:text-red-500 hover:bg-red-500/10 transition-all z-10 opacity-0 group-hover/row:opacity-100"
-                        title="Unsync All Videos"
-                      >
-                        <Link2Off size={14} />
-                      </button>
-                    )}
+                   
                   </div>
                 );
               })}
