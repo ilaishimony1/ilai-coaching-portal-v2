@@ -186,28 +186,13 @@ const LibraryVideoCard: React.FC<{
   return (
     <div className="rounded-3xl overflow-hidden border border-slate-800 bg-slate-900">
       <div className="aspect-video bg-black relative">
-        {/* Inline video */}
-
-        {/* Thumbnail + blue play button */}
-     
- {video.thumbnail ? (
-  <img
-    src={video.thumbnail}
-    alt={video.name}
-    className="w-full h-full object-cover cursor-pointer"
-    onClick={onPlay}
-  />
-) : (
-  <video
-  src={video.url + "#t=0.01"}
-  muted
-  playsInline
-  preload="metadata"
+      <img
+  src={video.thumbnail || "/video-placeholder.jpg"}
+  alt={video.name}
   className="w-full h-full object-cover cursor-pointer"
   onClick={onPlay}
 />
 
-)}
 
 
         {/* ✅ No extra buttons/icons for clients */}
