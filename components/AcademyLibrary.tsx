@@ -3,7 +3,8 @@ import { Play, Search, X, Lock } from "lucide-react";
 import { db, VideoFile } from "../db";
 import { ClientData } from "../types";
 import { resolveAcademyVideoUrl } from "../firebaseService";
-import { getAssignedExplanationUids } from "../firebase/academyAssignments";
+import { getAssignedExplanationUids } from "../firebase/explanationVideos";
+
 
 interface Props {
   accentColor: string;
