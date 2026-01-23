@@ -95,9 +95,13 @@ const assignedVideos = useMemo(() => {
         </div>
       </header>
 
-    {/* GRID */}
+  {/* GRID */}
 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-  {assignmentsLoaded && assignedVideos.length === 0 ? (
+  {!assignmentsLoaded ? (
+    <div className="col-span-full text-center text-slate-500 uppercase text-xs">
+      Loading videos…
+    </div>
+  ) : assignedVideos.length === 0 ? (
     <div className="col-span-full py-32 text-center border border-dashed border-slate-800 rounded-3xl">
       <Lock size={48} className="mx-auto text-slate-700 mb-4" />
       <p className="text-slate-600 uppercase text-xs font-bold">
@@ -109,19 +113,16 @@ const assignedVideos = useMemo(() => {
       No results
     </div>
   ) : (
-  filteredVideos.map(video => {
-  console.log("CLIENT VIDEO:", video);
-
-  return (
-    <LibraryVideoCard
-      key={video.id}
-      video={video}
-      onPlay={() => setActiveVideo(video)}
-    />
-  );
-})
+    filteredVideos.map(video => (
+      <LibraryVideoCard
+        key={video.id}
+        video={video}
+        onPlay={() => setActiveVideo(video)}
+      />
+    ))
   )}
 </div>
+
 
 
       {/* FULLSCREEN MODAL */}
