@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Play, Search, X, Lock } from "lucide-react";
 import { VideoFile } from "../db";
 import { ClientData } from "../types";
-import { resolveAcademyVideoUrl } from "../firebaseService";
 import { getAssignedExplanationUids } from "../firebase/explanationVideos";
 import { getExplanationVideos } from "../firebase/explanationVideos";
 
@@ -42,14 +41,15 @@ useEffect(() => {
 
 
   // Resolve Firebase URL when active video changes
-  useEffect(() => {
-    if (!activeVideo) {
-      setActiveVideoUrl(null);
-      return;
-    }
+ useEffect(() => {
+  if (!activeVideo) {
+    setActiveVideoUrl(null);
+    return;
+  }
 
-    resolveAcademyVideoUrl(activeVideo.uid).then(setActiveVideoUrl);
-  }, [activeVideo]);
+  setActiveVideoUrl(activeVideo.url);
+}, [activeVideo]);
+
 
   // Load local DB videos
 useEffect(() => {
@@ -59,7 +59,7 @@ useEffect(() => {
       uid: v.uid,
       name: v.name,
       url: v.downloadURL,
-      thumbnail: "",
+      thumbnail: v.thumbnail || "/video-placeholder.jpg",
       category: "explanation",
       subCategory: v.subCategory,
       uploadDate: v.createdAt,
