@@ -72,12 +72,7 @@ export async function getAssignedExplanationUids(
 ========================= */
 
 // Upload explanation video (coach)
-export async function uploadExplanationVideo(
-  videoFile: File,
-  thumbnailFile: File,
-  name: string,
-  subCategory: string
-) export async function uploadExplanationVideo(
+ export async function uploadExplanationVideo(
   videoFile: File,
   name: string,
   subCategory: string
