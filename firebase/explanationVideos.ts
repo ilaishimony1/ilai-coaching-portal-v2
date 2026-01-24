@@ -77,40 +77,34 @@ export async function uploadExplanationVideo(
   thumbnailFile: File,
   name: string,
   subCategory: string
+) export async function uploadExplanationVideo(
+  videoFile: File,
+  name: string,
+  subCategory: string
 ) {
   const db = syncService.getDb();
   const storage = getStorage();
 
   const uid = `v-${Date.now()}`;
   const storagePath = `videos/explanations/${uid}.mp4`;
-  const thumbnailPath = `videos/explanations/${uid}.jpg`;
 
+  const videoRef = ref(storage, storagePath);
+  await uploadBytes(videoRef, videoFile);
 
-  // Upload video
-const videoRef = ref(storage, storagePath);
-await uploadBytes(videoRef, videoFile);
-const downloadURL = await getDownloadURL(videoRef);
-
-// Upload thumbnail
-const thumbnailRef = ref(storage, thumbnailPath);
-await uploadBytes(thumbnailRef, thumbnailFile);
-const thumbnailURL = await getDownloadURL(thumbnailRef);
-
+  const downloadURL = await getDownloadURL(videoRef);
 
   await addDoc(collection(db, "explanation_videos"), {
-  uid,
-  name,
-  subCategory,
-  downloadURL,
-  thumbnail: thumbnailURL,
-  storagePath,
-  thumbnailPath,
-  createdAt: serverTimestamp(),
-});
+    uid,
+    name,
+    subCategory,
+    downloadURL,
+    storagePath,
+    createdAt: serverTimestamp(),
+  });
 
-
-  return { uid, name, subCategory, downloadURL, thumbnail: thumbnailURL };
+  return { uid, name, subCategory, downloadURL };
 }
+
 
 // Assign explanation to a client
 export async function assignExplanationToClient(
