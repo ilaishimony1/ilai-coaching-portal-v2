@@ -4,8 +4,10 @@ import {
   addDoc,
   query,
   where,
+  deleteDoc,
   serverTimestamp,
 } from "firebase/firestore";
+
 import {
   getStorage,
   ref,
@@ -18,13 +20,18 @@ import { syncService } from "../firebaseService";
    TYPES
 ========================= */
 export type ExplanationVideo = {
-  id: string;          // Firestore doc ID
-  uid: string;         // Stable ID for assignments
+  id: string;
+  uid: string;
   name: string;
   downloadURL: string;
+  thumbnail?: string;
+  storagePath?: string;
+  thumbnailPath?: string;
   subCategory: string;
   createdAt?: any;
 };
+
+
 
 /* =========================
    READ
@@ -66,7 +73,8 @@ export async function getAssignedExplanationUids(
 
 // Upload explanation video (coach)
 export async function uploadExplanationVideo(
-  file: File,
+  videoFile: File,
+  thumbnailFile: File,
   name: string,
   subCategory: string
 ) {
@@ -75,22 +83,33 @@ export async function uploadExplanationVideo(
 
   const uid = `v-${Date.now()}`;
   const storagePath = `videos/explanations/${uid}.mp4`;
+  const thumbnailPath = `videos/explanations/${uid}.jpg`;
 
-  const storageRef = ref(storage, storagePath);
-  await uploadBytes(storageRef, file);
 
-  const downloadURL = await getDownloadURL(storageRef);
+  // Upload video
+const videoRef = ref(storage, storagePath);
+await uploadBytes(videoRef, videoFile);
+const downloadURL = await getDownloadURL(videoRef);
+
+// Upload thumbnail
+const thumbnailRef = ref(storage, thumbnailPath);
+await uploadBytes(thumbnailRef, thumbnailFile);
+const thumbnailURL = await getDownloadURL(thumbnailRef);
+
 
   await addDoc(collection(db, "explanation_videos"), {
-    uid,
-    name,
-    subCategory,
-    downloadURL,
-    storagePath,
-    createdAt: serverTimestamp(),
-  });
+  uid,
+  name,
+  subCategory,
+  downloadURL,
+  thumbnail: thumbnailURL,
+  storagePath,
+  thumbnailPath,
+  createdAt: serverTimestamp(),
+});
 
-  return { uid, name, subCategory, downloadURL };
+
+  return { uid, name, subCategory, downloadURL, thumbnail: thumbnailURL };
 }
 
 // Assign explanation to a client
@@ -106,13 +125,7 @@ export async function assignExplanationToClient(
     assignedAt: serverTimestamp(),
   });
 }
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  deleteDoc,
-} from "firebase/firestore";
+
 
 export async function unassignExplanationFromClient(
   videoUid: string,
