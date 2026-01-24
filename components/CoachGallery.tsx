@@ -12,6 +12,7 @@ export default function CoachGallery() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+  const [thumbnail, setThumbnail] = useState<File | null>(null);
   const [title, setTitle] = useState("");
 
   async function loadVideos() {
@@ -26,7 +27,7 @@ export default function CoachGallery() {
   }, []);
 
   async function handleUpload() {
-    if (!file || !title) {
+    if (!file || !thumbnail || !title) {
       alert("Select a file and enter a title");
       return;
     }
@@ -34,9 +35,16 @@ export default function CoachGallery() {
     setUploading(true);
 
     try {
-      await uploadExplanationVideo(file, title, "general");
+      await uploadExplanationVideo(
+  file,
+  thumbnail,
+  title,
+  "general"
+);
+
       setFile(null);
       setTitle("");
+      setThumbnail(null);
       await loadVideos();
       alert("Upload successful");
     } catch (err) {
@@ -69,6 +77,14 @@ export default function CoachGallery() {
           accept="video/*"
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
         />
+<input
+  type="file"
+  accept="image/*"
+  onChange={(e) => setThumbnail(e.target.files?.[0] ?? null)}
+/>
+<p className="text-xs text-slate-500">
+  Thumbnail image (jpg / png)
+</p>
 
         <button
           onClick={handleUpload}
