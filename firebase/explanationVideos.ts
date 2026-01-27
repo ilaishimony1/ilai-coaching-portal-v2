@@ -45,31 +45,29 @@ export type ExplanationVideo = {
 export async function getExplanationVideos(): Promise<ExplanationVideo[]> {
   const db = syncService.getDb();
 
-  const snapshot = await getDocs(
-    collection(db, "explanation_videos")
-  );
+  try {
+    console.log("📡 Fetching explanation_videos...");
 
-  return snapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...(doc.data() as Omit<ExplanationVideo, "id">),
-  }));
+    const snapshot = await getDocs(
+      collection(db, "explanation_videos")
+    );
+
+    console.log("📦 Snapshot size:", snapshot.size);
+
+    snapshot.docs.forEach(doc => {
+      console.log("📄 DOC:", doc.id, doc.data());
+    });
+
+    return snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...(doc.data() as Omit<ExplanationVideo, "id">),
+    }));
+  } catch (err) {
+    console.error("❌ READ FAILED:", err);
+    throw err;
+  }
 }
 
-// Get assigned explanation VIDEO UIDs for a client
-export async function getAssignedExplanationUids(
-  clientId: string
-): Promise<string[]> {
-  const db = syncService.getDb();
-
-  const q = query(
-    collection(db, "explanation_assignments"),
-    where("clientId", "==", clientId)
-  );
-
-  const snapshot = await getDocs(q);
-
-  return snapshot.docs.map((doc) => doc.data().videoUid);
-}
 
 /* =========================
    WRITE
