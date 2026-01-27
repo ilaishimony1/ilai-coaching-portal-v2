@@ -163,9 +163,10 @@ if (activeFolder.cat === "explanation") {
 
 
 
-    /* ============================
-       SKILLS → UNCHANGED
-       ============================ */
+  /* ============================
+   SKILLS - UNCHANGED
+============================ */
+
     const folderVideos = videos.filter(
       v => v.category === activeFolder.cat && v.subCategory === activeFolder.sub
     );
