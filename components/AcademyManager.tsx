@@ -402,8 +402,7 @@ if (activeFolder.cat === "explanation") {
                   <Layers size={18} /> {isRearrangeMode ? 'DONE REARRANGING' : 'REARRANGE'}
                 </button>
 
-                <label className="cursor-pointer group">
-  <label className="cursor-pointer group">
+    <label className="cursor-pointer">
   <input 
     type="file" 
     accept="video/*" 
@@ -414,6 +413,7 @@ if (activeFolder.cat === "explanation") {
     <Plus size={18} /> {isUploading ? 'SYNCING...' : 'ADD VIDEO'}
   </div>
 </label>
+
 
               </div>
             </header>
