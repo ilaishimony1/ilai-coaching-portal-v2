@@ -134,14 +134,15 @@ const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     /* ============================
        EXPLANATIONS → FIRESTORE
        ============================ */
-   if (activeFolder.cat === "explanation") {
+ if (activeFolder.cat === "explanation") {
   await uploadExplanationVideo(
     file,
+    file, // temporary thumbnail
     file.name.split(".")[0].toUpperCase(),
     activeFolder.sub
   );
 
-  await loadExplanationVideos(); // ✅ THIS LINE
+  await loadExplanationVideos();
   setIsUploading(false);
   return;
 }
