@@ -3,6 +3,7 @@ import { Upload, X, Video, Search, Plus, Info, Zap, ChevronRight, Folder, ArrowL
 import { db, VideoFile } from '../db';
 import { ClientData } from '../types';
 import { uploadVideoToFirebase } from "../firebaseService";
+import { ExplanationVideo } from "../firebase/explanationVideos";
 import {
   uploadExplanationVideo,
   getExplanationVideos,
@@ -32,6 +33,7 @@ const AcademyManager: React.FC<Props> = ({ accentColor, clients, onToggleAssignm
   const [videos, setVideos] = useState<VideoFile[]>([]);
   const [explanationVideos, setExplanationVideos] = useState<ExplanationVideo[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [search, setSearch] = useState('');
   const [activeFolder, setActiveFolder] = useState<{cat: 'explanation' | 'skill', sub: string} | null>(null);
   const [draggedId, setDraggedId] = useState<number | null>(null);
@@ -84,7 +86,7 @@ const mappedExplanationVideos: VideoFile[] = explanationVideos.map((v) => ({
   uid: v.uid,                   // 🔥 REQUIRED for assignment
   name: v.name,
   url: v.downloadURL,
-  thumbnail: "",
+  thumbnail: v.thumbnailURL ?? "",
   category: "explanation",
   subCategory: v.subCategory,
   uploadDate: v.createdAt,
@@ -134,18 +136,26 @@ const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     /* ============================
        EXPLANATIONS → FIRESTORE
        ============================ */
- if (activeFolder.cat === "explanation") {
+if (activeFolder.cat === "explanation") {
+  if (!thumbnailFile) {
+    alert("Please select a thumbnail image");
+    setIsUploading(false);
+    return;
+  }
+
   await uploadExplanationVideo(
-    file,
-    file, // temporary thumbnail
+    file,                 // VIDEO
+    thumbnailFile,        // IMAGE
     file.name.split(".")[0].toUpperCase(),
     activeFolder.sub
   );
 
+  setThumbnailFile(null);
   await loadExplanationVideos();
   setIsUploading(false);
   return;
 }
+
 
 
 
@@ -393,6 +403,18 @@ const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
                 </button>
 
                 <label className="cursor-pointer group">
+                  <label className="cursor-pointer group">
+  <input
+    type="file"
+    accept="image/*"
+    className="hidden"
+    onChange={(e) => setThumbnailFile(e.target.files?.[0] ?? null)}
+  />
+  <div className="bg-slate-800 text-white px-8 py-4 rounded-2xl font-black text-xs tracking-widest uppercase flex items-center gap-3 shadow-xl">
+    ADD THUMBNAIL
+  </div>
+</label>
+
                   <input type="file" accept="video/*" className="hidden" onChange={handleFileUpload} />
                   <div className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-2xl font-black text-xs tracking-widest uppercase flex items-center gap-3 shadow-2xl transition-all active:scale-95">
                     <Plus size={18} /> {isUploading ? 'SYNCING...' : 'ADD VIDEO'}
@@ -409,56 +431,62 @@ const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
                 </div>
               )}
            {visibleVideos.map(video => (
-                <VideoManagementCard 
-               key={video.uid}
-                  video={video} 
-                  isRearrangeMode={isRearrangeMode}
-                  selectedClientId={selectedClientId}
-                  selectedClientName={selectedClient?.name.split(' ')[0]}
-                  isAssigned={assignedExplanationUids.includes(video.uid)}
-                  onToggleAssignment={async () => {
-  if (!selectedClientId) return;
+        <VideoManagementCard 
+  key={video.uid}
+  video={video} 
+  isRearrangeMode={isRearrangeMode}
+  selectedClientId={selectedClientId}
+  selectedClientName={selectedClient?.name.split(' ')[0]}
+  isAssigned={assignedExplanationUids.includes(video.uid)}
 
- if (activeFolder?.cat === "explanation") {
-  if (assignedExplanationUids.includes(video.uid)) {
-    await unassignExplanationFromClient(video.uid, selectedClientId);
-  } else {
-    await assignExplanationToClient(video.uid, selectedClientId);
-  }
+  onToggleAssignment={async () => {
+    if (!selectedClientId) return;
 
-  const updated = await getAssignedExplanationUids(selectedClientId);
-  setAssignedExplanationUids(updated);
-}
-else {
-    onToggleAssignment(selectedClientId, video.uid);
-  }
-}}
+    if (activeFolder?.cat === "explanation") {
+      if (assignedExplanationUids.includes(video.uid)) {
+        await unassignExplanationFromClient(video.uid, selectedClientId);
+      } else {
+        await assignExplanationToClient(video.uid, selectedClientId);
+      }
 
-onUpdate={(updates) => {
-  if (activeFolder?.cat === 'skill' && video.id) {
-    updateVideo(video.id, updates);
-  }
-}}
+      const updated = await getAssignedExplanationUids(selectedClientId);
+      setAssignedExplanationUids(updated);
+    } else {
+      onToggleAssignment(selectedClientId, video.uid);
+    }
+  }}
 
+  onDelete={() => {
+    if (activeFolder?.cat === "skill" && video.id) {
+      deleteVideo(video.id);
+    } else {
+      alert("Explanation videos must be deleted from Firebase (for now).");
+    }
+  }}
 
-onDragStart={() => {
-  if (activeFolder?.cat === "skill" && video.id) {
-    onDragStart(video.id)
-  }
-}}
+  onUpdate={(updates) => {
+    if (activeFolder?.cat === 'skill' && video.id) {
+      updateVideo(video.id, updates);
+    }
+  }}
 
-onDragOver={(e) => {
-  if (activeFolder?.cat === "skill" && video.id) {
-    onDragOver(e, video.id)
-  }
-}}
+  onDragStart={() => {
+    if (activeFolder?.cat === "skill" && video.id) {
+      onDragStart(video.id);
+    }
+  }}
 
-onDragEnd={() => {
-  if (activeFolder?.cat === "skill") {
-    onDragEnd()
-  }
-}}
+  onDragOver={(e) => {
+    if (activeFolder?.cat === "skill" && video.id) {
+      onDragOver(e, video.id);
+    }
+  }}
 
+  onDragEnd={() => {
+    if (activeFolder?.cat === "skill") {
+      onDragEnd();
+    }
+  }}
                 />
               ))}
             </div>
@@ -497,6 +525,11 @@ const VideoManagementCard: React.FC<{
 
 
 const handleThumbnailUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  if (video.category === "explanation") {
+    alert("Explanation thumbnails are managed in Firebase only.\nRe-upload the video with a new thumbnail.");
+    return;
+  }
+
   const file = e.target.files?.[0];
   if (!file) return;
 
@@ -506,6 +539,7 @@ const handleThumbnailUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
   };
   reader.readAsDataURL(file);
 };
+
 
   return (
     <div 

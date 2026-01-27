@@ -9,7 +9,6 @@ import {
 } from "firebase/firestore";
 
 import {
-  getStorage,
   ref,
   uploadBytes,
   getDownloadURL,
@@ -20,7 +19,7 @@ import { syncService } from "../firebaseService";
    TYPES
 ========================= */
 export type ExplanationVideo = {
-  id: string;
+  id?: string; // 👈 optional
   uid: string;
   name: string;
   downloadURL: string;
@@ -74,62 +73,51 @@ export async function getExplanationVideos(): Promise<ExplanationVideo[]> {
 ========================= */
 
 // Upload explanation video (coach)
- export async function uploadExplanationVideo(
+export async function uploadExplanationVideo(
   videoFile: File,
   thumbnailFile: File,
   name: string,
   subCategory: string
 ) {
-  if (!videoFile) throw new Error("Missing video file");
-  if (!thumbnailFile) throw new Error("Missing thumbnail file");
-  if (!name.trim()) throw new Error("Missing name");
-
   const db = syncService.getDb();
-  const storage = getStorage();
+  const storage = syncService.getStorage();
 
   const uid = `v-${Date.now()}`;
 
-  const videoPath = `videos/explanations/${uid}.mp4`;
-  const thumbnailPath = `videos/explanations/${uid}.jpg`;
-
-  // 🎥 Upload video
-  const videoRef = ref(storage, videoPath);
+  /* ======================
+     VIDEO UPLOAD
+  ====================== */
+  const videoRef = ref(storage, `videos/explanations/${uid}.mp4`);
   await uploadBytes(videoRef, videoFile);
   const downloadURL = await getDownloadURL(videoRef);
 
-  // 🖼 Upload thumbnail
-  const thumbnailRef = ref(storage, thumbnailPath);
-  await uploadBytes(thumbnailRef, thumbnailFile);
-  const thumbnailURL = await getDownloadURL(thumbnailRef);
+  /* ======================
+     THUMBNAIL UPLOAD (IMAGE ONLY)
+  ====================== */
+  if (!thumbnailFile.type.startsWith("image/")) {
+    throw new Error("Thumbnail must be an image file");
+  }
 
-  // 📄 Firestore document
+  const thumbRef = ref(storage, `videos/explanations/${uid}.jpg`);
+  await uploadBytes(thumbRef, thumbnailFile);
+  const thumbnailURL = await getDownloadURL(thumbRef);
+
+  /* ======================
+     FIRESTORE DOC
+  ====================== */
   await addDoc(collection(db, "explanation_videos"), {
     uid,
     name,
-   subCategory: subCategory ?? "general",
+    subCategory,
     downloadURL,
+    storagePath: videoRef.fullPath,
+    thumbnailPath: thumbRef.fullPath,
     thumbnailURL,
-    storagePath: videoPath,
-    thumbnailPath,
     createdAt: serverTimestamp(),
   });
-
-  console.log("UPLOAD PAYLOAD", {
-  name,
-  subCategory: subCategory ?? "general",
-  videoFile: videoFile.name,
-  thumbnailFile: thumbnailFile.name,
-});
-
- return {
-  uid,
-  name,
-  subCategory: subCategory ?? "general",
-  downloadURL,
-  thumbnailURL,
-};
-
 }
+
+  // 📄 Firestore 
 
 
 
@@ -166,7 +154,6 @@ export async function unassignExplanationFromClient(
     await deleteDoc(docSnap.ref);
   }
 }
-// Get assigned explanation video UIDs for a client
 export async function getAssignedExplanationUids(
   clientId: string
 ): Promise<string[]> {
@@ -178,6 +165,6 @@ export async function getAssignedExplanationUids(
   );
 
   const snapshot = await getDocs(q);
-
-  return snapshot.docs.map((doc) => doc.data().videoUid);
+  return snapshot.docs.map(d => d.data().videoUid);
 }
+
