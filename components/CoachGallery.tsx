@@ -14,13 +14,16 @@ export default function CoachGallery() {
   const [file, setFile] = useState<File | null>(null);
   const [thumbnail, setThumbnail] = useState<File | null>(null);
   const [title, setTitle] = useState("");
+async function loadVideos() {
+  setLoading(true);
+  const videos = await getExplanationVideos();
 
-  async function loadVideos() {
-    setLoading(true);
-    const videos = await getExplanationVideos();
-    setExplanationVideos(videos);
-    setLoading(false);
-  }
+  console.log("COACH GALLERY VIDEOS:", videos);
+
+  setExplanationVideos(videos);
+  setLoading(false);
+}
+
 
   useEffect(() => {
     loadVideos();
