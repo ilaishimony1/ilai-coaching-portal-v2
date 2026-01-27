@@ -24,12 +24,16 @@ export type ExplanationVideo = {
   uid: string;
   name: string;
   downloadURL: string;
-  thumbnail?: string;
-  storagePath?: string;
+
+  // 👇 ADD / CONFIRM THESE
+  thumbnailURL?: string;
   thumbnailPath?: string;
+
+  storagePath?: string;
   subCategory: string;
   createdAt?: any;
 };
+
 
 
 
@@ -74,31 +78,53 @@ export async function getAssignedExplanationUids(
 // Upload explanation video (coach)
  export async function uploadExplanationVideo(
   videoFile: File,
+  thumbnailFile: File,
   name: string,
   subCategory: string
 ) {
+  if (!videoFile) throw new Error("Missing video file");
+  if (!thumbnailFile) throw new Error("Missing thumbnail file");
+  if (!name.trim()) throw new Error("Missing name");
+
   const db = syncService.getDb();
   const storage = getStorage();
 
   const uid = `v-${Date.now()}`;
-  const storagePath = `videos/explanations/${uid}.mp4`;
 
-  const videoRef = ref(storage, storagePath);
+  const videoPath = `videos/explanations/${uid}.mp4`;
+  const thumbnailPath = `videos/explanations/${uid}.jpg`;
+
+  // 🎥 Upload video
+  const videoRef = ref(storage, videoPath);
   await uploadBytes(videoRef, videoFile);
-
   const downloadURL = await getDownloadURL(videoRef);
 
+  // 🖼 Upload thumbnail
+  const thumbnailRef = ref(storage, thumbnailPath);
+  await uploadBytes(thumbnailRef, thumbnailFile);
+  const thumbnailURL = await getDownloadURL(thumbnailRef);
+
+  // 📄 Firestore document
   await addDoc(collection(db, "explanation_videos"), {
     uid,
     name,
     subCategory,
     downloadURL,
-    storagePath,
+    thumbnailURL,
+    storagePath: videoPath,
+    thumbnailPath,
     createdAt: serverTimestamp(),
   });
 
-  return { uid, name, subCategory, downloadURL };
+  return {
+    uid,
+    name,
+    subCategory,
+    downloadURL,
+    thumbnailURL,
+  };
 }
+
 
 
 // Assign explanation to a client
