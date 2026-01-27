@@ -106,11 +106,20 @@ export default function CoachGallery() {
         {explanationVideos.map((video) => (
           <div key={video.id} className="space-y-2">
             <p className="font-semibold">{video.name}</p>
-            <video
-              src={video.downloadURL}
-              controls
-              className="w-full rounded-xl"
-            />
+           {video.thumbnailURL ? (
+  <img
+    src={video.thumbnailURL}
+    alt={video.name}
+    className="w-full aspect-video object-cover rounded-xl"
+  />
+) : (
+  <video
+    src={video.downloadURL}
+    controls
+    className="w-full rounded-xl"
+  />
+)}
+
           </div>
         ))}
       </div>
