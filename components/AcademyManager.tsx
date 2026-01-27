@@ -403,23 +403,18 @@ if (activeFolder.cat === "explanation") {
                 </button>
 
                 <label className="cursor-pointer group">
-                  <label className="cursor-pointer group">
-  <input
-    type="file"
-    accept="image/*"
-    className="hidden"
-    onChange={(e) => setThumbnailFile(e.target.files?.[0] ?? null)}
+  <label className="cursor-pointer group">
+  <input 
+    type="file" 
+    accept="video/*" 
+    className="hidden" 
+    onChange={handleFileUpload} 
   />
-  <div className="bg-slate-800 text-white px-8 py-4 rounded-2xl font-black text-xs tracking-widest uppercase flex items-center gap-3 shadow-xl">
-    ADD THUMBNAIL
+  <div className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-2xl font-black text-xs tracking-widest uppercase flex items-center gap-3 shadow-2xl transition-all active:scale-95">
+    <Plus size={18} /> {isUploading ? 'SYNCING...' : 'ADD VIDEO'}
   </div>
 </label>
 
-                  <input type="file" accept="video/*" className="hidden" onChange={handleFileUpload} />
-                  <div className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-2xl font-black text-xs tracking-widest uppercase flex items-center gap-3 shadow-2xl transition-all active:scale-95">
-                    <Plus size={18} /> {isUploading ? 'SYNCING...' : 'ADD VIDEO'}
-                  </div>
-                </label>
               </div>
             </header>
 
