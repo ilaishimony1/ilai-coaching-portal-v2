@@ -166,3 +166,18 @@ export async function unassignExplanationFromClient(
     await deleteDoc(docSnap.ref);
   }
 }
+// Get assigned explanation video UIDs for a client
+export async function getAssignedExplanationUids(
+  clientId: string
+): Promise<string[]> {
+  const db = syncService.getDb();
+
+  const q = query(
+    collection(db, "explanation_assignments"),
+    where("clientId", "==", clientId)
+  );
+
+  const snapshot = await getDocs(q);
+
+  return snapshot.docs.map((doc) => doc.data().videoUid);
+}
