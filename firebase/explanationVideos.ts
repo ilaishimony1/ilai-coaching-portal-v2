@@ -108,7 +108,7 @@ export async function getAssignedExplanationUids(
   await addDoc(collection(db, "explanation_videos"), {
     uid,
     name,
-    subCategory,
+   subCategory: subCategory ?? "general",
     downloadURL,
     thumbnailURL,
     storagePath: videoPath,
@@ -116,13 +116,21 @@ export async function getAssignedExplanationUids(
     createdAt: serverTimestamp(),
   });
 
-  return {
-    uid,
-    name,
-    subCategory,
-    downloadURL,
-    thumbnailURL,
-  };
+  console.log("UPLOAD PAYLOAD", {
+  name,
+  subCategory: subCategory ?? "general",
+  videoFile: videoFile.name,
+  thumbnailFile: thumbnailFile.name,
+});
+
+ return {
+  uid,
+  name,
+  subCategory: subCategory ?? "general",
+  downloadURL,
+  thumbnailURL,
+};
+
 }
 
 
