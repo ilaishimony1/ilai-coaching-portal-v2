@@ -168,3 +168,14 @@ export async function getAssignedExplanationUids(
   return snapshot.docs.map(d => d.data().videoUid);
 }
 
+export const uploadExplanationThumbnail = async (videoUid: string, file: File) => {
+  const storageRef = ref(storage, `explanation_thumbnails/${videoUid}`);
+  await uploadBytes(storageRef, file);
+  const downloadURL = await getDownloadURL(storageRef);
+
+  // Update Firestore
+  const videoDocRef = doc(db, "explanationVideos", videoUid);
+  await updateDoc(videoDocRef, { thumbnailURL: downloadURL });
+
+  return downloadURL;
+};

@@ -137,18 +137,22 @@ const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
        EXPLANATIONS → FIRESTORE
        ============================ */
 if (activeFolder.cat === "explanation") {
-  if (!thumbnailFile) {
-    alert("Please select a thumbnail image");
-    setIsUploading(false);
-    return;
-  }
+  // Use selected thumbnail if exists, otherwise use a default
+  const finalThumbnail = thumbnailFile ?? "/default-thumbnail.png"; // <-- make sure this file exists in your public folder
 
   await uploadExplanationVideo(
     file,                 // VIDEO
-    thumbnailFile,        // IMAGE
+    finalThumbnail,       // IMAGE
     file.name.split(".")[0].toUpperCase(),
     activeFolder.sub
   );
+
+  setThumbnailFile(null);
+  await loadExplanationVideos();
+  setIsUploading(false);
+  return;
+}
+
 
   setThumbnailFile(null);
   await loadExplanationVideos();
@@ -520,20 +524,30 @@ const VideoManagementCard: React.FC<{
 
 
 const handleThumbnailUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-  if (video.category === "explanation") {
-    alert("Explanation thumbnails are managed in Firebase only.\nRe-upload the video with a new thumbnail.");
-    return;
-  }
-
+const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
   const file = e.target.files?.[0];
   if (!file) return;
 
+  if (video.category === "explanation") {
+    try {
+      const newURL = await uploadExplanationThumbnail(video.uid, file);
+      onUpdate({ thumbnail: newURL });
+      alert("Thumbnail updated!");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to upload thumbnail.");
+    }
+    return;
+  }
+
+  // Existing behavior for skill videos
   const reader = new FileReader();
   reader.onloadend = () => {
     onUpdate({ thumbnail: reader.result as string });
   };
   reader.readAsDataURL(file);
 };
+
 
 
   return (
