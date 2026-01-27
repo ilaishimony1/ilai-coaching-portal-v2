@@ -133,12 +133,10 @@ const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
   setIsUploading(true);
 
   try {
-    /* ============================
-       EXPLANATIONS → FIRESTORE
-       ============================ */
+
 if (activeFolder.cat === "explanation") {
   // Use selected thumbnail if exists, otherwise use a default
-  const finalThumbnail = thumbnailFile ?? "/default-thumbnail.png"; // <-- make sure this file exists in your public folder
+  const finalThumbnail = thumbnailFile ?? "/default-thumbnail.png";
 
   await uploadExplanationVideo(
     file,                 // VIDEO
@@ -149,49 +147,37 @@ if (activeFolder.cat === "explanation") {
 
   setThumbnailFile(null);
   await loadExplanationVideos();
-  setIsUploading(false);
-  return;
+} else {
+  /* =========================
+     SKILLS - UNCHANGED
+  ========================== */
+  const folderVideos = videos.filter(
+    v => v.category === activeFolder.cat && v.subCategory === activeFolder.sub
+  );
+
+  const maxOrder =
+    folderVideos.length > 0
+      ? Math.max(...folderVideos.map(v => v.order))
+      : 0;
+
+  const videoId = `v-${Date.now()}`;
+
+  const videoUrl = await uploadVideoToFirebase(file, videoId);
+
+  const newVideo: VideoFile = {
+    uid: videoId,
+    name: file.name.split('.')[0].toUpperCase(),
+    url: videoUrl,
+    category: activeFolder.cat,
+    subCategory: activeFolder.sub,
+    uploadDate: new Date(),
+    order: maxOrder + 1
+  };
+
+  await db.videos.add(newVideo);
+  await loadVideos();
 }
 
-
-  setThumbnailFile(null);
-  await loadExplanationVideos();
-  setIsUploading(false);
-  return;
-}
-
-
-
-
-  /* ============================
-   SKILLS - UNCHANGED
-============================ */
-
-    const folderVideos = videos.filter(
-      v => v.category === activeFolder.cat && v.subCategory === activeFolder.sub
-    );
-
-    const maxOrder =
-      folderVideos.length > 0
-        ? Math.max(...folderVideos.map(v => v.order))
-        : 0;
-
-    const videoId = `v-${Date.now()}`;
-
-    const videoUrl = await uploadVideoToFirebase(file, videoId);
-
-    const newVideo: VideoFile = {
-      uid: videoId,
-      name: file.name.split('.')[0].toUpperCase(),
-      url: videoUrl,
-      category: activeFolder.cat,
-      subCategory: activeFolder.sub,
-      uploadDate: new Date(),
-      order: maxOrder + 1
-    };
-
-    await db.videos.add(newVideo);
-    await loadVideos();
 
   } catch (err) {
     console.error("UPLOAD ERROR:", err);
@@ -523,8 +509,6 @@ const VideoManagementCard: React.FC<{
     setTempName("");
   };
 
-
-const handleThumbnailUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
 const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
   const file = e.target.files?.[0];
   if (!file) return;
@@ -548,6 +532,7 @@ const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => 
   };
   reader.readAsDataURL(file);
 };
+
 
 
 
