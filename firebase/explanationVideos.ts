@@ -88,46 +88,45 @@ export async function uploadExplanationVideo(
   subCategory: string
 ) {
   const db = syncService.getDb();
-  
-
   const uid = `v-${Date.now()}`;
 
-  /* ======================
-     VIDEO UPLOAD
-  ====================== */
+  console.log("▶️ START upload", uid);
+
+  /* VIDEO */
+  console.log("⬆️ Uploading video...");
   const videoRef = ref(storage, `videos/explanations/${uid}.mp4`);
   await uploadBytes(videoRef, videoFile);
-  const downloadURL = await getDownloadURL(videoRef);
+  console.log("✅ Video uploaded");
 
-  /* ======================
-     THUMBNAIL UPLOAD (IMAGE ONLY)
-  ====================== */
+  const downloadURL = await getDownloadURL(videoRef);
+  console.log("🔗 Video URL:", downloadURL);
+
+  /* THUMBNAIL */
+  console.log("⬆️ Uploading thumbnail...");
   if (!thumbnailFile.type.startsWith("image/")) {
     throw new Error("Thumbnail must be an image file");
   }
 
   const thumbRef = ref(storage, `videos/explanations/${uid}.jpg`);
   await uploadBytes(thumbRef, thumbnailFile);
-  const thumbnailURL = await getDownloadURL(thumbRef);
+  console.log("✅ Thumbnail uploaded");
 
-  /* ======================
-     FIRESTORE DOC
-  ====================== */
+  const thumbnailURL = await getDownloadURL(thumbRef);
+  console.log("🔗 Thumbnail URL:", thumbnailURL);
+
+  /* FIRESTORE */
+  console.log("📝 Writing Firestore doc...");
   await addDoc(collection(db, "explanation_videos"), {
     uid,
     name,
     subCategory,
     downloadURL,
-    storagePath: videoRef.fullPath,
-    thumbnailPath: thumbRef.fullPath,
     thumbnailURL,
     createdAt: serverTimestamp(),
   });
+
+  console.log("🎉 DONE");
 }
-
-  // 📄 Firestore 
-
-
 
 // Assign explanation to a client
 export async function assignExplanationToClient(
