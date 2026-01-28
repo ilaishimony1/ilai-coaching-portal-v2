@@ -8,7 +8,9 @@ import {
   serverTimestamp,
   doc,
   updateDoc,
+  setDoc,
 } from "firebase/firestore";
+
 import { syncService } from "../firebaseService";
 
 
@@ -93,30 +95,23 @@ export async function uploadExplanationVideo(
   console.log("▶️ START upload", uid);
 
   /* VIDEO */
-  console.log("⬆️ Uploading video...");
   const videoRef = ref(storage, `videos/explanations/${uid}.mp4`);
   await uploadBytes(videoRef, videoFile);
-  console.log("✅ Video uploaded");
-
   const downloadURL = await getDownloadURL(videoRef);
-  console.log("🔗 Video URL:", downloadURL);
 
   /* THUMBNAIL */
-  console.log("⬆️ Uploading thumbnail...");
   if (!thumbnailFile.type.startsWith("image/")) {
     throw new Error("Thumbnail must be an image file");
   }
 
   const thumbRef = ref(storage, `videos/explanations/${uid}.jpg`);
   await uploadBytes(thumbRef, thumbnailFile);
-  console.log("✅ Thumbnail uploaded");
-
   const thumbnailURL = await getDownloadURL(thumbRef);
-  console.log("🔗 Thumbnail URL:", thumbnailURL);
 
-  /* FIRESTORE */
-  console.log("📝 Writing Firestore doc...");
-  await addDoc(collection(db, "explanation_videos"), {
+  /* FIRESTORE (FIXED ID) */
+  const videoDocRef = doc(db, "explanation_videos", uid);
+
+  await setDoc(videoDocRef, {
     uid,
     name,
     subCategory,
@@ -126,6 +121,7 @@ export async function uploadExplanationVideo(
   });
 
   console.log("🎉 DONE");
+  return { success: true };
 }
 
 // Assign explanation to a client
