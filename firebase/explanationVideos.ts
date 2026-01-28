@@ -6,14 +6,22 @@ import {
   where,
   deleteDoc,
   serverTimestamp,
+  doc,
+  updateDoc,
 } from "firebase/firestore";
+import { syncService } from "../firebaseService";
+
 
 import {
+  getStorage,
   ref,
   uploadBytes,
   getDownloadURL,
 } from "firebase/storage";
-import { syncService } from "../firebaseService";
+import { getApp } from "firebase/app";
+
+const storage = getStorage(getApp());
+
 
 /* =========================
    TYPES
@@ -80,7 +88,7 @@ export async function uploadExplanationVideo(
   subCategory: string
 ) {
   const db = syncService.getDb();
-  const storage = syncService.getStorage();
+  
 
   const uid = `v-${Date.now()}`;
 
@@ -168,13 +176,17 @@ export async function getAssignedExplanationUids(
   return snapshot.docs.map(d => d.data().videoUid);
 }
 
-export const uploadExplanationThumbnail = async (videoUid: string, file: File) => {
+export const uploadExplanationThumbnail = async (
+  videoUid: string,
+  file: File
+) => {
+  const db = syncService.getDb(); // 👈 REQUIRED
+
   const storageRef = ref(storage, `explanation_thumbnails/${videoUid}`);
   await uploadBytes(storageRef, file);
   const downloadURL = await getDownloadURL(storageRef);
 
-  // Update Firestore
-  const videoDocRef = doc(db, "explanationVideos", videoUid);
+  const videoDocRef = doc(db, "explanation_videos", videoUid); // 👈 FIXED NAME
   await updateDoc(videoDocRef, { thumbnailURL: downloadURL });
 
   return downloadURL;
