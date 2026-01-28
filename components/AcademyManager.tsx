@@ -6,6 +6,7 @@ import { uploadVideoToFirebase } from "../firebaseService";
 import { ExplanationVideo } from "../firebase/explanationVideos";
 import {
   uploadExplanationVideo,
+  uploadExplanationThumbnail,
   getExplanationVideos,
   assignExplanationToClient,
   unassignExplanationFromClient,
@@ -136,7 +137,18 @@ const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
 
 if (activeFolder.cat === "explanation") {
   // Use selected thumbnail if exists, otherwise use a default
-  const finalThumbnail = thumbnailFile ?? "/default-thumbnail.png";
+  if (!thumbnailFile) {
+  alert("Please select a thumbnail image first.");
+setIsUploading(false);
+if (e?.target) {
+  e.target.value = "";
+}
+
+  return;
+}
+
+const finalThumbnail = thumbnailFile;
+
 
   await uploadExplanationVideo(
     file,                 // VIDEO
@@ -392,18 +404,35 @@ if (activeFolder.cat === "explanation") {
                 >
                   <Layers size={18} /> {isRearrangeMode ? 'DONE REARRANGING' : 'REARRANGE'}
                 </button>
+<div className="flex items-center gap-4">
+  {/* Thumbnail picker */}
+  <label className="cursor-pointer">
+    <input
+      type="file"
+      accept="image/*"
+      className="hidden"
+      onChange={(e) => setThumbnailFile(e.target.files?.[0] ?? null)}
+    />
+    <div className="bg-slate-800 text-white px-6 py-4 rounded-2xl font-black text-xs tracking-widest uppercase flex items-center gap-3 shadow-xl hover:bg-slate-700">
+      <ImageIcon size={18} /> THUMBNAIL
+    </div>
+  </label>
 
-    <label className="cursor-pointer">
-  <input 
-    type="file" 
-    accept="video/*" 
-    className="hidden" 
-    onChange={handleFileUpload} 
-  />
-  <div className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-2xl font-black text-xs tracking-widest uppercase flex items-center gap-3 shadow-2xl transition-all active:scale-95">
-    <Plus size={18} /> {isUploading ? 'SYNCING...' : 'ADD VIDEO'}
-  </div>
-</label>
+  {/* Video picker */}
+  <label className="cursor-pointer">
+    <input
+      type="file"
+      accept="video/*"
+      className="hidden"
+      onChange={handleFileUpload}
+      
+    />
+    <div className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-2xl font-black text-xs tracking-widest uppercase flex items-center gap-3 shadow-2xl transition-all active:scale-95">
+      <Plus size={18} /> {isUploading ? 'SYNCING...' : 'ADD VIDEO'}
+    </div>
+  </label>
+</div>
+
 
 
               </div>
