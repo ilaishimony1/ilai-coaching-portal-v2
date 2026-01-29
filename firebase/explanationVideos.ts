@@ -67,10 +67,23 @@ export async function getExplanationVideos(): Promise<ExplanationVideo[]> {
       console.log("📄 DOC:", doc.id, doc.data());
     });
 
-    return snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...(doc.data() as Omit<ExplanationVideo, "id">),
-    }));
+ return snapshot.docs.map((doc) => {
+  const data = doc.data() as ExplanationVideo;
+
+  return {
+    id: doc.id,
+    uid: data.uid,
+    name: data.name,
+    downloadURL: data.downloadURL,
+
+    // 🔥 THIS IS THE FIX
+    thumbnail: data.thumbnailURL || null,
+
+    subCategory: data.subCategory,
+    createdAt: data.createdAt,
+  };
+});
+
   } catch (err) {
     console.error("❌ READ FAILED:", err);
     throw err;
