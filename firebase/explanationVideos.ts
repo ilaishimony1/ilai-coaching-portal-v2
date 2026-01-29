@@ -18,8 +18,10 @@ import {
   getStorage,
   ref,
   uploadBytes,
+  uploadBytesResumable,
   getDownloadURL,
 } from "firebase/storage";
+
 import { getApp } from "firebase/app";
 
 const storage = getStorage(getApp());
@@ -108,9 +110,20 @@ export async function uploadExplanationVideo(
   console.log("▶️ START upload", uid);
 
   /* VIDEO */
-  const videoRef = ref(storage, `videos/explanations/${uid}.mp4`);
-  await uploadBytes(videoRef, videoFile);
-  const downloadURL = await getDownloadURL(videoRef);
+const videoRef = ref(storage, `videos/explanations/${uid}.mp4`);
+
+await new Promise<void>((resolve, reject) => {
+  const uploadTask = uploadBytesResumable(videoRef, videoFile);
+
+  uploadTask.on(
+    "state_changed",
+    null,
+    (error) => reject(error),
+    () => resolve()
+  );
+});
+
+const downloadURL = await getDownloadURL(videoRef);
 
   /* THUMBNAIL */
   if (!thumbnailFile.type.startsWith("image/")) {
