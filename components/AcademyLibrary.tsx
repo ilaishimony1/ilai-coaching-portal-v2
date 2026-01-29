@@ -186,10 +186,13 @@ const LibraryVideoCard: React.FC<{
   return (
     <div className="rounded-3xl overflow-hidden border border-slate-800 bg-slate-900">
       <div className="aspect-video bg-black relative">
-      <img
+  <img
   src={video.thumbnail || "/video-placeholder.jpg"}
   alt={video.name}
+  loading="eager"
+  decoding="async"
   className="w-full h-full object-cover cursor-pointer"
+  style={{ display: "block" }}
   onClick={onPlay}
 />
 
