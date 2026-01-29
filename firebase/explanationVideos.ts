@@ -77,7 +77,7 @@ export async function getExplanationVideos(): Promise<ExplanationVideo[]> {
     downloadURL: data.downloadURL,
 
     // 🔥 THIS IS THE FIX
-    thumbnail: data.thumbnailURL || null,
+    thumbnailURL: data.thumbnailURL || null,
 
     subCategory: data.subCategory,
     createdAt: data.createdAt,

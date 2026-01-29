@@ -59,7 +59,7 @@ useEffect(() => {
       uid: v.uid,
       name: v.name,
       url: v.downloadURL,
-      thumbnail: v.thumbnail || "/video-placeholder.jpg",
+      thumbnail: v.thumbnailURL || "/video-placeholder.jpg",
       category: "explanation",
       subCategory: v.subCategory,
       uploadDate: v.createdAt,

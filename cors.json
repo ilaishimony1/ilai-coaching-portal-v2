@@ -3,10 +3,10 @@
     "origin": [
       "http://localhost:5173",
       "http://localhost:3000",
-      "https://ilai-coaching-portal-v2-libasblqz-ilaishimony1s-projects.vercel.app",
-      "https://ilai-coaching-portal-v2.vercel.app"
+      "https://ilai-coaching-portal-v2.vercel.app",
+      "https://ilai-coaching-portal-v2-libasblqz-ilaishimony1s-projects.vercel.app"
     ],
-    "method": ["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS"]
+    "method": ["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS"],
     "responseHeader": ["Content-Type", "Authorization"],
     "maxAgeSeconds": 3600
   }
