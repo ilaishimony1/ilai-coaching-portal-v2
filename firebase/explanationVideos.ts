@@ -22,6 +22,7 @@ import {
   getDownloadURL,
 } from "firebase/storage";
 
+
 import { getApp } from "firebase/app";
 
 const storage = getStorage(getApp());
@@ -112,16 +113,32 @@ export async function uploadExplanationVideo(
   /* VIDEO */
 const videoRef = ref(storage, `videos/explanations/${uid}.mp4`);
 
-await new Promise<void>((resolve, reject) => {
-  const uploadTask = uploadBytesResumable(videoRef, videoFile);
+const UPLOAD_TIMEOUT = 2 * 60 * 1000; // 2 minutes
 
-  uploadTask.on(
-    "state_changed",
-    null,
-    (error) => reject(error),
-    () => resolve()
-  );
+await Promise.race([
+  new Promise<void>((resolve, reject) => {
+ const uploadTask = uploadBytesResumable(videoRef, videoFile, {
+  contentType: videoFile.type,
 });
+
+
+
+    uploadTask.on(
+      "state_changed",
+      (snapshot) => {
+        const progress =
+          (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        console.log(`📤 Upload ${progress.toFixed(1)}%`);
+      },
+      (error) => reject(error),
+      () => resolve()
+    );
+  }),
+  new Promise((_, reject) =>
+    setTimeout(() => reject(new Error("Upload timed out")), UPLOAD_TIMEOUT)
+  ),
+]);
+
 
 const downloadURL = await getDownloadURL(videoRef);
 
@@ -131,7 +148,10 @@ const downloadURL = await getDownloadURL(videoRef);
   }
 
   const thumbRef = ref(storage, `videos/explanations/${uid}.jpg`);
-  await uploadBytes(thumbRef, thumbnailFile);
+  await uploadBytes(thumbRef, thumbnailFile, {
+  contentType: thumbnailFile.type,
+});
+
   const thumbnailURL = await getDownloadURL(thumbRef);
 
   /* FIRESTORE (FIXED ID) */
@@ -204,7 +224,9 @@ export const uploadExplanationThumbnail = async (
   const db = syncService.getDb(); // 👈 REQUIRED
 
   const storageRef = ref(storage, `explanation_thumbnails/${videoUid}`);
-  await uploadBytes(storageRef, file);
+  await uploadBytes(storageRef, file, {
+  contentType: file.type,
+});
   const downloadURL = await getDownloadURL(storageRef);
 
   const videoDocRef = doc(db, "explanation_videos", videoUid); // 👈 FIXED NAME
