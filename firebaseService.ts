@@ -29,7 +29,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyCK3MMANVameEK39oKGONkgjpqHyTIC0OM",
   authDomain: "ilai-portal.firebaseapp.com",
   projectId: "ilai-portal",
-  storageBucket: "ilai-portal.appspot.com",
+  storageBucket: "ilai-portal.firebasestorage.app",
   messagingSenderId: "1065589317308",
   appId: "1:1065589317308:web:f8014a9558afd429b6bab9",
   measurementId: "G-6T4QLBZ5FL"
