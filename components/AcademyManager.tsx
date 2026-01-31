@@ -48,7 +48,7 @@ const [assignedExplanationUids, setAssignedExplanationUids] = useState<string[]>
 
 
 const loadVideos = async () => {
-  // 1️⃣ Load Dexie videos as before
+  // 1️⃣ Load Dexie videos
   const localVideos = await db.videos.toArray();
   const normalizedLocal = localVideos.map(v => ({
     ...v,
@@ -57,34 +57,36 @@ const loadVideos = async () => {
     order: v.order ?? 0
   }));
 
-  // 2️⃣ Load videos from Firebase Storage
+  // 2️⃣ Load ALL videos from Firebase academy folder
   const storage = getStorage();
-  const storageRef = ref(storage, 'academy'); // 🔥 change 'skills' → 'academy'
+  const storageRef = ref(storage, "academy");
   const listResult = await listAll(storageRef);
 
-  // Convert Storage files to same shape as VideoFile
   const firebaseVideos: VideoFile[] = await Promise.all(
     listResult.items.map(async itemRef => {
       const url = await getDownloadURL(itemRef);
-      const name = itemRef.name.split('.')[0].toUpperCase();
+      const name = itemRef.name.split(".")[0].toUpperCase();
 
       return {
-        uid: itemRef.fullPath,     // use full path as unique id
+        uid: itemRef.fullPath,
         name,
         url,
         category: "skill",
-        subCategory: "General",    // optionally categorize by folder if you want
+        subCategory: "General",
         uploadDate: new Date(),
         order: 0
       };
     })
   );
 
-  // 3️⃣ Merge Dexie + Firebase
-  setVideos([...normalizedLocal, ...firebaseVideos]);
+  // 3️⃣ Merge Dexie + Firebase, dedupe by uid
+  const merged = [
+    ...normalizedLocal.filter(v => !firebaseVideos.some(f => f.uid === v.uid)),
+    ...firebaseVideos
+  ];
+
+  setVideos(merged);
 };
-
-
 
 const loadExplanationVideos = async () => {
  const vids = await getExplanationVideos();
