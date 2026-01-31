@@ -48,30 +48,11 @@ const [assignedExplanationUids, setAssignedExplanationUids] = useState<string[]>
 
 
 const loadVideos = async () => {
-  const storage = getStorage();
-  const storageRef = ref(storage, "academy"); // make sure path matches your Firebase folder
-  const listResult = await listAll(storageRef);
-
-  const firebaseVideos: VideoFile[] = await Promise.all(
-    listResult.items.map(async itemRef => {
-      const url = await getDownloadURL(itemRef);
-      const name = itemRef.name.split(".")[0].toUpperCase();
-
-      return {
-        uid: itemRef.fullPath,
-        name,
-        url,
-        category: "skill",       // Skill videos
-        subCategory: "Flexibility & Mobility", // default folder so videos appear
-        uploadDate: new Date(),
-        order: 0
-      };
-    })
-  );
-
-  // Directly set videos from Firebase, ignore Dexie
-  setVideos(firebaseVideos);
+  // Load all skill videos from your Dexie DB (not hardcoded)
+  const allVideos = await db.videos.toArray();
+  setVideos(allVideos);
 };
+
 
 
 const loadExplanationVideos = async () => {
