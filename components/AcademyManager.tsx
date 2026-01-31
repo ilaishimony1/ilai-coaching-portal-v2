@@ -44,11 +44,20 @@ const [assignedExplanationUids, setAssignedExplanationUids] = useState<string[]>
 
 
 
-
 const loadVideos = async () => {
-  const all = await db.videos.orderBy('order').toArray();
-  setVideos(all);
+  const all = await db.videos.toArray(); // get all videos
+
+  // Normalize missing category/subCategory/order
+  const normalized = all.map(v => ({
+    ...v,
+    category: v.category ?? "skill",        // default to skill if missing
+    subCategory: v.subCategory ?? "General", // default subcategory
+    order: v.order ?? 0                     // default order if missing
+  }));
+
+  setVideos(normalized);
 };
+
 
 const loadExplanationVideos = async () => {
  const vids = await getExplanationVideos();
