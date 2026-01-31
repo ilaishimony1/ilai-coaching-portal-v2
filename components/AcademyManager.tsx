@@ -73,7 +73,6 @@ const loadVideos = async () => {
   setVideos(firebaseVideos);
 };
 
-};
 
 const loadExplanationVideos = async () => {
  const vids = await getExplanationVideos();
