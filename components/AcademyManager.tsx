@@ -59,7 +59,7 @@ const loadVideos = async () => {
 
   // 2️⃣ Load videos from Firebase Storage
   const storage = getStorage();
-  const storageRef = ref(storage, 'skills'); // assumes your videos sit under /skills/
+  const storageRef = ref(storage, 'academy'); // 🔥 change 'skills' → 'academy'
   const listResult = await listAll(storageRef);
 
   // Convert Storage files to same shape as VideoFile
