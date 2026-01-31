@@ -1,5 +1,5 @@
 
-"use client";
+
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import TestFirebaseEngine from "./components/TestFirebaseEngine";
 import React, { useState, useRef, useMemo, useEffect } from 'react';
@@ -59,6 +59,26 @@ const MainApp: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('ADMIN');
   const [currentClientData, setCurrentClientData] = useState<ClientData | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const NavButtons = (
+  <>
+    {authStatus.type === 'CLIENT' ? (
+      <>
+        <NavBtn active={viewMode === 'CLIENT'} onClick={() => setViewMode('CLIENT')} icon={<User />} color={landingConfig.accentColor} />
+        <NavBtn active={viewMode === 'ACADEMY'} onClick={() => setViewMode('ACADEMY')} icon={<BookOpen />} color={landingConfig.accentColor} />
+        <NavBtn active={viewMode === 'CHAT'} onClick={() => setViewMode('CHAT')} icon={<MessageCircle />} color={landingConfig.accentColor} />
+      </>
+    ) : (
+      <>
+        <NavBtn active={viewMode === 'ADMIN'} onClick={() => setViewMode('ADMIN')} icon={<Home />} color={landingConfig.accentColor} />
+        <NavBtn active={viewMode === 'ACADEMY'} onClick={() => setViewMode('ACADEMY')} icon={<Video />} color={landingConfig.accentColor} />
+        <NavBtn active={viewMode === 'SAVED_PROGRAMS'} onClick={() => setViewMode('SAVED_PROGRAMS')} icon={<Library />} color={landingConfig.accentColor} />
+        <NavBtn active={viewMode === 'ARCHIVE'} onClick={() => setViewMode('ARCHIVE')} icon={<Archive />} color={landingConfig.accentColor} />
+        <NavBtn active={viewMode === 'LANDING_EDITOR'} onClick={() => setViewMode('LANDING_EDITOR')} icon={<Palette />} color={landingConfig.accentColor} />
+      </>
+    )}
+  </>
+);
+
   // ⛔ Prevent app from rendering before Firebase is ready
 if (cloudSync === 'loading') {
   return (
@@ -268,6 +288,7 @@ const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
   };
 
   const isWeekend = useMemo(() => {
+    
   const day = new Date().getDay();
   return [5, 6, 0].includes(day);
 }, []);
@@ -298,27 +319,40 @@ const resolvedClientAvatar =
           )}
         </button>
 
-        <div className="flex-1 space-y-8 flex flex-col items-center">
-          {authStatus.type === 'CLIENT' ? (
-            <>
-              <NavBtn active={viewMode === 'CLIENT'} onClick={() => setViewMode('CLIENT')} icon={<User />} color={landingConfig.accentColor} />
-              <NavBtn active={viewMode === 'ACADEMY'} onClick={() => setViewMode('ACADEMY')} icon={<BookOpen />} color={landingConfig.accentColor} />
-              <NavBtn active={viewMode === 'CHAT'} onClick={() => setViewMode('CHAT')} icon={<MessageCircle />} color={landingConfig.accentColor} />
-            </>
-          ) : (
-            <>
-              <NavBtn active={viewMode === 'ADMIN'} onClick={() => setViewMode('ADMIN')} icon={<Home />} color={landingConfig.accentColor} />
-              <NavBtn active={viewMode === 'ACADEMY'} onClick={() => setViewMode('ACADEMY')} icon={<Video />} color={landingConfig.accentColor} />
-              <NavBtn active={viewMode === 'SAVED_PROGRAMS'} onClick={() => setViewMode('SAVED_PROGRAMS')} icon={<Library />} color={landingConfig.accentColor} />
-              <NavBtn active={viewMode === 'ARCHIVE'} onClick={() => setViewMode('ARCHIVE')} icon={<Archive />} color={landingConfig.accentColor} />
-              <NavBtn active={viewMode === 'LANDING_EDITOR'} onClick={() => setViewMode('LANDING_EDITOR')} icon={<Palette />} color={landingConfig.accentColor} />
-            </>
-          )}
-        </div>
+   <div className="flex-1 space-y-8 flex flex-col items-center">
+  {NavButtons}
+</div>
+
         <button onClick={() => setAuthStatus({ type: 'NONE' })} className="mt-auto p-4 text-slate-700 hover:text-red-500 transition-colors">
           <LogOut size={24} />
         </button>
       </nav>
+{/* 📱 Mobile Top Navigation */}
+<nav className="md:hidden sticky top-0 z-50 bg-[#010409]/90 backdrop-blur-xl border-b border-slate-900">
+  <div className="flex items-center justify-between px-4 py-3">
+    <button
+      onClick={() => setViewMode(authStatus.type === 'COACH' ? 'ADMIN' : 'CLIENT')}
+      className="w-10 h-10 rounded-xl overflow-hidden bg-slate-800"
+    >
+      {landingConfig.coachAvatar ? (
+        <img src={landingConfig.coachAvatar} className="w-full h-full object-cover" />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center text-xs font-bold">IS</div>
+      )}
+    </button>
+
+   <div className="flex gap-2 overflow-x-auto no-scrollbar">
+  {NavButtons}
+</div>
+
+    <button
+      onClick={() => setAuthStatus({ type: 'NONE' })}
+      className="text-slate-500"
+    >
+      <LogOut size={20} />
+    </button>
+  </div>
+</nav>
 
       <main className="flex-1 overflow-y-auto p-4 md:p-12 pb-24 md:pb-12 no-scrollbar">
         <div className="max-w-6xl mx-auto">
@@ -452,7 +486,7 @@ const resolvedClientAvatar =
 const NavBtn = ({ active, icon, onClick, color }: any) => (
   <button 
     onClick={onClick} 
-    className={`p-4 rounded-2xl transition-all duration-300 ${active ? 'text-white shadow-lg' : 'text-slate-700 hover:text-white'}`} 
+    className={`p-3 md:p-4 rounded-2xl transition-all duration-300 ${active ? 'text-white shadow-lg' : 'text-slate-700 hover:text-white'}`}
     style={active ? {backgroundColor: color, boxShadow: `0 10px 30px -10px ${color}`} : {}}
   >
     {icon}
