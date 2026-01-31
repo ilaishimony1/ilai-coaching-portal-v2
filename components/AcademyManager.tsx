@@ -48,10 +48,39 @@ const [assignedExplanationUids, setAssignedExplanationUids] = useState<string[]>
 
 
 const loadVideos = async () => {
-  // Load all skill videos from your Dexie DB (not hardcoded)
-  const allVideos = await db.videos.toArray();
-  setVideos(allVideos);
+  const allDexieVideos = await db.videos.toArray(); // load all local Dexie videos
+  const storage = getStorage();
+  const storageRef = ref(storage, "academy");
+  const listResult = await listAll(storageRef);
+
+  const firebaseVideos: VideoFile[] = await Promise.all(
+    listResult.items.map(async itemRef => {
+      // Skip if already in Dexie
+      if (allDexieVideos.some(v => v.uid === itemRef.fullPath)) {
+        return null;
+      }
+
+      const url = await getDownloadURL(itemRef);
+      const name = itemRef.name.split(".")[0].toUpperCase();
+
+      return {
+        uid: itemRef.fullPath,
+        name,
+        url,
+        category: "skill",
+        subCategory: "Flexibility & Mobility", // we can leave a default for old ones
+        uploadDate: new Date(),
+        order: 0
+      };
+    })
+  );
+
+  // Combine Dexie videos + new Firebase videos
+  const combinedVideos = [...allDexieVideos, ...firebaseVideos.filter(Boolean) as VideoFile[]];
+
+  setVideos(combinedVideos);
 };
+
 
 
 
