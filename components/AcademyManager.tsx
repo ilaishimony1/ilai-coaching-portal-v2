@@ -4,6 +4,8 @@ import { db, VideoFile } from '../db';
 import { ClientData } from '../types';
 import { uploadVideoToFirebase } from "../firebaseService";
 import { ExplanationVideo } from "../firebase/explanationVideos";
+import { getStorage, ref, listAll, getDownloadURL } from "firebase/storage";
+
 import {
   uploadExplanationVideo,
   uploadExplanationThumbnail,
@@ -12,6 +14,7 @@ import {
   unassignExplanationFromClient,
   getAssignedExplanationUids,
 } from "../firebase/explanationVideos";
+
 
 
 
@@ -45,18 +48,42 @@ const [assignedExplanationUids, setAssignedExplanationUids] = useState<string[]>
 
 
 const loadVideos = async () => {
-  const all = await db.videos.toArray(); // get all videos
-
-  // Normalize missing category/subCategory/order
-  const normalized = all.map(v => ({
+  // 1️⃣ Load Dexie videos as before
+  const localVideos = await db.videos.toArray();
+  const normalizedLocal = localVideos.map(v => ({
     ...v,
-    category: v.category ?? "skill",        // default to skill if missing
-    subCategory: v.subCategory ?? "General", // default subcategory
-    order: v.order ?? 0                     // default order if missing
+    category: v.category ?? "skill",
+    subCategory: v.subCategory ?? "General",
+    order: v.order ?? 0
   }));
 
-  setVideos(normalized);
+  // 2️⃣ Load videos from Firebase Storage
+  const storage = getStorage();
+  const storageRef = ref(storage, 'skills'); // assumes your videos sit under /skills/
+  const listResult = await listAll(storageRef);
+
+  // Convert Storage files to same shape as VideoFile
+  const firebaseVideos: VideoFile[] = await Promise.all(
+    listResult.items.map(async itemRef => {
+      const url = await getDownloadURL(itemRef);
+      const name = itemRef.name.split('.')[0].toUpperCase();
+
+      return {
+        uid: itemRef.fullPath,     // use full path as unique id
+        name,
+        url,
+        category: "skill",
+        subCategory: "General",    // optionally categorize by folder if you want
+        uploadDate: new Date(),
+        order: 0
+      };
+    })
+  );
+
+  // 3️⃣ Merge Dexie + Firebase
+  setVideos([...normalizedLocal, ...firebaseVideos]);
 };
+
 
 
 const loadExplanationVideos = async () => {
