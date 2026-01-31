@@ -62,7 +62,7 @@ const loadVideos = async () => {
         name,
         url,
         category: "skill",       // Skill videos
-        subCategory: "General",  // Update if you have real subcategories
+        subCategory: "Flexibility & Mobility", // default folder so videos appear
         uploadDate: new Date(),
         order: 0
       };
