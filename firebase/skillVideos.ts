@@ -11,7 +11,8 @@ import {
   orderBy,
 } from "firebase/firestore";
 
-import { syncService } from "../firebaseSyncService";
+import { syncService } from "../firebaseService";
+
 
 // 🔥 Get Firestore instance from the singleton
 const db = syncService.getDb();
