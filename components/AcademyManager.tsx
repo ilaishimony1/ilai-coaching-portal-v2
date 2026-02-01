@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Upload, X, Video, Search, Plus, Info, Zap, ChevronRight, Folder, ArrowLeft, Edit3, Image as ImageIcon, Play, Pause, GripVertical, Layers, Check, Users, UserCheck, Smartphone, Link2Off } from 'lucide-react';
-import { db, VideoFile } from '../db';
+import {
+  getSkillVideos,
+  createSkillVideo,
+  SkillVideo
+} from "../firebase/skillVideos";
+
 import { ClientData } from '../types';
 import { uploadVideoToFirebase } from "../firebaseService";
 import { ExplanationVideo } from "../firebase/explanationVideos";
@@ -40,49 +45,28 @@ const AcademyManager: React.FC<Props> = ({ accentColor, clients, onToggleAssignm
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [search, setSearch] = useState('');
   const [activeFolder, setActiveFolder] = useState<{cat: 'explanation' | 'skill', sub: string} | null>(null);
-  const [draggedId, setDraggedId] = useState<number | null>(null);
   const [isRearrangeMode, setIsRearrangeMode] = useState(false);
+  const [draggedId, setDraggedId] = useState<number | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
 const [assignedExplanationUids, setAssignedExplanationUids] = useState<string[]>([]);
 
 
-
 const loadVideos = async () => {
-  const allDexieVideos = await db.videos.toArray(); // load all local Dexie videos
-  const storage = getStorage();
-  const storageRef = ref(storage, "academy");
-  const listResult = await listAll(storageRef);
+  const vids = await getSkillVideos();
 
-  const firebaseVideos: VideoFile[] = await Promise.all(
-    listResult.items.map(async itemRef => {
-      // Skip if already in Dexie
-      if (allDexieVideos.some(v => v.uid === itemRef.fullPath)) {
-        return null;
-      }
+  const normalized: VideoFile[] = vids.map(v => ({
+    id: v.id,
+    uid: v.uid,
+    name: v.name,
+    url: v.url,
+    category: "skill",
+    subCategory: v.subCategory,
+    uploadDate: v.createdAt,
+    order: v.order,
+  }));
 
-      const url = await getDownloadURL(itemRef);
-      const name = itemRef.name.split(".")[0].toUpperCase();
-
-      return {
-        uid: itemRef.fullPath,
-        name,
-        url,
-        category: "skill",
-        subCategory: "Flexibility & Mobility", // we can leave a default for old ones
-        uploadDate: new Date(),
-        order: 0
-      };
-    })
-  );
-
-  // Combine Dexie videos + new Firebase videos
-  const combinedVideos = [...allDexieVideos, ...firebaseVideos.filter(Boolean) as VideoFile[]];
-
-  setVideos(combinedVideos);
+  setVideos(normalized);
 };
-
-
-
 
 const loadExplanationVideos = async () => {
  const vids = await getExplanationVideos();
@@ -208,20 +192,16 @@ const finalThumbnail = thumbnailFile;
 
   const videoId = `v-${Date.now()}`;
 
-  const videoUrl = await uploadVideoToFirebase(file, videoId);
+const videoUrl = await uploadVideoToFirebase(file, videoId);
 
-  const newVideo: VideoFile = {
-    uid: videoId,
-    name: file.name.split('.')[0].toUpperCase(),
-    url: videoUrl,
-    category: activeFolder.cat,
-    subCategory: activeFolder.sub,
-    uploadDate: new Date(),
-    order: maxOrder + 1
-  };
-
-  await db.videos.add(newVideo);
-  await loadVideos();
+await createSkillVideo({
+  uid: videoId,
+  name: file.name.split(".")[0].toUpperCase(),
+  url: videoUrl,
+  subCategory: activeFolder.sub,
+  order: maxOrder + 1,
+});
+await loadVideos();
 }
 
 
@@ -233,25 +213,20 @@ const finalThumbnail = thumbnailFile;
   }
 };
 
+  const deleteVideo = async () => {
+  alert("Skill deletion is not wired to Firestore yet.");
+};
 
-   
 
-  const deleteVideo = async (id?: number) => {
-    if (id !== undefined) {
-      await db.videos.delete(id);
-      await loadVideos();
-    }
-  };
+  const updateVideo = async () => {
+  alert("Skill updates are not wired to Firestore yet.");
+};
 
-  const updateVideo = async (id: number, updates: Partial<VideoFile>) => {
-    await db.videos.update(id, updates);
-    await loadVideos();
-  };
 
-  const onDragStart = (id: number) => {
-    if (!isRearrangeMode) return;
-    setDraggedId(id);
-  };
+const onDragStart = (id: number) => {
+  if (!isRearrangeMode) return;
+  setDraggedId(id);
+};
 
   const onDragOver = (e: React.DragEvent, targetId: number) => {
     e.preventDefault();
@@ -268,19 +243,8 @@ const finalThumbnail = thumbnailFile;
   };
 
   const onDragEnd = async () => {
-    if (!isRearrangeMode) return;
-    const updates = videos.map((v, idx) => db.videos.update(v.id!, { order: idx }));
-    await Promise.all(updates);
-    setDraggedId(null);
-  };
-
-
-  
-
-
-
-
-
+  setDraggedId(null);
+};
 
   return (
     <div className="flex flex-col lg:flex-row gap-10 animate-in fade-in duration-700 pb-20">
@@ -506,17 +470,18 @@ const finalThumbnail = thumbnailFile;
   }}
 
   onDelete={() => {
-    if (activeFolder?.cat === "skill" && video.id) {
-      deleteVideo(video.id);
-    } else {
+   if (activeFolder?.cat === "skill") {
+  deleteVideo();
+}
+else {
       alert("Explanation videos must be deleted from Firebase (for now).");
     }
   }}
 
   onUpdate={(updates) => {
-    if (activeFolder?.cat === 'skill' && video.id) {
-      updateVideo(video.id, updates);
-    }
+   if (activeFolder?.cat === "skill") {
+  return;
+}
   }}
 
   onDragStart={() => {
