@@ -5,6 +5,7 @@ import { Save, Plus, X, Dumbbell, Info, Eye, EyeOff, Target, User, Phone, Mail, 
 import { ClientData, Workout, Exercise, Goal, MiniGoal, WorkoutTemplate } from '../types';
 import { db, VideoFile } from '../db';
 import { useApp } from '../AppContext';
+import { getSkillVideos } from '../services/skillVideos';
 
 interface Props {
   client: ClientData;
@@ -292,10 +293,12 @@ const TrainerTemplateEditor: React.FC<Props> = ({ client, onUpdate, onAddClient,
     // stop autocomplete once video is linked
     if (currentExercise?.videoId) return;
 
-    const matches = await db.videos
-      .where('category').equals('skill')
-      .filter(v => normalize(v.name).startsWith(searchVal))
-      .toArray();
+ const allSkills = await getSkillVideos();
+
+const matches = allSkills.filter(v =>
+  normalize(v.name).startsWith(searchVal)
+);
+
 
     const skillVideo = matches.find(
       v => normalize(v.name) === searchVal
