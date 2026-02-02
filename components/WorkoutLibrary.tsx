@@ -43,6 +43,43 @@ const WorkoutLibrary: React.FC<Props> = ({ workouts, clientData, accentColor }) 
   const [selectedId, setSelectedId] = useState(workouts[0]?.id);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [activeVideoUrl, setActiveVideoUrl] = useState<string | null>(null);
+  useEffect(() => {
+  if (!activeVideoUrl) return;
+
+  const originalOverflow = document.body.style.overflow;
+  document.body.style.overflow = 'hidden';
+
+  const preventTouchMove = (e: TouchEvent) => {
+    e.preventDefault();
+  };
+
+  document.addEventListener('touchmove', preventTouchMove, { passive: false });
+
+  return () => {
+    document.body.style.overflow = originalOverflow;
+    document.removeEventListener('touchmove', preventTouchMove);
+  };
+}, [activeVideoUrl]);
+useEffect(() => {
+  if (!activeVideoUrl) return;
+
+  const handlePopState = () => {
+    setActiveVideoUrl(null);
+  };
+
+  // push a dummy state so swipe/back only closes modal
+  if (window.history.state?.modal !== 'video') {
+  window.history.pushState({ modal: 'video' }, '');
+}
+
+
+  window.addEventListener('popstate', handlePopState);
+
+  return () => {
+    window.removeEventListener('popstate', handlePopState);
+  };
+}, [activeVideoUrl]);
+
   const [activeVideoName, setActiveVideoName] = useState<string | null>(null);
   const [academyBlobUrl, setAcademyBlobUrl] = useState<string | null>(null);
   
@@ -102,12 +139,18 @@ const WorkoutLibrary: React.FC<Props> = ({ workouts, clientData, accentColor }) 
     setTimeout(() => { setIsSubmitted(false); setExerciseState({}); }, 3000);
   };
 
-  const closePlayer = () => {
-    setActiveVideoUrl(null);
-    setActiveVideoName(null);
-    if (academyBlobUrl) URL.revokeObjectURL(academyBlobUrl);
-    setAcademyBlobUrl(null);
-  };
+const closePlayer = () => {
+  setActiveVideoUrl(null);
+  setActiveVideoName(null);
+
+  if (academyBlobUrl) URL.revokeObjectURL(academyBlobUrl);
+  setAcademyBlobUrl(null);
+
+  // consume the dummy history entry if it exists
+  if (window.history.state?.modal === 'video') {
+    window.history.back();
+  }
+};
 
   const isExternalVideo = activeVideoUrl && !activeVideoUrl.startsWith('academy://');
   const embedUrl = isExternalVideo ? getEmbedUrl(activeVideoUrl!) : null;
