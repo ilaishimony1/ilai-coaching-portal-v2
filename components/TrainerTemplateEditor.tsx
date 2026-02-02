@@ -5,7 +5,8 @@ import { Save, Plus, X, Dumbbell, Info, Eye, EyeOff, Target, User, Phone, Mail, 
 import { ClientData, Workout, Exercise, Goal, MiniGoal, WorkoutTemplate } from '../types';
 import { db, VideoFile } from '../db';
 import { useApp } from '../AppContext';
-import { getSkillVideos } from '../services/skillVideos';
+import { getSkillVideos } from '../firebase/skillVideos';
+
 
 interface Props {
   client: ClientData;
