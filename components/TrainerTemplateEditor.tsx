@@ -278,26 +278,72 @@ const TrainerTemplateEditor: React.FC<Props> = ({ client, onUpdate, onAddClient,
     let updatedValue = value;
    
 
-    if (field === 'name') {
-      const searchVal = (value as string).trim().toUpperCase();
-      if (searchVal.length > 0) {
-        const matches = await db.videos
-          .where('category').equals('skill')
-          .filter(v => v.name.toUpperCase().startsWith(searchVal))
-          .toArray();
-        
-        setExerciseSuggestions(prev => ({ ...prev, [exerciseId]: matches.slice(0, 5) }));
-        
-        const skillVideo = matches.find(v => v.name.toUpperCase() === searchVal);
-        
-      } else {
-        setExerciseSuggestions(prev => {
-          const newState = { ...prev };
-          delete newState[exerciseId];
-          return newState;
-        });
-      }
+  if (field === 'name') {
+  const normalize = (s: string) =>
+    s.trim().replace(/\s+/g, ' ').toUpperCase();
+
+  const searchVal = normalize(value as string);
+
+  if (searchVal.length > 0) {
+    const currentExercise = localClient.workouts
+      .find(w => w.id === workoutId)
+      ?.exercises.find(ex => ex.id === exerciseId);
+
+    // stop autocomplete once video is linked
+    if (currentExercise?.videoId) return;
+
+    const matches = await db.videos
+      .where('category').equals('skill')
+      .filter(v => normalize(v.name).startsWith(searchVal))
+      .toArray();
+
+    const skillVideo = matches.find(
+      v => normalize(v.name) === searchVal
+    );
+
+    // ✅ EXACT MATCH → AUTO ATTACH
+    if (skillVideo) {
+      setLocalClient(prev => ({
+        ...prev,
+        workouts: prev.workouts.map(w =>
+          w.id !== workoutId ? w : {
+            ...w,
+            exercises: w.exercises.map(ex =>
+              ex.id !== exerciseId ? ex : {
+                ...ex,
+                name: skillVideo.name,
+                videoId: skillVideo.uid,
+                videoUrl: skillVideo.videoUrl || skillVideo.url,
+                videoThumbnail: skillVideo.thumbnail || null
+              }
+            )
+          }
+        )
+      }));
+
+      setExerciseSuggestions(prev => {
+        const next = { ...prev };
+        delete next[exerciseId];
+        return next;
+      });
+
+      return;
     }
+
+    // ❌ NO exact match → show suggestions
+    setExerciseSuggestions(prev => ({
+      ...prev,
+      [exerciseId]: matches.slice(0, 5)
+    }));
+  } else {
+    setExerciseSuggestions(prev => {
+      const next = { ...prev };
+      delete next[exerciseId];
+      return next;
+    });
+  }
+}
+
 
     setLocalClient((prev: ClientData) => ({
       ...prev,
