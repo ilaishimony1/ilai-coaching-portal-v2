@@ -219,4 +219,8 @@ const isDone = false;
           </div>
         </div>
       )}
- 
+     </section>
+  );
+};
+
+export default WorkoutLibrary;
