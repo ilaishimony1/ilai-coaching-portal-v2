@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { PlayCircle, Timer, Send, Dumbbell, CheckCircle2, X, Target, BarChart3, Check, Video, Info, MessageSquare, Camera, Upload, ChevronRight, Hash, Zap, AlertCircle, Maximize2, Move, Shapes, Sparkles, Type } from 'lucide-react';
+import { PlayCircle, Dumbbell, X, Info, Check, Type } from 'lucide-react';
 import { Workout, WorkoutLog, ClientData, Message, Exercise } from '../types';
 import { useApp } from '../AppContext';
 import ScheduleCalendar from './ScheduleCalendar';
@@ -14,12 +14,7 @@ interface Props {
   accentColor: string;
 }
 
-interface SubmissionState {
-  reps: string;
-  rpe: string;
-  notes: string;
-  videoBlob?: Blob;
-}
+
 
 const getEmbedUrl = (url: string) => {
   if (!url) return null;
@@ -41,7 +36,7 @@ const getEmbedUrl = (url: string) => {
 const WorkoutLibrary: React.FC<Props> = ({ workouts, clientData, accentColor }) => {
   const { clients, setClients } = useApp();
   const [selectedId, setSelectedId] = useState(workouts[0]?.id);
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  
   const [activeVideoUrl, setActiveVideoUrl] = useState<string | null>(null);
   useEffect(() => {
   if (!activeVideoUrl) return;
@@ -83,61 +78,10 @@ useEffect(() => {
   const [activeVideoName, setActiveVideoName] = useState<string | null>(null);
   const [academyBlobUrl, setAcademyBlobUrl] = useState<string | null>(null);
   
-  const [activeMiniPage, setActiveMiniPage] = useState<{ exId: string, type: 'notes' | 'video' } | null>(null);
-  const [exerciseState, setExerciseState] = useState<Record<string, SubmissionState>>({});
+
+  
   
   const current = workouts.find(w => w.id === selectedId) || workouts[0];
-
-  const updateState = (exId: string, updates: Partial<SubmissionState>) => {
-    setExerciseState(prev => ({
-      ...prev,
-      [exId]: { ...(prev[exId] || { reps: '', rpe: '5', notes: '' }), ...updates }
-    }));
-  };
-
-  const handleVideoSelect = (exId: string, e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      updateState(exId, { videoBlob: file });
-      setActiveMiniPage(null);
-    }
-  };
-
-  const handleSubmit = async () => {
-    if (!current) return;
-    const movementCount = current.exercises.filter(ex => ex.category !== 'header').length;
-    const completedCount = current.exercises.filter(ex => {
-      if (ex.category === 'header') return false;
-      const state = exerciseState[ex.id];
-      return state?.videoBlob && state?.notes?.trim();
-    }).length;
-
-    if (movementCount > 0 && completedCount === 0) {
-      if (!window.confirm("No movements are fully fulfilled with video and notes. Are you sure you want to log this session?")) return;
-    }
-
-    setIsSubmitted(true);
-    const timestamp = new Date().toISOString();
-    const loggedExercises = [];
-    for (const ex of current.exercises) {
-      if (ex.category === 'header') continue;
-      const state = exerciseState[ex.id];
-      let videoUid = undefined;
-      if (state?.videoBlob) {
-        videoUid = `sub-${Date.now()}-${ex.id}`;
-        await db.clientSubmissions.add({ uid: videoUid, blob: state.videoBlob, createdAt: new Date() });
-      }
-      loggedExercises.push({ id: ex.id, actualReps: state?.reps || 'DONE', rpe: state?.rpe || '5', clientNotes: state?.notes, clientVideoId: videoUid });
-    }
-    const newLog: WorkoutLog = { date: timestamp, workoutId: current.id, exercises: loggedExercises, isRead: false };
-    const systemMsg: Message = { id: `sys-${Date.now()}`, senderId: clientData.id, text: `Protocol Transmission: Module ${current.name} Logged.`, timestamp: timestamp, type: 'system', meta: { workoutId: current.id, type: 'workout', title: current.title } };
-
-    setClients(prev => prev.map(c => {
-      if (c.id === clientData.id) return { ...c, logs: [...(c.logs || []), newLog], messages: [...(c.messages || []), systemMsg], hasNewSubmission: true };
-      return c;
-    }));
-    setTimeout(() => { setIsSubmitted(false); setExerciseState({}); }, 3000);
-  };
 
 const closePlayer = () => {
   setActiveVideoUrl(null);
@@ -172,11 +116,7 @@ const closePlayer = () => {
         </div>
       );
     }
-
-    const state = exerciseState[ex.id];
-    const hasVideo = !!state?.videoBlob;
-    const hasNotes = !!state?.notes?.trim();
-    const isDone = hasVideo && hasNotes;
+const isDone = false;
 
     return (
       <div key={ex.id} className="group">
@@ -201,13 +141,6 @@ const closePlayer = () => {
             
             <div className="flex items-center gap-2">
               {ex.videoUrl && <button onClick={() => { setActiveVideoUrl(ex.videoUrl!); setActiveVideoName(ex.name); }} className="w-10 h-10 md:w-9 md:h-9 flex items-center justify-center bg-blue-600/10 text-blue-500 rounded-xl md:rounded-lg"><PlayCircle size={20} /></button>}
-              <div className="relative">
-                <button onClick={() => setActiveMiniPage({ exId: ex.id, type: 'video' })} className={`w-10 h-10 md:w-9 md:h-9 flex items-center justify-center rounded-xl md:rounded-lg transition-all ${hasVideo ? 'bg-emerald-500 text-white' : 'bg-white/5 text-slate-400'}`}><Camera size={20} /></button>
-                {!hasVideo && <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse border-2 border-slate-900"></div>}
-              </div>
-              <div className="relative">
-                <button onClick={() => setActiveMiniPage({ exId: ex.id, type: 'notes' })} className={`w-10 h-10 md:w-9 md:h-9 flex items-center justify-center rounded-xl md:rounded-lg transition-all ${hasNotes ? 'bg-emerald-500 text-white' : 'bg-white/5 text-slate-400'}`}><MessageSquare size={20} /></button>
-                {!hasNotes && <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse border-2 border-slate-900"></div>}
               </div>
             </div>
           </div>
@@ -263,13 +196,7 @@ const closePlayer = () => {
              </div>
           </div>
 
-          <div className="flex justify-center pt-4 md:pt-8 border-t border-white/5">
-            {isSubmitted ? (
-              <div className="px-6 py-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 font-black text-[10px] tracking-widest uppercase flex items-center gap-2 animate-in zoom-in-95"><CheckCircle2 size={16} /> SESSION LOGGED</div>
-            ) : (
-              <button onClick={handleSubmit} className="w-full md:w-auto px-10 py-5 rounded-2xl text-white font-black text-xs tracking-widest uppercase flex items-center justify-center gap-3 transition-all active:scale-95 shadow-xl bg-blue-600">FINISH SESSION</button>
-            )}
-          </div>
+         
         </div>
       )}
 
@@ -293,41 +220,4 @@ const closePlayer = () => {
           </div>
         </div>
       )}
-
-      {activeMiniPage && (
-        <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 animate-in fade-in duration-300">
-          <div className="absolute inset-0 bg-[#020617]/95 backdrop-blur-xl" onClick={() => setActiveMiniPage(null)}></div>
-          <div className="relative w-full max-w-md bg-slate-900 rounded-[2.5rem] border border-white/10 shadow-2xl overflow-hidden">
-            <div className="p-8 space-y-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-[8px] font-black text-blue-500 uppercase tracking-widest mb-1">Requirement Module</p>
-                  <h4 className="text-xl font-black text-white uppercase brand-font">{current.exercises.find(e => e.id === activeMiniPage.exId)?.name}</h4>
-                </div>
-                <button onClick={() => setActiveMiniPage(null)} className="p-2 text-slate-500 hover:text-white transition-colors"><X size={24}/></button>
-              </div>
-              {activeMiniPage.type === 'video' ? (
-                <div className="space-y-6">
-                  <label className="block">
-                    <input type="file" accept="video/*" className="hidden" onChange={(e) => handleVideoSelect(activeMiniPage.exId, e)} />
-                    <div className={`w-full aspect-video rounded-3xl border-2 border-dashed flex flex-col items-center justify-center gap-3 transition-all cursor-pointer ${exerciseState[activeMiniPage.exId]?.videoBlob ? 'border-emerald-500 bg-emerald-500/10 text-emerald-500' : 'border-slate-800 text-slate-500'}`}>
-                      {exerciseState[activeMiniPage.exId]?.videoBlob ? <><CheckCircle2 size={40} /><span className="text-[10px] font-black uppercase tracking-widest">Clip Attached</span></> : <><Upload size={40} /><span className="text-[10px] font-black uppercase tracking-widest">Upload Video Set</span></>}
-                    </div>
-                  </label>
-                  <button onClick={() => setActiveMiniPage(null)} className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl">Confirm Asset</button>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                   <textarea value={exerciseState[activeMiniPage.exId]?.notes || ''} onChange={(e) => updateState(activeMiniPage.exId, { notes: e.target.value })} placeholder="Technical feedback for this set..." className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-6 text-sm font-medium text-slate-300 outline-none focus:ring-1 ring-blue-500/40 resize-none h-48" />
-                   <button onClick={() => setActiveMiniPage(null)} className="w-full py-5 bg-emerald-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl">Save Note</button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-    </section>
-  );
-};
-
-export default WorkoutLibrary;
+ 
