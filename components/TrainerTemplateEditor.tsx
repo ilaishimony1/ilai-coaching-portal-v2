@@ -527,8 +527,26 @@ const matches = allSkills.filter(v =>
                 />
               </div>
 
-              <InfoFieldIcon label="Height (CM)" icon={<RulerIcon size={14}/>} value={localClient.height} onChange={(v: string) => updateExercise(activeWorkoutId || '', '', 'height' as any, v)} placeholder="180" />
-              <InfoFieldIcon label="Weight (KG)" icon={<Weight size={14}/>} value={localClient.weight} onChange={(v: string) => updateExercise(activeWorkoutId || '', '', 'weight' as any, v)} placeholder="75" />
+            <InfoFieldIcon
+  label="Height (CM)"
+  icon={<RulerIcon size={14} />}
+  value={localClient.height || ''}
+  onChange={(v: string) =>
+    setLocalClient(prev => ({ ...prev, height: v }))
+  }
+  placeholder="180"
+/>
+
+              <InfoFieldIcon
+  label="Weight (KG)"
+  icon={<Weight size={14} />}
+  value={localClient.weight || ''}
+  onChange={(v: string) =>
+    setLocalClient(prev => ({ ...prev, weight: v }))
+  }
+  placeholder="75"
+/>
+
               
               <div className="space-y-2">
                 <label className="text-[9px] font-black text-slate-600 uppercase flex items-center gap-1"><Activity size={14}/> Gender</label>
