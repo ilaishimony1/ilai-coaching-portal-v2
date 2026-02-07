@@ -135,9 +135,26 @@ const isDone = false;
 
           <div className="col-span-1 md:col-span-3 flex items-center justify-end gap-3">
             <div className="md:hidden flex flex-1 items-center gap-4">
-              <div className="flex flex-col"><span className="text-[7px] font-black text-slate-600 uppercase">Sets</span><span className="text-xs font-black text-blue-400">{ex.sets}</span></div>
-              <div className="flex flex-col"><span className="text-[7px] font-black text-slate-600 uppercase">Target</span><span className="text-xs font-black text-white">{ex.reps || ex.duration}</span></div>
-            </div>
+  <div className="flex flex-col">
+    <span className="text-[7px] font-black text-slate-600 uppercase">Sets</span>
+    <span className="text-xs font-black text-blue-400">{ex.sets}</span>
+  </div>
+
+  <div className="flex flex-col">
+    <span className="text-[7px] font-black text-slate-600 uppercase">Target</span>
+    <span className="text-xs font-black text-white">
+      {ex.reps || ex.duration}
+    </span>
+  </div>
+
+  <div className="flex flex-col">
+    <span className="text-[7px] font-black text-slate-600 uppercase">Rest</span>
+    <span className="text-xs font-black text-amber-500">
+      {ex.restTime || '90s'}
+    </span>
+  </div>
+</div>
+
             
             <div className="flex items-center gap-2">
               {ex.videoUrl && <button onClick={() => { setActiveVideoUrl(ex.videoUrl!); setActiveVideoName(ex.name); }} className="w-10 h-10 md:w-9 md:h-9 flex items-center justify-center bg-blue-600/10 text-blue-500 rounded-xl md:rounded-lg"><PlayCircle size={20} /></button>}
