@@ -25,13 +25,19 @@ const LoginPage: React.FC<Props> = ({ onLogin, config, version }) => {
     }
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    const success = onLogin(u, p);
-    if (!success) {
-      setError("Wrong Credentials. Access Denied.");
-    }
+   try {
+  const success = await onLogin(u, p);
+
+  if (!success) {
+    setError("Username or password are incorrect. Please try again.");
+  }
+} catch (err) {
+  setError("Username or password are incorrect. Please try again.");
+}
+
   };
 
   return (
