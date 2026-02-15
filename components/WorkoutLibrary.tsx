@@ -36,7 +36,7 @@ const getEmbedUrl = (url: string) => {
 const WorkoutLibrary: React.FC<Props> = ({ workouts, clientData, accentColor }) => {
   const { clients, setClients } = useApp();
   const [selectedId, setSelectedId] = useState(workouts[0]?.id);
-  
+  const [exerciseState, setExerciseState] = useState<Record<string, boolean>>({});
   const [activeVideoUrl, setActiveVideoUrl] = useState<string | null>(null);
   useEffect(() => {
   if (!activeVideoUrl) return;
@@ -116,13 +116,29 @@ const closePlayer = () => {
         </div>
       );
     }
-const isDone = false;
+const isDone = exerciseState[ex.id] || false;
+
 
     return (
       <div key={ex.id} className="group">
         <div className={`grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 px-4 md:px-8 py-4 md:py-5 border-x border-b border-white/5 ${idx === 0 ? 'border-t' : ''} ${isLast ? 'rounded-b-2xl' : ''} transition-all items-center ${isDone ? 'bg-emerald-500/5 opacity-60' : 'bg-slate-950/30 hover:bg-slate-900/40'}`}>
           <div className="col-span-1 md:col-span-5 flex items-center gap-3">
-            <div className={`w-5 h-5 rounded-lg border flex items-center justify-center shrink-0 transition-all ${isDone ? 'bg-emerald-500 border-emerald-500' : 'border-slate-800 bg-slate-900'}`}>{isDone ? <Check size={12} className="text-white" strokeWidth={4} /> : <div className="w-1 h-1 rounded-full bg-slate-700"></div>}</div>
+            <div
+  onClick={() =>
+    setExerciseState(prev => ({
+      ...prev,
+      [ex.id]: !prev[ex.id]
+    }))
+  }
+  className={`w-5 h-5 cursor-pointer rounded-lg border flex items-center justify-center shrink-0 transition-all ${isDone ? 'bg-emerald-500 border-emerald-500' : 'border-slate-800 bg-slate-900'}`}
+>
+  {isDone ? (
+    <Check size={12} className="text-white" strokeWidth={4} />
+  ) : (
+    <div className="w-1 h-1 rounded-full bg-slate-700"></div>
+  )}
+</div>
+
             <div className="flex flex-col">
               <h4 className={`font-black uppercase text-base md:text-lg brand-font tracking-tight leading-tight ${isDone ? 'text-emerald-500/70 line-through' : 'text-white'}`}>{ex.name}</h4>
               {ex.category === 'mobility' && <span className="text-[7px] font-black text-emerald-500 uppercase tracking-widest mt-1">Mobility</span>}
