@@ -1,6 +1,12 @@
-
-
-import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import { 
+  getAuth, 
+  signInWithEmailAndPassword, 
+  signOut,
+  onAuthStateChanged,
+  setPersistence,
+  browserLocalPersistence,
+  inMemoryPersistence
+} from "firebase/auth";
 import TestFirebaseEngine from "./components/TestFirebaseEngine";
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Home, LogOut, Palette, User, ChevronLeft, Archive, BookOpen, Video, BarChart2, Camera, Shield, Users, Upload, ClipboardCheck, X, Send, Sparkles, MessageCircle, Activity, CheckCircle2, Info, Play, Clock, Hash, Zap, MessageSquareText, Smartphone, Globe, Cloud, Cpu, Database, Binary, Timer as TimerIcon, RotateCcw, BrainCircuit, Maximize2, Trophy, RefreshCw, Library } from 'lucide-react';
@@ -108,40 +114,43 @@ const handleLogin = async (email: string, password: string): Promise<boolean> =>
   const auth = getAuth();
 
   try {
+
+    // 🔒 COACH → no persistence (logout on refresh)
+    if (email === "ilaishimony1@gmail.com") {
+      await setPersistence(auth, inMemoryPersistence);
+    } 
+    // 👤 CLIENT → stay logged in
+    else {
+      await setPersistence(auth, browserLocalPersistence);
+    }
+
     const cred = await signInWithEmailAndPassword(auth, email, password);
 
-    // ===============================
-    // ✅ YOU = COACH
-    // ===============================
+    // ✅ COACH
     if (cred.user.email === "ilaishimony1@gmail.com") {
       setAuthStatus({ type: "COACH" });
       setViewMode("ADMIN");
-
-      // 🔥 START FIREBASE LISTENERS (COACH)
-
       return true;
     }
 
-    // ===============================
-    // ✅ CLIENT LOGIN
-    // ===============================
+    // ✅ CLIENT
     const client = clients.find(c => c.email === cred.user.email);
     if (client) {
+      localStorage.setItem("loginTime", Date.now().toString());
       setAuthStatus({ type: "CLIENT", clientId: client.id });
-     setCurrentClientData(mergeClient(client));
+      setCurrentClientData(mergeClient(client));
       setViewMode("CLIENT");
       return true;
     }
 
     return false;
+
   } catch (err) {
     console.error("Login failed:", err);
     return false;
   }
 };
 
-
-  
 
   const handleAddOrUpdateClient = async (data: ClientData) => {
     if (!data.id) return;
@@ -294,10 +303,70 @@ const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
 }, []);
 
 // 👇 ADD THIS RIGHT HERE
-const resolvedClientAvatar =
+    const resolvedClientAvatar =
   currentClientData?.avatar?.length
     ? currentClientData.avatar
     : "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&h=400&fit=crop";
+
+
+// ✅ ADD THIS WHOLE BLOCK RIGHT HERE
+useEffect(() => {
+  const auth = getAuth();
+
+  const unsubscribe = onAuthStateChanged(auth, (user) => {
+    if (!user) {
+      setAuthStatus({ type: "NONE" });
+      return;
+    }
+
+    // Coach restore
+   // 🔒 Coach → logout on refresh
+// 🔒 Coach restore
+if (user.email === "ilaishimony1@gmail.com") {
+  setAuthStatus({ type: "COACH" });
+  setViewMode("ADMIN");
+  return;
+}
+
+    // Client restore
+    const client = clients.find(c => c.email === user.email);
+    if (client) {
+      setAuthStatus({ type: "CLIENT", clientId: client.id });
+      setCurrentClientData(mergeClient(client));
+      setViewMode("CLIENT");
+    }
+  });
+
+  return () => unsubscribe();
+}, [clients]);
+
+
+// 🔥 YOUR EXISTING 1-HOUR EFFECT STAYS BELOW THIS
+
+useEffect(() => {
+  const auth = getAuth();
+  const loginTime = localStorage.getItem("loginTime");
+
+  // 🔒 COACH → always logout on refresh
+ 
+
+  // 👤 CLIENT → 1 hour session
+  if (authStatus.type === "CLIENT") {
+    if (!loginTime) {
+      setAuthStatus({ type: "NONE" });
+      return;
+    }
+
+    const oneHour = 60 * 60 * 1000;
+
+    if (Date.now() - parseInt(loginTime) > oneHour) {
+      localStorage.removeItem("loginTime");
+      signOut(auth);
+      setAuthStatus({ type: "NONE" });
+    }
+  }
+}, [authStatus]);
+
 
 
   if (authStatus.type === 'NONE') {
