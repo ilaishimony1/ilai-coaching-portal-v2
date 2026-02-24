@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { PlayCircle, Dumbbell, X, Info, Check, Type } from 'lucide-react';
+import { PlayCircle, Dumbbell, X, Info, Check } from 'lucide-react';
 import { Workout, WorkoutLog, ClientData, Message, Exercise } from '../types';
 import { useApp } from '../AppContext';
 import ScheduleCalendar from './ScheduleCalendar';
@@ -103,15 +103,16 @@ const closePlayer = () => {
     if (ex.category === 'header') {
       return (
         <div key={ex.id} className="pt-10 pb-4 px-4 group">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-lg">
-              <Type size={20} />
-            </div>
-            <div>
-              <h4 className="text-2xl font-black brand-font uppercase text-white tracking-tight leading-none">{ex.name || 'SECTION'}</h4>
-              {ex.notes && <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest mt-1.5">{ex.notes}</p>}
-            </div>
-          </div>
+          <div>
+  <h4 className="text-2xl font-black brand-font uppercase text-white tracking-tight leading-none">
+    {ex.name || 'SECTION'}
+  </h4>
+  {ex.notes && (
+    <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest mt-1.5">
+      {ex.notes}
+    </p>
+  )}
+</div>
           <div className="h-[2px] w-full bg-white/5 mt-4 group-hover:bg-blue-600/30 transition-all"></div>
         </div>
       );
