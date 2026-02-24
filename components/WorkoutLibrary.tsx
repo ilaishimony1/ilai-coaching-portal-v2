@@ -1,13 +1,13 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { PlayCircle, Dumbbell, X, Info, Check } from 'lucide-react';
+import { PlayCircle, Dumbbell, X, Info, Check, Download } from 'lucide-react';
 import { Workout, WorkoutLog, ClientData, Message, Exercise } from '../types';
 import { useApp } from '../AppContext';
 import ScheduleCalendar from './ScheduleCalendar';
 import { db } from '../db';
 import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '../firebase'; // use YOUR firestore export
-
+import { jsPDF } from 'jspdf';
 interface Props {
   workouts: Workout[];
   clientData: ClientData;
@@ -94,6 +94,54 @@ const closePlayer = () => {
   if (window.history.state?.modal === 'video') {
     window.history.back();
   }
+};
+const handleDownloadPdf = () => {
+  if (!current) return;
+
+  const doc = new jsPDF();
+  let y = 20;
+
+  // Title
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
+  doc.text(current.title.toUpperCase(), 20, y);
+  y += 12;
+
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+
+  current.exercises.forEach((ex) => {
+    if (ex.category === 'header') {
+      y += 8;
+      doc.setFont('helvetica', 'bold');
+      doc.text((ex.name || 'SECTION').toUpperCase(), 20, y);
+      y += 6;
+      doc.setFont('helvetica', 'normal');
+      return;
+    }
+
+    const line = `${ex.name} — ${ex.sets} sets — ${ex.reps || ex.duration} — Rest: ${ex.restTime || '90s'}`;
+    doc.text(line, 20, y);
+    y += 6;
+
+    if (ex.notes) {
+      doc.setFontSize(9);
+      doc.setTextColor(100);
+      doc.text(`Notes: ${ex.notes}`, 25, y);
+      doc.setTextColor(0);
+      doc.setFontSize(10);
+      y += 6;
+    }
+
+    y += 2;
+
+    if (y > 270) {
+      doc.addPage();
+      y = 20;
+    }
+  });
+
+  doc.save(`${current.title}.pdf`);
 };
 
   const isExternalVideo = activeVideoUrl && !activeVideoUrl.startsWith('academy://');
@@ -212,8 +260,17 @@ const isDone = exerciseState[ex.id] || false;
             <div>
               <p className="text-[8px] md:text-[9px] font-black uppercase tracking-[0.4em] opacity-40 mb-1">Sector: {current.name}</p>
               <h3 className="text-3xl md:text-4xl font-black brand-font uppercase text-white leading-none">{current.title}</h3>
-            </div>
-          </header>
+          </div>
+
+<button
+  onClick={handleDownloadPdf}
+  title="Download workout as PDF"
+  className="flex items-center justify-center p-2 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 transition-all group"
+>
+  <Download size={18} className="text-slate-400 group-hover:text-white transition" />
+</button>
+
+</header>
 
           <div className="space-y-4">
              {/* LINEAR PROTOCOL FLOW (HONORING MANUALLY PLACED HEADERS) */}

@@ -1,4 +1,3 @@
-
 {
   "name": "ilai-coaching-portal",
   "private": true,
@@ -14,6 +13,7 @@
     "@google/genai": "^1.34.0",
     "dexie": "^4.2.1",
     "firebase": "^11.3.1",
+    "jspdf": "^4.2.0",
     "lucide-react": "^0.562.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
