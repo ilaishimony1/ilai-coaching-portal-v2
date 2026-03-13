@@ -254,12 +254,35 @@ const TrainerTemplateEditor: React.FC<Props> = ({ client, onUpdate, onAddClient,
     setTimeout(() => setSaveIndicatorId(null), 3000);
   };
 
-  const addExercise = (workoutId: string) => {
-    setLocalClient((prev: ClientData) => ({
-      ...prev,
-      workouts: prev.workouts.map((w: Workout) => w.id === workoutId ? { ...w, exercises: [...w.exercises, { id: generateUniqueId('ex'), name: '', sets: '', reps: '', notes: '', restTime: '', category: 'strength' }] } : w)
-    }));
+  const addExercise = (workoutId: string, afterExerciseId?: string) => {
+  const newExercise: Exercise = {
+    id: generateUniqueId('ex'),
+    name: '',
+    sets: '',
+    reps: '',
+    notes: '',
+    restTime: '',
+    category: 'strength'
   };
+
+  setLocalClient((prev: ClientData) => ({
+    ...prev,
+    workouts: prev.workouts.map((w: Workout) => {
+      if (w.id !== workoutId) return w;
+
+      if (!afterExerciseId) {
+        return { ...w, exercises: [...w.exercises, newExercise] };
+      }
+
+      const index = w.exercises.findIndex(ex => ex.id === afterExerciseId);
+
+      const newExercises = [...w.exercises];
+      newExercises.splice(index + 1, 0, newExercise);
+
+      return { ...w, exercises: newExercises };
+    })
+  }));
+};
 
   const addHeader = (workoutId: string) => {
     setLocalClient((prev: ClientData) => ({
@@ -848,6 +871,15 @@ const matches = allSkills.filter(v =>
                         <div className="space-y-1">
                           <label className="text-[8px] font-black text-slate-600 uppercase">Technical Cues</label>
                           <textarea value={ex.notes || ''} onChange={e => updateExercise(activeWorkout.id, ex.id, 'notes', e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-4 text-xs text-slate-400 outline-none resize-none h-14" placeholder="Cues..." />
+                            <div className="flex justify-center pt-4">
+  <button
+    type="button"
+    onClick={() => addExercise(activeWorkout.id, ex.id)}
+    className="text-[9px] font-black uppercase tracking-widest text-slate-600 hover:text-blue-400"
+  >
+    + Insert Exercise
+  </button>
+</div>
                         </div>
                     </>
                   )}
