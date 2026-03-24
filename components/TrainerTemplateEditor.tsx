@@ -298,95 +298,68 @@ const TrainerTemplateEditor: React.FC<Props> = ({ client, onUpdate, onAddClient,
     }));
     setDeletingExerciseId(null);
   };
-
-  const updateExercise = async (workoutId: string, exerciseId: string, field: keyof Exercise, value: any) => {
-    let updatedValue = value;
-   
-
-  if (field === 'name') {
+const updateExercise = async (
+  workoutId: string,
+  exerciseId: string,
+  field: keyof Exercise,
+  value: any
+) => {
   const normalize = (s: string) =>
     s.trim().replace(/\s+/g, ' ').toUpperCase();
 
-  const searchVal = normalize(value as string);
+  // ✅ Update state FIRST (so input never locks)
+  setLocalClient((prev: ClientData) => ({
+    ...prev,
+    workouts: prev.workouts.map(w => {
+      if (w.id !== workoutId) return w;
 
-  if (searchVal.length > 0) {
-    const currentExercise = localClient.workouts
-      .find(w => w.id === workoutId)
-      ?.exercises.find(ex => ex.id === exerciseId);
+      return {
+        ...w,
+        exercises: w.exercises.map(ex => {
+          if (ex.id !== exerciseId) return ex;
 
-    // stop autocomplete once video is linked
-    if (currentExercise?.videoId) return;
+          return {
+            ...ex,
+            [field]: value,
 
- const allSkills = await getSkillVideos();
+            // 🔥 IMPORTANT: always remove video when editing name
+            ...(field === 'name'
+              ? {
+                  videoId: undefined,
+                  videoUrl: undefined,
+                  videoThumbnail: undefined
+                }
+              : {})
+          };
+        })
+      };
+    })
+  }));
 
-const matches = allSkills.filter(v =>
-  normalize(v.name).startsWith(searchVal)
-);
-
-
-    const skillVideo = matches.find(
-      v => normalize(v.name) === searchVal
-    );
-
-    // ✅ EXACT MATCH → AUTO ATTACH
-    if (skillVideo) {
-      setLocalClient(prev => ({
-        ...prev,
-        workouts: prev.workouts.map(w =>
-          w.id !== workoutId ? w : {
-            ...w,
-            exercises: w.exercises.map(ex =>
-              ex.id !== exerciseId ? ex : {
-                ...ex,
-                name: skillVideo.name,
-                videoId: skillVideo.uid,
-                videoUrl: skillVideo.videoUrl || skillVideo.url,
-                videoThumbnail: skillVideo.thumbnail || null
-              }
-            )
-          }
-        )
-      }));
-
+  // ✅ THEN handle suggestions AFTER state update
+  if (field === 'name') {
+    if (value.trim().length === 0) {
       setExerciseSuggestions(prev => {
         const next = { ...prev };
         delete next[exerciseId];
         return next;
       });
-
       return;
     }
 
-    // ❌ NO exact match → show suggestions
+    const allSkills = await getSkillVideos();
+
+    const matches = allSkills
+      .filter(v => normalize(v.name).startsWith(normalize(value)))
+      .slice(0, 5);
+
     setExerciseSuggestions(prev => ({
       ...prev,
-      [exerciseId]: matches.slice(0, 5)
+      [exerciseId]: matches
     }));
-  } else {
-    setExerciseSuggestions(prev => {
-      const next = { ...prev };
-      delete next[exerciseId];
-      return next;
-    });
   }
-}
+};
 
-
-    setLocalClient((prev: ClientData) => ({
-      ...prev,
-      workouts: prev.workouts.map((w: Workout) => {
-        if (w.id !== workoutId) return w;
-        return {
-          ...w,
-          exercises: w.exercises.map((ex: Exercise) => {
-            if (ex.id !== exerciseId) return ex;
-            const updates: Partial<Exercise> = { [field]: updatedValue };
-            return { ...ex, ...updates };
-          })
-        };
-      })
-    }));
-  };
 
   const selectExerciseSuggestion = (workoutId: string, exerciseId: string, video: VideoFile) => {
     setLocalClient((prev: ClientData) => ({
