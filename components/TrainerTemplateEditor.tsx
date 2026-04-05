@@ -349,9 +349,8 @@ const updateExercise = async (
 
     const allSkills = await getSkillVideos();
 
-    const matches = allSkills
-      .filter(v => normalize(v.name).startsWith(normalize(value)))
-      .slice(0, 5);
+  const matches = allSkills
+  .filter(v => normalize(v.name).startsWith(normalize(value)));
 
     setExerciseSuggestions(prev => ({
       ...prev,
@@ -494,7 +493,7 @@ const updateExercise = async (
                     placeholder="Search Country..." 
                   />
                   {showCountrySuggestions && filteredCountries.length > 0 && (
-                    <div className="absolute z-50 left-0 right-0 top-full mt-2 bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="absolute z-50 left-0 right-0 top-full mt-2 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200 max-h-60 overflow-y-auto">
                       {filteredCountries.map(c => (
                         <button 
                           key={c.name} 
@@ -797,7 +796,7 @@ const updateExercise = async (
                               placeholder="Enter Movement Name" 
                             />
                             {exerciseSuggestions[ex.id]?.length > 0 && (
-                              <div className="absolute z-50 left-0 right-0 top-full mt-2 bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200">
+                             <div className="absolute z-50 left-0 right-0 top-full mt-2 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200 max-h-64 overflow-y-auto">
                                  {exerciseSuggestions[ex.id].map(suggestion => (
                                    <button 
                                      key={suggestion.uid}
