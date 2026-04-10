@@ -349,9 +349,21 @@ const updateExercise = async (
 
     const allSkills = await getSkillVideos();
 
-  const matches = allSkills
-  .filter(v => normalize(v.name).startsWith(normalize(value)));
+const query = normalize(value);
 
+// Priority 1: starts with
+const startsWithMatches = allSkills.filter(v =>
+  normalize(v.name).startsWith(query)
+);
+
+// Priority 2: includes (keyword anywhere)
+const includesMatches = allSkills.filter(v =>
+  normalize(v.name).includes(query) &&
+  !normalize(v.name).startsWith(query)
+);
+
+// Merge results (best first)
+const matches = [...startsWithMatches, ...includesMatches];
     setExerciseSuggestions(prev => ({
       ...prev,
       [exerciseId]: matches
