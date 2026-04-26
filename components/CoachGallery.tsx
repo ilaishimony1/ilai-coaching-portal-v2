@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Share2 } from "lucide-react";
 import {
   getExplanationVideos,
   uploadExplanationVideo,
@@ -28,7 +29,23 @@ async function loadVideos() {
   useEffect(() => {
     loadVideos();
   }, []);
+const handleShare = async (video: ExplanationVideo) => {
+  const link = video.downloadURL;
 
+  if (!link) return;
+
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: video.name,
+        url: link,
+      });
+    } catch {}
+  } else {
+    await navigator.clipboard.writeText(link);
+    alert("Link copied");
+  }
+};
   async function handleUpload() {
     if (!file || !thumbnail || !title) {
       alert("Select a file and enter a title");
@@ -108,7 +125,16 @@ async function loadVideos() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {explanationVideos.map((video) => (
           <div key={video.id} className="space-y-2">
-            <p className="font-semibold">{video.name}</p>
+          <div className="flex items-center justify-between">
+  <p className="font-semibold">{video.name}</p>
+
+  <button
+    onClick={() => handleShare(video)}
+    className="p-2 rounded-lg hover:bg-gray-100 transition"
+  >
+    <Share2 size={18} />
+  </button>
+</div>
            {video.thumbnailURL ? (
   <img
     src={video.thumbnailURL}
