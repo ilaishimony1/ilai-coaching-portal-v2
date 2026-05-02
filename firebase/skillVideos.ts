@@ -9,10 +9,11 @@ import {
   serverTimestamp,
   query,
   orderBy,
+  writeBatch,
+  doc,
 } from "firebase/firestore";
 
 import { syncService } from "../firebaseService";
-
 
 // 🔥 Get Firestore instance from the singleton
 const db = syncService.getDb();
@@ -47,6 +48,17 @@ export const createSkillVideo = async (
     category: "skill",
     createdAt: serverTimestamp(),
   });
+};
+
+// ===============================
+// Update Order of Multiple Skill Videos (batch write)
+// ===============================
+export const updateSkillVideoOrders = async (videos: { id: string; order: number }[]) => {
+  const batch = writeBatch(db);
+  videos.forEach(({ id, order }) => {
+    batch.update(doc(db, "skill_videos", id), { order });
+  });
+  await batch.commit();
 };
 
 // ===============================

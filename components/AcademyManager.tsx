@@ -3,6 +3,7 @@ import { Upload, X, Video, Search, Plus, Info, Zap, ChevronRight, Folder, ArrowL
 import {
   getSkillVideos,
   createSkillVideo,
+  updateSkillVideoOrders,
   SkillVideo
 } from "../firebase/skillVideos";
 
@@ -18,6 +19,7 @@ import {
   assignExplanationToClient,
   unassignExplanationFromClient,
   getAssignedExplanationUids,
+  updateExplanationVideoOrders,
 } from "../firebase/explanationVideos";
 
 
@@ -46,7 +48,7 @@ const AcademyManager: React.FC<Props> = ({ accentColor, clients, onToggleAssignm
   const [search, setSearch] = useState('');
   const [activeFolder, setActiveFolder] = useState<{cat: 'explanation' | 'skill', sub: string} | null>(null);
   const [isRearrangeMode, setIsRearrangeMode] = useState(false);
-  const [draggedId, setDraggedId] = useState<number | null>(null);
+  const [draggedId, setDraggedId] = useState<number | string | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
 const [assignedExplanationUids, setAssignedExplanationUids] = useState<string[]>([]);
 
@@ -223,28 +225,52 @@ await loadVideos();
 };
 
 
-const onDragStart = (id: number) => {
+  const [dragOverVideoId, setDragOverVideoId] = useState<number | string | null>(null);
+
+const onDragStart = (id: number | string) => {
   if (!isRearrangeMode) return;
   setDraggedId(id);
 };
 
-  const onDragOver = (e: React.DragEvent, targetId: number) => {
+  const onDragOver = (e: React.DragEvent, targetId: number | string) => {
     e.preventDefault();
     if (!isRearrangeMode || draggedId === null || draggedId === targetId) return;
-
-    const draggedIdx = videos.findIndex(v => v.id === draggedId);
-    const targetIdx = videos.findIndex(v => v.id === targetId);
-    
-    const newVideos = [...videos];
-    const [removed] = newVideos.splice(draggedIdx, 1);
-    newVideos.splice(targetIdx, 0, removed);
-    
-    setVideos(newVideos);
+    setDragOverVideoId(targetId);
   };
 
   const onDragEnd = async () => {
-  setDraggedId(null);
-};
+    if (draggedId !== null && dragOverVideoId !== null && draggedId !== dragOverVideoId) {
+      if (activeFolder?.cat === 'skill') {
+        const draggedIdx = videos.findIndex(v => v.id === draggedId);
+        const targetIdx = videos.findIndex(v => v.id === dragOverVideoId);
+        const newVideos = [...videos];
+        const [removed] = newVideos.splice(draggedIdx, 1);
+        newVideos.splice(targetIdx, 0, removed);
+        const reordered = newVideos.map((v, i) => ({ ...v, order: i + 1 }));
+        setVideos(reordered);
+        try {
+          await updateSkillVideoOrders(
+            reordered.filter(v => v.id !== undefined).map(v => ({ id: String(v.id), order: v.order }))
+          );
+        } catch (e) { console.error("Failed to save skill video order:", e); }
+      } else if (activeFolder?.cat === 'explanation') {
+        const draggedIdx = explanationVideos.findIndex(v => v.uid === draggedId || v.id === String(draggedId));
+        const targetIdx = explanationVideos.findIndex(v => v.uid === dragOverVideoId || v.id === String(dragOverVideoId));
+        const newVideos = [...explanationVideos];
+        const [removed] = newVideos.splice(draggedIdx, 1);
+        newVideos.splice(targetIdx, 0, removed);
+        const reordered = newVideos.map((v, i) => ({ ...v, order: i + 1 }));
+        setExplanationVideos(reordered);
+        try {
+          await updateExplanationVideoOrders(
+            reordered.map(v => ({ uid: v.uid, order: v.order ?? 0 }))
+          );
+        } catch (e) { console.error("Failed to save explanation video order:", e); }
+      }
+    }
+    setDraggedId(null);
+    setDragOverVideoId(null);
+  };
 
   return (
     <div className="flex flex-col lg:flex-row gap-10 animate-in fade-in duration-700 pb-20">
@@ -448,6 +474,7 @@ const onDragStart = (id: number) => {
   key={video.uid}
   video={video} 
   isRearrangeMode={isRearrangeMode}
+  isDragOver={dragOverVideoId === video.id || dragOverVideoId === video.uid}
   selectedClientId={selectedClientId}
   selectedClientName={selectedClient?.name.split(' ')[0]}
   isAssigned={assignedExplanationUids.includes(video.uid)}
@@ -487,12 +514,16 @@ else {
   onDragStart={() => {
     if (activeFolder?.cat === "skill" && video.id) {
       onDragStart(video.id);
+    } else if (activeFolder?.cat === "explanation" && video.uid) {
+      onDragStart(video.uid);
     }
   }}
 
   onDragOver={(e) => {
     if (activeFolder?.cat === "skill" && video.id) {
       onDragOver(e, video.id);
+    } else if (activeFolder?.cat === "explanation" && video.uid) {
+      onDragOver(e, video.uid);
     }
   }}
 
@@ -514,6 +545,7 @@ else {
 const VideoManagementCard: React.FC<{ 
   video: VideoFile; 
   isRearrangeMode: boolean;
+  isDragOver: boolean;
   selectedClientId: string | null;
   selectedClientName?: string;
   isAssigned: boolean;
@@ -523,7 +555,7 @@ const VideoManagementCard: React.FC<{
   onDragStart: () => void;
   onDragOver: (e: React.DragEvent) => void;
   onDragEnd: () => void;
-}> = ({ video, isRearrangeMode, selectedClientId, selectedClientName, isAssigned, onToggleAssignment, onDelete, onUpdate, onDragStart, onDragOver, onDragEnd }) => {
+}> = ({ video, isRearrangeMode, isDragOver, selectedClientId, selectedClientName, isAssigned, onToggleAssignment, onDelete, onUpdate, onDragStart, onDragOver, onDragEnd }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [tempName, setTempName] = useState("");
@@ -570,7 +602,7 @@ const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => 
       onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDragEnd={onDragEnd}
-      className={`glass-card rounded-[2.5rem] border-slate-800/50 overflow-hidden group shadow-xl transition-all flex flex-col relative ${isRearrangeMode ? 'ring-2 ring-blue-500/50 scale-[0.98] cursor-grab active:cursor-grabbing' : 'hover:border-blue-500/30'} ${selectedClientId && isAssigned ? 'ring-2 ring-emerald-500/50 border-emerald-500/20' : ''}`}
+      className={`glass-card rounded-[2.5rem] border-slate-800/50 overflow-hidden group shadow-xl transition-all flex flex-col relative ${isRearrangeMode ? 'ring-2 ring-blue-500/50 scale-[0.98] cursor-grab active:cursor-grabbing' : 'hover:border-blue-500/30'} ${isDragOver ? 'ring-2 ring-amber-400/80 border-amber-400/40 scale-[1.02]' : ''} ${selectedClientId && isAssigned ? 'ring-2 ring-emerald-500/50 border-emerald-500/20' : ''}`}
     >
       {/* Mini Player / Thumbnail Area */}
       <div className="aspect-video bg-black relative overflow-hidden">

@@ -9,6 +9,7 @@ import {
   doc,
   updateDoc,
   setDoc,
+  writeBatch,
 } from "firebase/firestore";
 
 import { syncService } from "../firebaseService";
@@ -43,6 +44,7 @@ export type ExplanationVideo = {
 
   storagePath?: string;
   subCategory: string;
+  order?: number;
   createdAt?: any;
 };
 
@@ -72,19 +74,21 @@ export async function getExplanationVideos(): Promise<ExplanationVideo[]> {
 
  return snapshot.docs.map((doc) => {
   const data = doc.data() as ExplanationVideo;
-
   return {
     id: doc.id,
     uid: data.uid,
     name: data.name,
     downloadURL: data.downloadURL,
-
-    // 🔥 THIS IS THE FIX
     thumbnailURL: data.thumbnailURL || null,
-
     subCategory: data.subCategory,
+    order: data.order ?? undefined,
     createdAt: data.createdAt,
   };
+}).sort((a, b) => {
+  if (a.order !== undefined && b.order !== undefined) return a.order - b.order;
+  if (a.order !== undefined) return -1;
+  if (b.order !== undefined) return 1;
+  return 0;
 });
 
   } catch (err) {
@@ -158,6 +162,19 @@ const downloadURL = await getDownloadURL(videoRef);
 
   console.log("🎉 DONE");
   return { success: true };
+}
+
+
+/* =========================
+   REORDER
+========================= */
+export async function updateExplanationVideoOrders(videos: { uid: string; order: number }[]) {
+  const db = syncService.getDb();
+  const batch = writeBatch(db);
+  videos.forEach(({ uid, order }) => {
+    batch.update(doc(db, "explanation_videos", uid), { order });
+  });
+  await batch.commit();
 }
 
 // Assign explanation to a client

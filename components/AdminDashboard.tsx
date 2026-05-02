@@ -45,10 +45,14 @@ const AdminDashboard: React.FC<Props> = ({
 }) => {
   const { cloudSync, cloudError, lastServerUpdate } = useApp();
 
-  // Drag-to-reorder state — starts from alphabetical, persists in component lifetime
-  const initialOrder = useMemo(() =>
-    [...clients].sort((a, b) => a.name.localeCompare(b.name)).map(c => c.id),
-  []);
+  // Drag-to-reorder state — starts from localStorage if available, else alphabetical
+  const initialOrder = useMemo(() => {
+    const saved = localStorage.getItem('ilai_client_order');
+    if (saved) {
+      try { return JSON.parse(saved) as string[]; } catch {}
+    }
+    return [...clients].sort((a, b) => a.name.localeCompare(b.name)).map(c => c.id);
+  }, []);
   const [order, setOrder] = useState<string[]>(initialOrder);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
@@ -79,6 +83,7 @@ const AdminDashboard: React.FC<Props> = ({
       if (fromIdx === -1 || toIdx === -1) return prev;
       next.splice(fromIdx, 1);
       next.splice(toIdx, 0, draggedId);
+      localStorage.setItem('ilai_client_order', JSON.stringify(next));
       return next;
     });
     setDraggedId(null);
