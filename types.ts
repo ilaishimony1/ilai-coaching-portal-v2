@@ -71,6 +71,7 @@ export interface ClientSummary {
   avatar: string;
   lastActive?: string;
   programLength?: string;
+  programStartDate?: string;
   programEndDate?: string;
 }
 

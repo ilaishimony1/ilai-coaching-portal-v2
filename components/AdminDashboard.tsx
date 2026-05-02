@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { Users, UserPlus, Palette, Settings2, RefreshCw, ChevronRight, Inbox, AlertCircle, Database, Cpu, Shield, Clock } from 'lucide-react';
+import React, { useMemo, useState, useCallback } from 'react';
+import { Users, UserPlus, Palette, Settings2, RefreshCw, ChevronRight, Inbox, AlertCircle, Database, Cpu, Shield, Clock, GripVertical } from 'lucide-react';
 import { ClientSummary, ClientData } from '../types';
 import { useApp } from '../AppContext';
 
@@ -15,14 +15,80 @@ interface Props {
   isMasterNode: boolean;
 }
 
+// Returns progress 0–1, and a status string
+const getProgramStatus = (startDate?: string, endDate?: string) => {
+  if (!startDate || !endDate) return { progress: 0, status: 'none' as const };
+  const start = new Date(startDate).getTime();
+  const end = new Date(endDate).getTime();
+  const now = Date.now();
+  const total = end - start;
+  if (total <= 0) return { progress: 1, status: 'expired' as const };
+  const elapsed = now - start;
+  const progress = Math.min(Math.max(elapsed / total, 0), 1);
+  const daysLeft = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
+  if (daysLeft <= 0) return { progress: 1, status: 'expired' as const };
+  if (daysLeft <= 14) return { progress, status: 'critical' as const };
+  if (progress >= 0.5) return { progress, status: 'warning' as const };
+  return { progress, status: 'good' as const };
+};
+
+const statusStyles = {
+  none:     { bar: 'bg-slate-700',    text: 'text-slate-500',   label: 'text-slate-600',   badge: 'bg-slate-800 border-slate-700 text-slate-500' },
+  good:     { bar: 'bg-emerald-500',  text: 'text-emerald-400', label: 'text-emerald-600', badge: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' },
+  warning:  { bar: 'bg-amber-500',    text: 'text-amber-400',   label: 'text-amber-600',   badge: 'bg-amber-500/10 border-amber-500/30 text-amber-400' },
+  critical: { bar: 'bg-red-500',      text: 'text-red-400',     label: 'text-red-600',     badge: 'bg-red-500/10 border-red-500/30 text-red-400' },
+  expired:  { bar: 'bg-red-700',      text: 'text-red-500',     label: 'text-red-700',     badge: 'bg-red-500/10 border-red-500/30 text-red-500' },
+};
+
 const AdminDashboard: React.FC<Props> = ({
-  clients, onOpenPortal, onEditPortal, onArchiveClient, onAddClient, onOpenBranding
+  clients, fullClients, onOpenPortal, onEditPortal, onArchiveClient, onAddClient, onOpenBranding
 }) => {
   const { cloudSync, cloudError, lastServerUpdate } = useApp();
 
-  const sortedClients = useMemo(() => {
-    return [...clients].sort((a, b) => a.name.localeCompare(b.name));
-  }, [clients]);
+  // Drag-to-reorder state — starts from alphabetical, persists in component lifetime
+  const initialOrder = useMemo(() =>
+    [...clients].sort((a, b) => a.name.localeCompare(b.name)).map(c => c.id),
+  []);
+  const [order, setOrder] = useState<string[]>(initialOrder);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+
+  // Keep order in sync if clients list changes (new client added etc.)
+  const orderedClients = useMemo(() => {
+    const clientMap = new Map(clients.map(c => [c.id, c]));
+    const known = order.filter(id => clientMap.has(id)).map(id => clientMap.get(id)!);
+    const newOnes = clients.filter(c => !order.includes(c.id));
+    return [...known, ...newOnes];
+  }, [clients, order]);
+
+  const handleDragStart = useCallback((id: string) => {
+    setDraggedId(id);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent, id: string) => {
+    e.preventDefault();
+    if (id !== draggedId) setDragOverId(id);
+  }, [draggedId]);
+
+  const handleDrop = useCallback((targetId: string) => {
+    if (!draggedId || draggedId === targetId) return;
+    setOrder(prev => {
+      const next = [...prev];
+      const fromIdx = next.indexOf(draggedId);
+      const toIdx = next.indexOf(targetId);
+      if (fromIdx === -1 || toIdx === -1) return prev;
+      next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, draggedId);
+      return next;
+    });
+    setDraggedId(null);
+    setDragOverId(null);
+  }, [draggedId]);
+
+  const handleDragEnd = useCallback(() => {
+    setDraggedId(null);
+    setDragOverId(null);
+  }, []);
 
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-top-4 duration-700 pb-20">
@@ -105,46 +171,102 @@ const AdminDashboard: React.FC<Props> = ({
         </div>
 
         <div className="grid gap-6">
-          {sortedClients.length === 0 ? (
+          {orderedClients.length === 0 ? (
             <div className="py-24 text-center border-2 border-dashed border-slate-900 rounded-[4rem] bg-slate-950/20">
               <Inbox className="mx-auto text-slate-800 mb-6" size={56} />
               <p className="text-slate-700 font-black uppercase text-sm tracking-widest">Roster Empty</p>
             </div>
           ) : (
-            sortedClients.map(clientSummary => (
-              <div key={clientSummary.id} className="glass-card p-8 rounded-[2.5rem] border-slate-800/50 flex items-center justify-between group hover:border-blue-500/40 transition-all shadow-xl bg-slate-950/20">
-                <div className="flex items-center gap-8">
-                  <div className="w-20 h-20 rounded-3xl bg-slate-900 border-2 border-slate-800 overflow-hidden relative shadow-inner">
-                    {clientSummary.avatar
-                      ? <img src={clientSummary.avatar} className="w-full h-full object-cover" />
-                      : <div className="w-full h-full flex items-center justify-center text-slate-700 font-black italic text-2xl">IS</div>
-                    }
+            orderedClients.map(clientSummary => {
+              const fullClient = fullClients.find(f => f.id === clientSummary.id);
+              const { progress, status } = getProgramStatus(
+                fullClient?.programStartDate ?? clientSummary.programStartDate,
+                clientSummary.programEndDate
+              );
+              const styles = statusStyles[status];
+              const daysLeft = clientSummary.programEndDate
+                ? Math.ceil((new Date(clientSummary.programEndDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                : null;
+              const isDragging = draggedId === clientSummary.id;
+              const isDragOver = dragOverId === clientSummary.id;
+
+              return (
+                <div
+                  key={clientSummary.id}
+                  draggable
+                  onDragStart={() => handleDragStart(clientSummary.id)}
+                  onDragOver={(e) => handleDragOver(e, clientSummary.id)}
+                  onDrop={() => handleDrop(clientSummary.id)}
+                  onDragEnd={handleDragEnd}
+                  className={`glass-card p-8 rounded-[2.5rem] border-slate-800/50 flex items-center justify-between group transition-all shadow-xl bg-slate-950/20
+                    ${isDragging ? 'opacity-40 scale-[0.98]' : ''}
+                    ${isDragOver ? 'border-blue-500/60 bg-blue-500/5 scale-[1.01]' : 'hover:border-blue-500/40'}
+                  `}
+                >
+                  {/* Drag handle */}
+                  <div className="mr-4 text-slate-800 group-hover:text-slate-600 cursor-grab active:cursor-grabbing transition-colors shrink-0">
+                    <GripVertical size={20} />
                   </div>
-                  <div>
-                    <h4 className="text-3xl font-black text-white brand-font tracking-tight">
-                      {clientSummary.name}
-                    </h4>
-                    <div className="flex items-center gap-4 mt-2">
-                      <div className="bg-red-500/10 border border-red-500/20 px-3 py-1 rounded-lg">
-                        <span className="text-[9px] text-red-500 uppercase font-black tracking-[0.1em]">{clientSummary.programLength || '3'} Month Protocol</span>
+
+                  <div className="flex items-center gap-8 flex-1 min-w-0">
+                    <div className="w-20 h-20 rounded-3xl bg-slate-900 border-2 border-slate-800 overflow-hidden relative shadow-inner shrink-0">
+                      {clientSummary.avatar
+                        ? <img src={clientSummary.avatar} className="w-full h-full object-cover" />
+                        : <div className="w-full h-full flex items-center justify-center text-slate-700 font-black italic text-2xl">IS</div>
+                      }
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-3xl font-black text-white brand-font tracking-tight truncate">
+                        {clientSummary.name}
+                      </h4>
+                      <div className="flex items-center gap-4 mt-2 flex-wrap">
+                        <div className={`border px-3 py-1 rounded-lg ${styles.badge}`}>
+                          <span className="text-[9px] uppercase font-black tracking-[0.1em]">
+                            {clientSummary.programLength || '3'} Month Protocol
+                          </span>
+                        </div>
+                        <div className="w-1 h-1 rounded-full bg-slate-800"></div>
+                        <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${styles.text}`}>
+                          {daysLeft === null
+                            ? 'No end date'
+                            : daysLeft <= 0
+                            ? 'Expired'
+                            : `${daysLeft}d left`}
+                        </p>
                       </div>
-                      <div className="w-1 h-1 rounded-full bg-slate-800"></div>
-                      <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${clientSummary.programEndDate && new Date(clientSummary.programEndDate) < new Date() ? 'text-red-500' : 'text-slate-500'}`}>
-                        Ends: {clientSummary.programEndDate ? new Date(clientSummary.programEndDate).toLocaleDateString() : 'N/A'}
-                      </p>
+
+                      {/* Progress bar */}
+                      {status !== 'none' && (
+                        <div className="mt-3 w-full max-w-[200px]">
+                          <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-700 ${styles.bar}`}
+                              style={{ width: `${Math.round(progress * 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
+
+                  <div className="flex gap-3 shrink-0 ml-4">
+                    <button
+                      onClick={() => onEditPortal(clientSummary.id)}
+                      className="p-5 bg-slate-950 rounded-2xl text-slate-600 hover:text-blue-400 transition-colors border border-white/5 group-hover:bg-slate-900 group-hover:border-blue-500/20"
+                      title="Edit Protocol"
+                    >
+                      <Settings2 size={24} />
+                    </button>
+                    <button
+                      onClick={() => onOpenPortal(clientSummary.id)}
+                      className="px-10 py-5 bg-blue-600 rounded-2xl text-white font-black text-xs tracking-widest uppercase flex items-center justify-center gap-3 hover:bg-blue-500 transition-all shadow-2xl active:scale-95 group/btn"
+                    >
+                      Open Portal <ChevronRight size={18} className="group-hover/btn:translate-x-1 transition-transform" />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex gap-3">
-                  <button onClick={() => onEditPortal(clientSummary.id)} className="p-5 bg-slate-950 rounded-2xl text-slate-600 hover:text-blue-400 transition-colors border border-white/5 group-hover:bg-slate-900 group-hover:border-blue-500/20" title="Edit Protocol">
-                    <Settings2 size={24} />
-                  </button>
-                  <button onClick={() => onOpenPortal(clientSummary.id)} className="px-10 py-5 bg-blue-600 rounded-2xl text-white font-black text-xs tracking-widest uppercase flex items-center justify-center gap-3 hover:bg-blue-500 transition-all shadow-2xl active:scale-95 group/btn">
-                    Open Portal <ChevronRight size={18} className="group-hover/btn:translate-x-1 transition-transform" />
-                  </button>
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
