@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 // Added RefreshCw to imports from lucide-react
 import { Save, Plus, X, Dumbbell, Info, Eye, EyeOff, Target, User, Phone, Mail, Globe, Calendar, Zap, Check, Clock, Ruler as RulerIcon, Weight, Activity, Search, BarChart, Move, Shapes, Library, Download, Type, ShieldCheck, CheckCircle2, RefreshCw, Archive } from 'lucide-react';
@@ -60,7 +59,7 @@ const COUNTRY_DATA = [
 const generateUniqueId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
 const TrainerTemplateEditor: React.FC<Props> = ({ client, onUpdate, onAddClient, onArchive, isEditing }) => {
-  const { savedWorkouts, setSavedWorkouts, cloudSync } = useApp();
+  const { savedWorkouts, setSavedWorkouts, cloudSync, syncService } = useApp();
   const [localClient, setLocalClient] = useState<ClientData>(client);
   const [showPassword, setShowPassword] = useState(false);
   const [isCapsLock, setIsCapsLock] = useState(false);
@@ -250,7 +249,7 @@ const TrainerTemplateEditor: React.FC<Props> = ({ client, onUpdate, onAddClient,
     };
     setSavedWorkouts(prev => [...prev, template]);
     setSaveIndicatorId(workout.id);
-    cloudSync.forceSync();
+    syncService.updateDocument('master_library', template.id, template);
     setTimeout(() => setSaveIndicatorId(null), 3000);
   };
 

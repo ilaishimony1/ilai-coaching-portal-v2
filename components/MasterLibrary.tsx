@@ -1,4 +1,3 @@
-
 import VideoUploader from './VideoUploader/VideoUploader';
 import React, { useState } from 'react';
 import { Library, Trash2, Edit3, ChevronRight, Dumbbell, Zap, Sparkles, X, Check, Eye, User, FileText, Info, UserPlus, Smartphone, Send, PlusCircle, Type } from 'lucide-react';
@@ -7,7 +6,11 @@ import { WorkoutTemplate, Exercise, ClientData, Workout } from '../types';
 
 const generateUniqueId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-const MasterLibrary: React.FC = () => {
+interface Props {
+  onLoadIntoEditor: (clientId: string, templateWorkout: Workout, targetModuleId: string | 'NEW') => void;
+}
+
+const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
   const { savedWorkouts, setSavedWorkouts, clients, setClients, cloudSync } = useApp();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -15,7 +18,7 @@ const MasterLibrary: React.FC = () => {
   const [previewTemplate, setPreviewTemplate] = useState<WorkoutTemplate | null>(null);
   const [assigningTemplate, setAssigningTemplate] = useState<WorkoutTemplate | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string>("");
-  const [targetModuleId, setTargetModuleId] = useState<string>(""); // "" means create new
+  const [targetModuleId, setTargetModuleId] = useState<string>("");
 
   const executeDelete = async (id: string) => {
     const updatedLibrary = savedWorkouts.filter(w => w.id !== id);
@@ -41,50 +44,16 @@ const MasterLibrary: React.FC = () => {
     await cloudSync.forceSync();
   };
 
-  const handleExecuteAssignment = () => {
-    if (!assigningTemplate || !selectedClientId) return;
-
-    setClients(prev => prev.map(c => {
-      if (c.id !== selectedClientId) return c;
-      
-      const newWorkouts = [...c.workouts];
-      
-      if (targetModuleId === "NEW") {
-        // Find next available letter
-        const existingLetters = c.workouts.map(w => w.name.toUpperCase());
-        const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        let nextLetter = 'A';
-        for (const char of alphabet) {
-          if (!existingLetters.includes(char)) {
-            nextLetter = char;
-            break;
-          }
-        }
-
-        const newModule: Workout = {
-          id: generateUniqueId('w'),
-          name: nextLetter,
-          title: assigningTemplate.title,
-          exercises: assigningTemplate.exercises.map(ex => ({ ...ex, id: generateUniqueId('ex') }))
-        };
-        newWorkouts.push(newModule);
-      } else {
-        // Override existing
-        const idx = newWorkouts.findIndex(w => w.id === targetModuleId);
-        if (idx !== -1) {
-          newWorkouts[idx] = {
-            ...newWorkouts[idx],
-            title: assigningTemplate.title,
-            exercises: assigningTemplate.exercises.map(ex => ({ ...ex, id: generateUniqueId('ex') }))
-          };
-        }
-      }
-
-      return { ...c, workouts: newWorkouts };
-    }));
-
-    cloudSync.forceSync();
-    alert(`Protocol "${assigningTemplate.title}" dispatched to athlete.`);
+  const handleLoadIntoEditor = () => {
+    if (!assigningTemplate || !selectedClientId || !targetModuleId) return;
+    // Pass a fresh copy of the template workout (new IDs so it doesn't collide)
+    const freshWorkout: Workout = {
+      id: generateUniqueId('w'),
+      name: assigningTemplate.name,
+      title: assigningTemplate.title,
+      exercises: assigningTemplate.exercises.map(ex => ({ ...ex, id: generateUniqueId('ex') })),
+    };
+    onLoadIntoEditor(selectedClientId, freshWorkout, targetModuleId);
     setAssigningTemplate(null);
     setSelectedClientId("");
     setTargetModuleId("");
