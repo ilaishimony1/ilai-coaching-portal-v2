@@ -134,6 +134,10 @@ export class FirebaseSyncService {
     };
   }
 
+  async deleteDocument(collectionName: string, id: string) {
+    await deleteDoc(doc(this.db, collectionName, id));
+  }
+
   async updateDocument(collectionName: string, id: string, data: any) {
     const ref = doc(this.db, collectionName, id);
     const cleanData = JSON.parse(JSON.stringify(data));

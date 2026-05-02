@@ -25,7 +25,7 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
   const executeDelete = async (id: string) => {
     setSavedWorkouts(prev => prev.filter(w => w.id !== id));
     setDeletingId(null);
-    await cloudSync.forceSync();
+    await syncService.deleteDocument('master_library', id);
   };
 
   const startEdit = (e: React.MouseEvent, template: WorkoutTemplate) => {
