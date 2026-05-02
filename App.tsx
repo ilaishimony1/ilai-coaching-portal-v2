@@ -317,7 +317,26 @@ const MainApp: React.FC = () => {
           )}
 
           {viewMode === 'SAVED_PROGRAMS' && (
-            <MasterLibrary />
+            <MasterLibrary
+              onLoadIntoEditor={(clientId, templateWorkout, targetModuleId) => {
+                const client = clients.find(c => c.id === clientId);
+                if (!client) return;
+                // Inject the template into the client's workouts
+                let updatedWorkouts = [...client.workouts];
+                if (targetModuleId === 'NEW') {
+                  const usedLetters = updatedWorkouts.map(w => w.name.toUpperCase());
+                  const nextLetter = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').find(l => !usedLetters.includes(l)) || 'X';
+                  updatedWorkouts.push({ ...templateWorkout, name: nextLetter });
+                } else {
+                  updatedWorkouts = updatedWorkouts.map(w =>
+                    w.id === targetModuleId ? { ...templateWorkout, name: w.name } : w
+                  );
+                }
+                const updatedClient = mergeClient({ ...client, workouts: updatedWorkouts });
+                setCurrentClientData(updatedClient);
+                setViewMode('TRAINER');
+              }}
+            />
           )}
 
           {viewMode === 'ARCHIVE' && (
