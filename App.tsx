@@ -504,6 +504,15 @@ useEffect(() => {
           <p className="font-bold uppercase tracking-[0.5em] text-[10px] mt-2 text-blue-500">1:1 ONLINE COACHING</p>
         </div>
       </div>
+      {authStatus.type === 'COACH' && (
+        <button
+          onClick={() => setViewMode('ADMIN')}
+          className="flex items-center gap-2 px-5 py-3 bg-slate-900/60 border border-slate-800 rounded-2xl text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-white hover:border-slate-600 transition-all group"
+        >
+          <ChevronLeft size={14} className="group-hover:-translate-x-0.5 transition-transform" />
+          Command Center
+        </button>
+      )}
     </header>  {/* ✅ close header properly */}
 
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
