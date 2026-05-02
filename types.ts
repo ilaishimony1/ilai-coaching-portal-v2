@@ -1,4 +1,3 @@
-
 export interface Exercise {
   id: string;
   name: string;
@@ -6,39 +5,9 @@ export interface Exercise {
   sets: string;
   duration?: string;
   notes: string;
-videoId?: string; // ✅ ONLY THIS
+  videoId?: string;
   restTime?: string;
   category?: 'strength' | 'mobility' | 'header';
-}
-
-export interface Message {
-  id: string;
-  senderId: string; // 'coach' or client.id
-  text: string;
-  timestamp: string;
-  type: 'text' | 'system';
-  isRead?: boolean;
-  meta?: {
-    workoutId?: string;
-    type?: 'workout' | 'summary';
-    title?: string;
-  };
-}
-
-export interface WorkoutLog {
-  date: string;
-  workoutId: string;
-  exercises: {
-    id: string;
-    actualReps: string;
-    rpe: string; // Rate of Perceived Exertion
-    clientNotes?: string;
-    clientVideoId?: string; // UID of client-uploaded video in Firebase
-  }[];
-  // Adding top-level clientNotes for weekly summaries or overall feedback
-  clientNotes?: string;
-  coachFeedback?: string;
-  isRead?: boolean;
 }
 
 export interface Workout {
@@ -77,7 +46,6 @@ export interface ClientData {
   avatar: string;
   username?: string;
   password?: string;
-  // Personal Info
   email?: string;
   phone?: string;
   country?: string;
@@ -85,7 +53,6 @@ export interface ClientData {
   height?: string;
   weight?: string;
   level?: string;
-  
   programStartDate?: string;
   programEndDate?: string;
   programLength?: string;
@@ -94,9 +61,6 @@ export interface ClientData {
   schedule: TrainingDay[];
   weeklySchedule?: Record<number, string>;
   workouts: Workout[];
-  logs?: WorkoutLog[];
-  messages?: Message[];
-  hasNewSubmission?: boolean;
   assignedVideoUids?: string[];
   lastSync?: any;
 }
@@ -108,12 +72,11 @@ export interface ClientSummary {
   lastActive?: string;
   programLength?: string;
   programEndDate?: string;
-  hasNewSubmission?: boolean;
 }
 
-export type ViewMode = 'ADMIN' | 'TRAINER' | 'CLIENT' | 'LANDING_EDITOR' | 'ARCHIVE' | 'ACADEMY' | 'PERFORMANCE' | 'CHAT' | 'FOCUS_MODE' | 'SAVED_PROGRAMS';
+export type ViewMode = 'ADMIN' | 'TRAINER' | 'CLIENT' | 'LANDING_EDITOR' | 'ARCHIVE' | 'ACADEMY' | 'CHAT' | 'SAVED_PROGRAMS';
 
-export type AuthStatus = 
+export type AuthStatus =
   | { type: 'NONE' }
   | { type: 'COACH' }
   | { type: 'CLIENT', clientId: string };
