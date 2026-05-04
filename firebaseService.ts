@@ -16,11 +16,12 @@ import {
   query,
   limit,
   getDocs,
-  getDoc
+  getDoc,
+  addDoc
 } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
-import { ClientData, LandingPageConfig, WorkoutTemplate } from "./types";
+import { ClientData, LandingPageConfig, WorkoutTemplate, WeeklyCheckIn } from "./types";
 
 // ===============================
 // Firebase Config
@@ -126,11 +127,24 @@ export class FirebaseSyncService {
       onError
     );
 
+    const unsubCheckIns = onSnapshot(
+      collection(this.db, "check_ins"),
+      snap => {
+        const checkIns = snap.docs.map(d => ({
+          ...(d.data() as WeeklyCheckIn),
+          id: d.id
+        }));
+        onUpdate({ type: "checkIns", payload: checkIns });
+      },
+      onError
+    );
+
     return () => {
       unsubClients();
       unsubArchived();
       unsubLibrary();
       unsubBranding();
+      unsubCheckIns();
     };
   }
 
@@ -175,6 +189,18 @@ export class FirebaseSyncService {
     });
 
     await batch.commit();
+  }
+
+  async submitCheckIn(checkIn: Omit<WeeklyCheckIn, 'id'>): Promise<string> {
+    const docRef = await addDoc(collection(this.db, "check_ins"), {
+      ...checkIn,
+      lastSync: serverTimestamp()
+    });
+    return docRef.id;
+  }
+
+  async markCheckInRead(id: string): Promise<void> {
+    await this.updateDocument("check_ins", id, { readByCoach: true });
   }
 
   async deletePermanent(clientId: string, fromArchive = true) {

@@ -8,7 +8,7 @@ import {
   inMemoryPersistence
 } from "firebase/auth";
 import React, { useState, useRef, useEffect } from 'react';
-import { Home, LogOut, Palette, User, ChevronLeft, Archive, BookOpen, Video, Camera, Library } from 'lucide-react';
+import { Home, LogOut, Palette, User, ChevronLeft, Archive, BookOpen, Video, Camera, Library, ClipboardList } from 'lucide-react';
 import { ViewMode, AuthStatus, ClientData } from './types';
 import LoginPage from './components/LoginPage'; 
 import GoalTracker from './components/GoalTracker';
@@ -21,6 +21,8 @@ import AcademyManager from './components/AcademyManager';
 import AcademyLibrary from './components/AcademyLibrary';
 import ArchivedDashboard from './components/ArchivedDashboard';
 import MasterLibrary from './components/MasterLibrary';
+import WeeklyCheckInComponent from './components/WeeklyCheckIn';
+import CoachCheckIns from './components/CoachCheckIns';
 import { AppProvider, useApp } from './AppContext';
 
 const APP_VERSION = "2.10.0";
@@ -50,7 +52,7 @@ const mergeClient = (client: ClientData): ClientData => ({
 });
 
 const MainApp: React.FC = () => {
-  const { clients, setClients, archivedClients, setArchivedClients, landingConfig, setLandingConfig, cloudSync, syncService } = useApp();
+  const { clients, setClients, archivedClients, setArchivedClients, landingConfig, setLandingConfig, cloudSync, syncService, unreadCheckInsCount } = useApp();
   const [authStatus, setAuthStatus] = useState<AuthStatus>({ type: 'NONE' });
   const [viewMode, setViewMode] = useState<ViewMode>('ADMIN');
   const [currentClientData, setCurrentClientData] = useState<ClientData | null>(null);
@@ -62,6 +64,7 @@ const MainApp: React.FC = () => {
         <>
           <NavBtn active={viewMode === 'CLIENT'} onClick={() => setViewMode('CLIENT')} icon={<User />} color={landingConfig.accentColor} />
           <NavBtn active={viewMode === 'ACADEMY'} onClick={() => setViewMode('ACADEMY')} icon={<BookOpen />} color={landingConfig.accentColor} />
+          <NavBtn active={viewMode === 'WEEKLY_CHECKIN'} onClick={() => setViewMode('WEEKLY_CHECKIN')} icon={<ClipboardList />} color={landingConfig.accentColor} />
         </>
       ) : (
         <>
@@ -69,6 +72,7 @@ const MainApp: React.FC = () => {
           <NavBtn active={viewMode === 'ACADEMY'} onClick={() => setViewMode('ACADEMY')} icon={<Video />} color={landingConfig.accentColor} />
           <NavBtn active={viewMode === 'SAVED_PROGRAMS'} onClick={() => setViewMode('SAVED_PROGRAMS')} icon={<Library />} color={landingConfig.accentColor} />
           <NavBtn active={viewMode === 'ARCHIVE'} onClick={() => setViewMode('ARCHIVE')} icon={<Archive />} color={landingConfig.accentColor} />
+          <NavBtn active={viewMode === 'WEEKLY_CHECKIN'} onClick={() => setViewMode('WEEKLY_CHECKIN')} icon={<ClipboardList />} color={landingConfig.accentColor} badge={unreadCheckInsCount} />
           <NavBtn active={viewMode === 'LANDING_EDITOR'} onClick={() => setViewMode('LANDING_EDITOR')} icon={<Palette />} color={landingConfig.accentColor} />
         </>
       )}
@@ -422,6 +426,17 @@ const MainApp: React.FC = () => {
             </div>
           )}
 
+          {viewMode === 'WEEKLY_CHECKIN' && authStatus.type === 'COACH' && (
+            <CoachCheckIns />
+          )}
+
+          {viewMode === 'WEEKLY_CHECKIN' && authStatus.type === 'CLIENT' && currentClientData && (
+            <WeeklyCheckInComponent
+              client={currentClientData}
+              accentColor={landingConfig.accentColor}
+            />
+          )}
+
           {viewMode === 'LANDING_EDITOR' && (
             <LandingPageEditor config={landingConfig} onUpdate={(c) => { setLandingConfig(c); }} onBack={() => setViewMode('ADMIN')} />
           )}
@@ -432,14 +447,21 @@ const MainApp: React.FC = () => {
   );
 };
 
-const NavBtn = ({ active, icon, onClick, color }: any) => (
-  <button
-    onClick={onClick}
-    className={`p-3 md:p-4 rounded-2xl transition-all duration-300 ${active ? 'text-white shadow-lg' : 'text-slate-700 hover:text-white'}`}
-    style={active ? { backgroundColor: color, boxShadow: `0 10px 30px -10px ${color}` } : {}}
-  >
-    {icon}
-  </button>
+const NavBtn = ({ active, icon, onClick, color, badge }: any) => (
+  <div className="relative">
+    <button
+      onClick={onClick}
+      className={`p-3 md:p-4 rounded-2xl transition-all duration-300 ${active ? 'text-white shadow-lg' : 'text-slate-700 hover:text-white'}`}
+      style={active ? { backgroundColor: color, boxShadow: `0 10px 30px -10px ${color}` } : {}}
+    >
+      {icon}
+    </button>
+    {badge > 0 && (
+      <div className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 rounded-full flex items-center justify-center text-[9px] font-black text-white shadow-lg pointer-events-none">
+        {badge > 9 ? '9+' : badge}
+      </div>
+    )}
+  </div>
 );
 
 const App = () => (

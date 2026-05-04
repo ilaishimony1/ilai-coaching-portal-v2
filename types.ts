@@ -75,7 +75,26 @@ export interface ClientSummary {
   programEndDate?: string;
 }
 
-export type ViewMode = 'ADMIN' | 'TRAINER' | 'CLIENT' | 'LANDING_EDITOR' | 'ARCHIVE' | 'ACADEMY' | 'CHAT' | 'SAVED_PROGRAMS';
+export type ViewMode = 'ADMIN' | 'TRAINER' | 'CLIENT' | 'LANDING_EDITOR' | 'ARCHIVE' | 'ACADEMY' | 'CHAT' | 'SAVED_PROGRAMS' | 'WEEKLY_CHECKIN';
+
+export interface WeeklyCheckIn {
+  id: string;
+  clientId: string;
+  clientName: string;
+  submittedAt: string;
+  readByCoach: boolean;
+  programWeek: string;
+  sessionsCompleted: string;
+  followedProgram: string;
+  smallWin: string;
+  mostImprovement: string;
+  biggestChallenge: string;
+  mostLimiting: string;
+  dontUnderstand: string;
+  clearOnWork: string;
+  focusNextWeek: string;
+  anythingElse: string;
+}
 
 export type AuthStatus =
   | { type: 'NONE' }

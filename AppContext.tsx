@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { ClientData, LandingPageConfig, WorkoutTemplate } from './types';
+import { ClientData, LandingPageConfig, WorkoutTemplate, WeeklyCheckIn } from './types';
 import { TEST_CLIENT, INITIAL_CONFIG } from './constants';
 import { FirebaseSyncService } from './firebaseService';
 
@@ -21,6 +21,10 @@ interface AppContextType {
   cloudError: string | null;
   lastServerUpdate: Date | null;
   hasInitialCloudSync: boolean;
+  checkIns: WeeklyCheckIn[];
+  unreadCheckInsCount: number;
+  submitCheckIn: (checkIn: Omit<WeeklyCheckIn, 'id'>) => Promise<void>;
+  markCheckInRead: (id: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -42,11 +46,27 @@ const [clients, setClients] = useState<ClientData[] | null>(null);
   const [lastServerUpdate, setLastServerUpdate] = useState<Date | null>(null);
   const [hasInitialCloudSync, setHasInitialCloudSync] = useState(false);
 
+  const [checkIns, setCheckIns] = useState<WeeklyCheckIn[]>([]);
+
   const syncService = useMemo(() => new FirebaseSyncService(), []);
-  
-  // Ref to track if the current state change is coming FROM the cloud 
+
+  // Ref to track if the current state change is coming FROM the cloud
   // (to avoid circular updates, though Firestore onSnapshot handles most of this)
   const isIncomingUpdate = useRef(false);
+
+  const unreadCheckInsCount = useMemo(
+    () => checkIns.filter(c => !c.readByCoach).length,
+    [checkIns]
+  );
+
+  const submitCheckIn = useCallback(async (checkIn: Omit<WeeklyCheckIn, 'id'>) => {
+    await syncService.submitCheckIn(checkIn);
+  }, [syncService]);
+
+  const markCheckInRead = useCallback(async (id: string) => {
+    setCheckIns(prev => prev.map(c => c.id === id ? { ...c, readByCoach: true } : c));
+    await syncService.markCheckInRead(id);
+  }, [syncService]);
 
   // 1. Initial Load from Local Cache (Immediate UI)
   useEffect(() => {
@@ -88,6 +108,9 @@ const [clients, setClients] = useState<ClientData[] | null>(null);
               setLandingConfig(update.payload);
               localStorage.setItem('ilai_academy_config', JSON.stringify(update.payload));
             }
+            break;
+          case 'checkIns':
+            setCheckIns(update.payload || []);
             break;
         }
 
@@ -138,7 +161,11 @@ const [clients, setClients] = useState<ClientData[] | null>(null);
       },
       cloudError,
       lastServerUpdate,
-      hasInitialCloudSync
+      hasInitialCloudSync,
+      checkIns,
+      unreadCheckInsCount,
+      submitCheckIn,
+      markCheckInRead,
     }}>
       {children}
     </AppContext.Provider>
