@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 // Added RefreshCw to imports from lucide-react
-import { Save, Plus, X, Dumbbell, Info, Eye, EyeOff, Target, User, Phone, Mail, Globe, Calendar, Zap, Check, Clock, Ruler as RulerIcon, Weight, Activity, Search, BarChart, Move, Shapes, Library, Download, Type, ShieldCheck, CheckCircle2, RefreshCw, Archive } from 'lucide-react';
+import { Save, Plus, X, Dumbbell, Info, Eye, EyeOff, Target, User, Phone, Mail, Globe, Calendar, Zap, Check, Clock, Ruler as RulerIcon, Weight, Activity, Search, BarChart, Move, Shapes, Library, Download, Type, ShieldCheck, CheckCircle2, RefreshCw, Archive, PlayCircle } from 'lucide-react';
 import { ClientData, Workout, Exercise, Goal, MiniGoal, WorkoutTemplate } from '../types';
 import { db, VideoFile } from '../db';
 import { useApp } from '../AppContext';
@@ -69,6 +69,7 @@ const TrainerTemplateEditor: React.FC<Props> = ({ client, onUpdate, onAddClient,
   const [exerciseSuggestions, setExerciseSuggestions] = useState<Record<string, VideoFile[]>>({});
   const [saveIndicatorId, setSaveIndicatorId] = useState<string | null>(null);
   const [isDeploying, setIsDeploying] = useState(false);
+  const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
 
   // UI Confirmation States
   const [deletingWorkoutId, setDeletingWorkoutId] = useState<string | null>(null);
@@ -850,6 +851,16 @@ const matches = [...startsWithMatches, ...includesMatches];
                             )}
                          </div>
                          <div className="flex items-center gap-3">
+                            {ex.videoUrl && (
+                              <button
+                                type="button"
+                                onClick={() => setPreviewVideoUrl(ex.videoUrl!)}
+                                className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-500 hover:text-blue-400 hover:border-blue-500/40 transition-all"
+                                title="Preview linked video"
+                              >
+                                <PlayCircle size={18} />
+                              </button>
+                            )}
                             <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800">
                                <button 
                                 type="button" 
@@ -942,6 +953,28 @@ const matches = [...startsWithMatches, ...includesMatches];
           )}
         </button>
       </div>
+
+      {/* ── VIDEO PREVIEW MODAL ── */}
+      {previewVideoUrl && (
+        <div className="fixed inset-0 z-[900] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={() => setPreviewVideoUrl(null)} />
+          <div className="relative w-full max-w-2xl">
+            <button
+              onClick={() => setPreviewVideoUrl(null)}
+              className="absolute -top-12 right-0 p-2 text-slate-400 hover:text-white transition-colors flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
+            >
+              <X size={16} /> Close
+            </button>
+            <video
+              src={previewVideoUrl}
+              controls
+              autoPlay
+              className="w-full rounded-3xl shadow-2xl bg-black"
+              style={{ maxHeight: '75vh' }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
