@@ -136,7 +136,11 @@ export class FirebaseSyncService {
         }));
         onUpdate({ type: "checkIns", payload: checkIns });
       },
-      onError
+      (err) => {
+        // Isolated — don't let check_ins permission errors break the main app
+        console.warn("check_ins listener:", err.message);
+        onUpdate({ type: "checkIns", payload: [] });
+      }
     );
 
     return () => {
