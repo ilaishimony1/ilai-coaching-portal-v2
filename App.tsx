@@ -52,7 +52,7 @@ const mergeClient = (client: ClientData): ClientData => ({
 });
 
 const MainApp: React.FC = () => {
-  const { clients, setClients, archivedClients, setArchivedClients, landingConfig, setLandingConfig, cloudSync, syncService, unreadCheckInsCount } = useApp();
+  const { clients, setClients, archivedClients, setArchivedClients, landingConfig, setLandingConfig, cloudSync, syncService, unreadCheckInsCount, checkIns } = useApp();
   const [authStatus, setAuthStatus] = useState<AuthStatus>({ type: 'NONE' });
   const [viewMode, setViewMode] = useState<ViewMode>('ADMIN');
   const [currentClientData, setCurrentClientData] = useState<ClientData | null>(null);
@@ -64,9 +64,6 @@ const MainApp: React.FC = () => {
         <>
           <NavBtn active={viewMode === 'CLIENT'} onClick={() => setViewMode('CLIENT')} icon={<User />} color={landingConfig.accentColor} />
           <NavBtn active={viewMode === 'ACADEMY'} onClick={() => setViewMode('ACADEMY')} icon={<BookOpen />} color={landingConfig.accentColor} />
-          {currentClientData?.weeklyCheckInEnabled && (
-            <NavBtn active={viewMode === 'WEEKLY_CHECKIN'} onClick={() => setViewMode('WEEKLY_CHECKIN')} icon={<ClipboardList />} color={landingConfig.accentColor} />
-          )}
         </>
       ) : (
         <>
@@ -412,6 +409,47 @@ const MainApp: React.FC = () => {
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
                 <div className="lg:col-span-8 space-y-12">
+                  {currentClientData.weeklyCheckInEnabled && authStatus.type === 'CLIENT' && (() => {
+                    const twoDaysAgo = Date.now() - 2 * 24 * 60 * 60 * 1000;
+                    const submitted = checkIns.some(c => c.clientId === currentClientData.id && new Date(c.submittedAt).getTime() > twoDaysAgo);
+                    const day = new Date().getDay();
+                    const weekend = day === 0 || day === 6;
+                    return (
+                      <button
+                        onClick={() => !submitted && setViewMode('WEEKLY_CHECKIN')}
+                        className={`w-full flex items-center justify-between px-8 py-6 rounded-[2rem] border transition-all group ${
+                          submitted
+                            ? 'bg-emerald-500/5 border-emerald-500/20 cursor-default'
+                            : weekend
+                            ? 'bg-blue-600/5 border-blue-500/20 hover:bg-blue-600/10 hover:border-blue-500/40 active:scale-[0.99]'
+                            : 'bg-slate-950/40 border-slate-800/50 cursor-not-allowed opacity-60'
+                        }`}
+                      >
+                        <div className="flex items-center gap-5">
+                          <div className={`p-3 rounded-2xl ${submitted ? 'bg-emerald-500/10' : weekend ? 'bg-blue-600/10' : 'bg-slate-900'}`}>
+                            <ClipboardList size={22} className={submitted ? 'text-emerald-400' : weekend ? 'text-blue-400' : 'text-slate-600'} />
+                          </div>
+                          <div className="text-left">
+                            <p className={`text-sm font-black uppercase tracking-wide ${submitted ? 'text-emerald-300' : weekend ? 'text-white' : 'text-slate-500'}`}>
+                              Weekly Check-In
+                            </p>
+                            <p className={`text-[10px] font-bold mt-0.5 ${submitted ? 'text-emerald-600' : weekend ? 'text-slate-500' : 'text-slate-700'}`}>
+                              {submitted ? 'Submitted this weekend — view your history' : weekend ? "This week's review is ready to fill" : 'Available on weekends'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className={`flex items-center gap-2 text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-xl border ${
+                          submitted
+                            ? 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20'
+                            : weekend
+                            ? 'text-blue-400 bg-blue-500/10 border-blue-500/20 group-hover:bg-blue-500/20'
+                            : 'text-slate-700 bg-slate-900 border-slate-800'
+                        }`}>
+                          {submitted ? '✓ Done' : weekend ? 'Fill Now →' : 'Locked'}
+                        </div>
+                      </button>
+                    );
+                  })()}
                   <CoachDirectives notes={currentClientData.generalNotes} />
                   <GoalTracker
                     goals={currentClientData.goals || []}
