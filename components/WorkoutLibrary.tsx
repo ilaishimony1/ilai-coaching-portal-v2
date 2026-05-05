@@ -341,7 +341,7 @@ const isDone = exerciseState[ex.id] || false;
                   <div className="space-y-4 animate-in fade-in duration-300">
                     <div>
                       <p className="text-xs font-black text-slate-300 uppercase tracking-wide">Log this session</p>
-                      <p className="text-[10px] font-medium text-slate-600 mt-1">Track your numbers, how it felt — anything you want your coach to know</p>
+                      <p className="text-[10px] font-medium text-slate-600 mt-1">Track your numbers, how it felt — anything you want me to know</p>
                     </div>
                     <textarea
                       autoFocus

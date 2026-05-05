@@ -9,10 +9,13 @@ export function useCoachNotifications(enabled: boolean) {
     'Notification' in window ? Notification.permission : 'denied'
   );
 
-  const requestPermission = async () => {
+  const requestPermission = () => {
     if (!('Notification' in window)) return;
-    const result = await Notification.requestPermission();
-    setPermission(result);
+    try {
+      Notification.requestPermission(result => setPermission(result));
+    } catch {
+      Notification.requestPermission().then(result => setPermission(result));
+    }
   };
 
   useEffect(() => {
