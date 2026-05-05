@@ -6,19 +6,22 @@ export function useCoachNotifications(enabled: boolean) {
   const knownCheckInIds = useRef<Set<string> | null>(null);
   const knownWorkoutLogIds = useRef<Set<string> | null>(null);
   const [permission, setPermission] = useState<NotificationPermission>(
-    'Notification' in window ? Notification.permission : 'denied'
+    typeof Notification !== 'undefined' ? Notification.permission : 'denied'
   );
 
-  const requestPermission = () => {
-    if (!('Notification' in window)) {
-      alert('Notifications not supported on this device/browser.');
-      return;
+  const requestPermission = async () => {
+    const hasNotification = typeof Notification !== 'undefined';
+    const hasSW = 'serviceWorker' in navigator;
+    alert(`Notification: ${hasNotification}, SW: ${hasSW}, permission: ${hasNotification ? Notification.permission : 'n/a'}`);
+    if (!hasNotification) return;
+    if (hasSW) {
+      try {
+        await navigator.serviceWorker.ready;
+      } catch {}
     }
-    alert(`Notification API found. Current permission: ${Notification.permission}`);
-    Notification.requestPermission().then(result => {
-      alert(`Permission result: ${result}`);
-      setPermission(result);
-    });
+    const result = await Notification.requestPermission();
+    alert(`Result: ${result}`);
+    setPermission(result);
   };
 
   useEffect(() => {
@@ -61,6 +64,6 @@ export function useCoachNotifications(enabled: boolean) {
 }
 
 function notify(body: string) {
-  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
   new Notification('Ilai Shimony Coaching', { body });
 }
