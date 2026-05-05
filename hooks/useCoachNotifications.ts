@@ -10,17 +10,11 @@ export function useCoachNotifications(enabled: boolean) {
   );
 
   const requestPermission = async () => {
-    const hasNotification = typeof Notification !== 'undefined';
-    const hasSW = 'serviceWorker' in navigator;
-    alert(`Notification: ${hasNotification}, SW: ${hasSW}, permission: ${hasNotification ? Notification.permission : 'n/a'}`);
-    if (!hasNotification) return;
-    if (hasSW) {
-      try {
-        await navigator.serviceWorker.ready;
-      } catch {}
+    if (typeof Notification === 'undefined') return;
+    if ('serviceWorker' in navigator) {
+      try { await navigator.serviceWorker.ready; } catch {}
     }
     const result = await Notification.requestPermission();
-    alert(`Result: ${result}`);
     setPermission(result);
   };
 
