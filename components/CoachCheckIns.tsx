@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { ClipboardList, Dumbbell, ChevronDown, ChevronUp, CheckCheck, Inbox, User } from 'lucide-react';
-import { WeeklyCheckIn, WorkoutLog } from '../types';
+import { ClipboardList, Dumbbell, ChevronDown, ChevronUp, CheckCheck, Inbox, User, X, Info } from 'lucide-react';
+import { WeeklyCheckIn, WorkoutLog, Workout } from '../types';
 import { useApp } from '../AppContext';
 
 const CHECKIN_FIELDS: { key: keyof WeeklyCheckIn; label: string }[] = [
@@ -34,6 +34,7 @@ const CoachCheckIns: React.FC = () => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('ALL');
   const [filterClient, setFilterClient] = useState<string>('ALL');
+  const [previewWorkout, setPreviewWorkout] = useState<{ workout: Workout; clientName: string } | null>(null);
 
   const feed = useMemo<FeedItem[]>(() => {
     const items: FeedItem[] = [
@@ -207,13 +208,26 @@ const CoachCheckIns: React.FC = () => {
                       {unread && (
                         <span className="text-[8px] font-black uppercase px-2 py-0.5 bg-red-500 text-white rounded-lg">+1</span>
                       )}
-                      <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg border ${
-                        isReview
-                          ? 'text-blue-400 bg-blue-500/10 border-blue-500/20'
-                          : 'text-slate-500 bg-slate-900 border-slate-800'
-                      }`}>
-                        {isReview ? 'Weekly Review' : `Workout ${(item.data as WorkoutLog).workoutName}`}
-                      </span>
+                      {isReview ? (
+                        <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg border text-blue-400 bg-blue-500/10 border-blue-500/20">
+                          Weekly Review
+                        </span>
+                      ) : (() => {
+                        const log = item.data as WorkoutLog;
+                        const workout = clients.find(c => c.id === log.clientId)?.workouts.find(w => w.name === log.workoutName);
+                        return (
+                          <button
+                            onClick={e => {
+                              e.stopPropagation();
+                              if (workout) setPreviewWorkout({ workout, clientName: log.clientName });
+                            }}
+                            className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg border text-slate-400 bg-slate-900 border-slate-700 hover:border-blue-500/50 hover:text-blue-400 transition-all"
+                            title="View workout"
+                          >
+                            Workout {log.workoutName} ↗
+                          </button>
+                        );
+                      })()}
                     </div>
                     <p className="text-[10px] font-bold text-slate-600 mt-1">{dateStr}</p>
                     {!isOpen && (
@@ -258,6 +272,60 @@ const CoachCheckIns: React.FC = () => {
               </div>
             );
           })}
+        </div>
+      )}
+      {/* Workout preview modal */}
+      {previewWorkout && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-10 animate-in fade-in duration-200">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-xl" onClick={() => setPreviewWorkout(null)} />
+          <div className="relative w-full max-w-2xl bg-[#0a0f1a] border border-slate-800 rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 max-h-[85vh] flex flex-col">
+
+            {/* Modal header */}
+            <div className="flex items-center justify-between px-8 py-6 border-b border-white/5 shrink-0">
+              <div>
+                <p className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-600 mb-1">{previewWorkout.clientName} · Sector {previewWorkout.workout.name}</p>
+                <h3 className="text-2xl font-black brand-font uppercase text-white tracking-tight">{previewWorkout.workout.title}</h3>
+              </div>
+              <button onClick={() => setPreviewWorkout(null)} className="p-3 bg-slate-900 border border-slate-800 rounded-2xl text-slate-500 hover:text-white transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Exercise list */}
+            <div className="overflow-y-auto px-8 py-6 space-y-2">
+              {previewWorkout.workout.exercises.map(ex => {
+                if (ex.category === 'header') {
+                  return (
+                    <p key={ex.id} className="text-xs font-black uppercase tracking-widest text-slate-500 pt-4 pb-1 border-b border-white/5">
+                      {ex.name}
+                    </p>
+                  );
+                }
+                return (
+                  <div key={ex.id} className="flex items-center justify-between px-4 py-3 bg-slate-950/60 border border-slate-800/50 rounded-2xl">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-1.5 h-1.5 rounded-full bg-blue-500/50 shrink-0" />
+                      <span className="text-sm font-black text-white uppercase tracking-tight truncate">{ex.name}</span>
+                      {ex.category === 'mobility' && (
+                        <span className="text-[7px] font-black text-emerald-500 uppercase tracking-widest shrink-0">Mobility</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-4 shrink-0 ml-4">
+                      <div className="text-right">
+                        <span className="text-xs font-black text-blue-400">{ex.sets}</span>
+                        <span className="text-slate-700 mx-1">×</span>
+                        <span className="text-xs font-black text-white">{ex.reps || ex.duration}</span>
+                      </div>
+                      {ex.restTime && <span className="text-[10px] font-black text-amber-500">{ex.restTime}</span>}
+                    </div>
+                  </div>
+                );
+              })}
+              {previewWorkout.workout.exercises.filter(e => e.category !== 'header').length === 0 && (
+                <p className="text-slate-700 text-sm font-bold italic text-center py-8">No exercises added yet</p>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
