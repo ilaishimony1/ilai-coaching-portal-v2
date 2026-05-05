@@ -40,6 +40,7 @@ const FIELDS: { key: keyof FormData; label: string; placeholder: string }[] = [
 ];
 
 const isWeekend = () => {
+  if (new URLSearchParams(window.location.search).get('previewWeekend') === '1') return true;
   const day = new Date().getDay();
   return day === 0 || day === 6;
 };

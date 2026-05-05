@@ -64,7 +64,9 @@ const MainApp: React.FC = () => {
         <>
           <NavBtn active={viewMode === 'CLIENT'} onClick={() => setViewMode('CLIENT')} icon={<User />} color={landingConfig.accentColor} />
           <NavBtn active={viewMode === 'ACADEMY'} onClick={() => setViewMode('ACADEMY')} icon={<BookOpen />} color={landingConfig.accentColor} />
-          <NavBtn active={viewMode === 'WEEKLY_CHECKIN'} onClick={() => setViewMode('WEEKLY_CHECKIN')} icon={<ClipboardList />} color={landingConfig.accentColor} />
+          {currentClientData?.weeklyCheckInEnabled && (
+            <NavBtn active={viewMode === 'WEEKLY_CHECKIN'} onClick={() => setViewMode('WEEKLY_CHECKIN')} icon={<ClipboardList />} color={landingConfig.accentColor} />
+          )}
         </>
       ) : (
         <>

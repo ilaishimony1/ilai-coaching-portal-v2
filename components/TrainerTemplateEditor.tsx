@@ -505,6 +505,29 @@ const matches = [...startsWithMatches, ...includesMatches];
             {!isEditing && (
               <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest leading-relaxed italic">The athlete will use these credentials to access their personalized coaching terminal.</p>
             )}
+
+            <div className="border-t border-white/5 pt-6 space-y-4">
+              <h3 className="text-[10px] font-black uppercase text-slate-500 tracking-widest flex items-center gap-2">
+                <ShieldCheck size={12} /> Feature Access
+              </h3>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-black text-slate-300 uppercase tracking-wide">Weekly Check-In</p>
+                  <p className="text-[9px] font-bold text-slate-600 mt-0.5">Client can submit weekend reviews</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setLocalClient(prev => ({ ...prev, weeklyCheckInEnabled: !prev.weeklyCheckInEnabled }))}
+                  className={`relative w-12 h-6 rounded-full transition-all duration-300 focus:outline-none ${
+                    localClient.weeklyCheckInEnabled ? 'bg-blue-600' : 'bg-slate-800'
+                  }`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all duration-300 ${
+                    localClient.weeklyCheckInEnabled ? 'left-7' : 'left-1'
+                  }`} />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
