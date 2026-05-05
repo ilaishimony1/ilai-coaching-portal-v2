@@ -39,8 +39,10 @@ const FIELDS: { key: keyof FormData; label: string; placeholder: string }[] = [
   { key: 'anythingElse',      label: "Is there anything else you'd like me to know?",                placeholder: 'Open feedback...' },
 ];
 
-// TODO: change back to weekend-only once feature is approved
-const isWeekend = () => true;
+const isWeekend = () => {
+  const day = new Date().getDay();
+  return day === 0 || day === 6;
+};
 
 const getNextWeekendText = () => {
   const now = new Date();

@@ -416,10 +416,10 @@ const MainApp: React.FC = () => {
                     const weekend = day === 0 || day === 6;
                     return (
                       <button
-                        onClick={() => !submitted && setViewMode('WEEKLY_CHECKIN')}
+                        onClick={() => setViewMode('WEEKLY_CHECKIN')}
                         className={`w-full flex items-center justify-between px-8 py-6 rounded-[2rem] border transition-all group ${
                           submitted
-                            ? 'bg-emerald-500/5 border-emerald-500/20 cursor-default'
+                            ? 'bg-emerald-500/5 border-emerald-500/20 hover:bg-emerald-500/10 hover:border-emerald-500/30 active:scale-[0.99]'
                             : weekend
                             ? 'bg-blue-600/5 border-blue-500/20 hover:bg-blue-600/10 hover:border-blue-500/40 active:scale-[0.99]'
                             : 'bg-slate-950/40 border-slate-800/50 cursor-not-allowed opacity-60'
