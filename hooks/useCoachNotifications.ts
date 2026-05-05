@@ -1,18 +1,19 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useApp } from '../AppContext';
 
 export function useCoachNotifications(enabled: boolean) {
   const { checkIns, workoutLogs } = useApp();
   const knownCheckInIds = useRef<Set<string> | null>(null);
   const knownWorkoutLogIds = useRef<Set<string> | null>(null);
+  const [permission, setPermission] = useState<NotificationPermission>(
+    'Notification' in window ? Notification.permission : 'denied'
+  );
 
-  useEffect(() => {
-    if (!enabled) return;
+  const requestPermission = async () => {
     if (!('Notification' in window)) return;
-    if (Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
-  }, [enabled]);
+    const result = await Notification.requestPermission();
+    setPermission(result);
+  };
 
   useEffect(() => {
     if (!enabled || checkIns.length === 0) return;
@@ -49,6 +50,8 @@ export function useCoachNotifications(enabled: boolean) {
       }
     });
   }, [workoutLogs, enabled]);
+
+  return { permission, requestPermission };
 }
 
 function notify(body: string) {

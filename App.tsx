@@ -8,7 +8,7 @@ import {
   inMemoryPersistence
 } from "firebase/auth";
 import React, { useState, useRef, useEffect } from 'react';
-import { Home, LogOut, Palette, User, ChevronLeft, Archive, BookOpen, Video, Camera, Library, ClipboardList } from 'lucide-react';
+import { Home, LogOut, Palette, User, ChevronLeft, Archive, BookOpen, Video, Camera, Library, ClipboardList, Bell, BellOff } from 'lucide-react';
 import { ViewMode, AuthStatus, ClientData } from './types';
 import LoginPage from './components/LoginPage'; 
 import GoalTracker from './components/GoalTracker';
@@ -59,7 +59,7 @@ const MainApp: React.FC = () => {
   const [currentClientData, setCurrentClientData] = useState<ClientData | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
-  useCoachNotifications(authStatus.type === 'COACH');
+  const { permission: notifPermission, requestPermission: requestNotifPermission } = useCoachNotifications(authStatus.type === 'COACH');
 
   const NavButtons = (
     <>
@@ -274,6 +274,11 @@ const MainApp: React.FC = () => {
         <div className="flex-1 space-y-8 flex flex-col items-center">
           {NavButtons}
         </div>
+        {authStatus.type === 'COACH' && notifPermission !== 'granted' && (
+          <button onClick={requestNotifPermission} title="Enable notifications" className="p-4 text-slate-600 hover:text-yellow-400 transition-colors">
+            <BellOff size={20} />
+          </button>
+        )}
         <button onClick={() => setAuthStatus({ type: 'NONE' })} className="mt-auto p-4 text-slate-700 hover:text-red-500 transition-colors">
           <LogOut size={24} />
         </button>
@@ -295,9 +300,16 @@ const MainApp: React.FC = () => {
           <div className="flex gap-2 overflow-x-auto no-scrollbar">
             {NavButtons}
           </div>
-          <button onClick={() => setAuthStatus({ type: 'NONE' })} className="text-slate-500">
-            <LogOut size={20} />
-          </button>
+          <div className="flex items-center gap-1">
+            {authStatus.type === 'COACH' && notifPermission !== 'granted' && (
+              <button onClick={requestNotifPermission} title="Enable notifications" className="p-2 text-slate-600 hover:text-yellow-400 transition-colors">
+                <BellOff size={18} />
+              </button>
+            )}
+            <button onClick={() => setAuthStatus({ type: 'NONE' })} className="text-slate-500 p-2">
+              <LogOut size={20} />
+            </button>
+          </div>
         </div>
       </nav>
 
