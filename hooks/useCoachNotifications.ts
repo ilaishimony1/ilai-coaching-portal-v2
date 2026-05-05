@@ -10,12 +10,15 @@ export function useCoachNotifications(enabled: boolean) {
   );
 
   const requestPermission = () => {
-    if (!('Notification' in window)) return;
-    try {
-      Notification.requestPermission(result => setPermission(result));
-    } catch {
-      Notification.requestPermission().then(result => setPermission(result));
+    if (!('Notification' in window)) {
+      alert('Notifications not supported on this device/browser.');
+      return;
     }
+    alert(`Notification API found. Current permission: ${Notification.permission}`);
+    Notification.requestPermission().then(result => {
+      alert(`Permission result: ${result}`);
+      setPermission(result);
+    });
   };
 
   useEffect(() => {
