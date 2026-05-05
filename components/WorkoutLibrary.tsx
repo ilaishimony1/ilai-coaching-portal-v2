@@ -346,7 +346,7 @@ const isDone = exerciseState[ex.id] || false;
                       autoFocus
                       value={logText}
                       onChange={e => setLogText(e.target.value)}
-                      placeholder="e.g. Bench 80kg felt strong, skipped last set of rows, knee a bit sore..."
+                      placeholder="e.g. did only 4 sets of chest to wall cause had some wrist pain. every set 20 sec."
                       rows={4}
                       className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-5 py-4 text-sm text-slate-200 placeholder-slate-700 font-medium resize-none focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-all"
                     />
