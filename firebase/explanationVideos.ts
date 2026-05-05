@@ -10,6 +10,8 @@ import {
   updateDoc,
   setDoc,
   writeBatch,
+  arrayUnion,
+  arrayRemove,
 } from "firebase/firestore";
 
 import { syncService } from "../firebaseService";
@@ -189,6 +191,10 @@ export async function assignExplanationToClient(
     clientId,
     assignedAt: serverTimestamp(),
   });
+
+  await updateDoc(doc(db, "clients", clientId), {
+    unseenVideoUids: arrayUnion(videoUid),
+  });
 }
 
 
@@ -205,10 +211,13 @@ export async function unassignExplanationFromClient(
   );
 
   const snapshot = await getDocs(q);
-
   for (const docSnap of snapshot.docs) {
     await deleteDoc(docSnap.ref);
   }
+
+  await updateDoc(doc(db, "clients", clientId), {
+    unseenVideoUids: arrayRemove(videoUid),
+  });
 }
 export async function getAssignedExplanationUids(
   clientId: string

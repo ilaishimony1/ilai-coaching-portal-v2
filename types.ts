@@ -62,6 +62,7 @@ export interface ClientData {
   weeklySchedule?: Record<number, string>;
   workouts: Workout[];
   assignedVideoUids?: string[];
+  unseenVideoUids?: string[];
   weeklyCheckInEnabled?: boolean;
   lastSync?: any;
 }

@@ -4,6 +4,8 @@ import { VideoFile } from "../db";
 import { ClientData } from "../types";
 import { getAssignedExplanationUids } from "../firebase/explanationVideos";
 import { getExplanationVideos } from "../firebase/explanationVideos";
+import { doc, updateDoc } from "firebase/firestore";
+import { syncService } from "../firebaseService";
 
 interface Props {
   client: ClientData;
@@ -37,6 +39,12 @@ useEffect(() => {
     setAssignedUids(new Set(uids));
     setAssignmentsLoaded(true);
   });
+
+  if (client.unseenVideoUids?.length) {
+    updateDoc(doc(syncService.getDb(), "clients", client.id), {
+      unseenVideoUids: [],
+    }).catch(() => {});
+  }
 }, [client?.id]);
 
 

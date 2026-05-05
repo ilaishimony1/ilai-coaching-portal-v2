@@ -66,7 +66,7 @@ const MainApp: React.FC = () => {
       {authStatus.type === 'CLIENT' ? (
         <>
           <NavBtn active={viewMode === 'CLIENT'} onClick={() => setViewMode('CLIENT')} icon={<User />} color={landingConfig.accentColor} />
-          <NavBtn active={viewMode === 'ACADEMY'} onClick={() => setViewMode('ACADEMY')} icon={<BookOpen />} color={landingConfig.accentColor} />
+          <NavBtn active={viewMode === 'ACADEMY'} onClick={() => setViewMode('ACADEMY')} icon={<BookOpen />} color={landingConfig.accentColor} badge={currentClientData?.unseenVideoUids?.length || 0} />
         </>
       ) : (
         <>
