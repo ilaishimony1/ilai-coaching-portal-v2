@@ -236,6 +236,14 @@ const MainApp: React.FC = () => {
     return () => unsubscribe();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Keep currentClientData in sync with live Firestore updates
+  useEffect(() => {
+    if (authStatus.type === 'CLIENT' && clients) {
+      const updated = clients.find(c => c.id === authStatus.clientId);
+      if (updated) setCurrentClientData(mergeClient(updated));
+    }
+  }, [clients]);
+
   useEffect(() => {
     const auth = getAuth();
     const loginTime = localStorage.getItem("loginTime");
@@ -297,7 +305,7 @@ const MainApp: React.FC = () => {
               <div className="w-full h-full flex items-center justify-center text-xs font-bold">IS</div>
             )}
           </button>
-          <div className="flex gap-2 overflow-x-auto no-scrollbar">
+          <div className="flex gap-2 overflow-x-auto overflow-y-visible no-scrollbar py-1">
             {NavButtons}
           </div>
           <div className="flex items-center gap-1">
