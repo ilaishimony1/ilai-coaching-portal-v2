@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { ClientData, LandingPageConfig, WorkoutTemplate, WeeklyCheckIn } from './types';
+import { ClientData, LandingPageConfig, WorkoutTemplate, WeeklyCheckIn, WorkoutLog } from './types';
 import { TEST_CLIENT, INITIAL_CONFIG } from './constants';
 import { FirebaseSyncService } from './firebaseService';
 
@@ -25,6 +25,8 @@ interface AppContextType {
   unreadCheckInsCount: number;
   submitCheckIn: (checkIn: Omit<WeeklyCheckIn, 'id'>) => Promise<void>;
   markCheckInRead: (id: string) => Promise<void>;
+  workoutLogs: WorkoutLog[];
+  submitWorkoutLog: (log: Omit<WorkoutLog, 'id'>) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -47,6 +49,7 @@ const [clients, setClients] = useState<ClientData[] | null>(null);
   const [hasInitialCloudSync, setHasInitialCloudSync] = useState(false);
 
   const [checkIns, setCheckIns] = useState<WeeklyCheckIn[]>([]);
+  const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
 
   const syncService = useMemo(() => new FirebaseSyncService(), []);
 
@@ -61,6 +64,10 @@ const [clients, setClients] = useState<ClientData[] | null>(null);
 
   const submitCheckIn = useCallback(async (checkIn: Omit<WeeklyCheckIn, 'id'>) => {
     await syncService.submitCheckIn(checkIn);
+  }, [syncService]);
+
+  const submitWorkoutLog = useCallback(async (log: Omit<WorkoutLog, 'id'>) => {
+    await syncService.submitWorkoutLog(log);
   }, [syncService]);
 
   const markCheckInRead = useCallback(async (id: string) => {
@@ -108,6 +115,9 @@ const [clients, setClients] = useState<ClientData[] | null>(null);
               setLandingConfig(update.payload);
               localStorage.setItem('ilai_academy_config', JSON.stringify(update.payload));
             }
+            break;
+          case 'workoutLogs':
+            setWorkoutLogs(update.payload || []);
             break;
           case 'checkIns':
             setCheckIns(update.payload || []);
@@ -166,6 +176,8 @@ const [clients, setClients] = useState<ClientData[] | null>(null);
       unreadCheckInsCount,
       submitCheckIn,
       markCheckInRead,
+      workoutLogs,
+      submitWorkoutLog,
     }}>
       {children}
     </AppContext.Provider>

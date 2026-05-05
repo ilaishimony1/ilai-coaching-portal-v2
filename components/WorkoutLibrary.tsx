@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { PlayCircle, Dumbbell, X, Info, Check, Download } from 'lucide-react';
-import { Workout, WorkoutLog, ClientData, Message, Exercise } from '../types';
+import { PlayCircle, Dumbbell, X, Info, Check, Download, NotebookPen, ChevronDown, ChevronUp } from 'lucide-react';
+import { Workout, WorkoutLog, ClientData, Exercise } from '../types';
 import { useApp } from '../AppContext';
 import ScheduleCalendar from './ScheduleCalendar';
 import { db } from '../db';
@@ -12,6 +12,7 @@ interface Props {
   workouts: Workout[];
   clientData: ClientData;
   accentColor: string;
+  isCoach?: boolean;
 }
 
 
@@ -33,9 +34,17 @@ const getEmbedUrl = (url: string) => {
   return url;
 };
 
-const WorkoutLibrary: React.FC<Props> = ({ workouts, clientData, accentColor }) => {
-  const { clients, setClients } = useApp();
+const formatLogDate = (iso: string) =>
+  new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+const WorkoutLibrary: React.FC<Props> = ({ workouts, clientData, accentColor, isCoach = false }) => {
+  const { clients, setClients, workoutLogs, submitWorkoutLog } = useApp();
   const [selectedId, setSelectedId] = useState(workouts[0]?.id);
+  const [showLogForm, setShowLogForm] = useState(false);
+  const [logText, setLogText] = useState('');
+  const [logSaving, setLogSaving] = useState(false);
+  const [logJustSaved, setLogJustSaved] = useState(false);
+  const [showAllLogs, setShowAllLogs] = useState(false);
   const [exerciseState, setExerciseState] = useState<Record<string, boolean>>({});
   const [activeVideoUrl, setActiveVideoUrl] = useState<string | null>(null);
   useEffect(() => {
@@ -82,6 +91,33 @@ useEffect(() => {
   
   
   const current = workouts.find(w => w.id === selectedId) || workouts[0];
+
+  const currentLogs = workoutLogs
+    .filter(l => l.clientId === clientData.id && l.workoutId === current?.id)
+    .sort((a, b) => new Date(b.loggedAt).getTime() - new Date(a.loggedAt).getTime());
+
+  const handleSubmitLog = async () => {
+    if (!logText.trim() || !current || logSaving) return;
+    setLogSaving(true);
+    try {
+      await submitWorkoutLog({
+        clientId: clientData.id,
+        clientName: clientData.name,
+        workoutId: current.id,
+        workoutName: current.name,
+        workoutTitle: current.title,
+        loggedAt: new Date().toISOString(),
+        note: logText.trim(),
+      });
+      setLogText('');
+      setShowLogForm(false);
+      setLogJustSaved(true);
+      setTimeout(() => setLogJustSaved(false), 3000);
+    } catch {
+      alert('Failed to save. Try again.');
+    }
+    setLogSaving(false);
+  };
 
 const closePlayer = () => {
   setActiveVideoUrl(null);
@@ -249,7 +285,7 @@ const isDone = exerciseState[ex.id] || false;
         <ScheduleCalendar client={clientData} accentColor={accentColor} />
         <div className="flex gap-2 md:gap-3">
           {workouts.map(w => (
-            <button key={w.id} onClick={() => { setSelectedId(w.id); setExerciseState({}); }} className={`w-10 h-10 md:w-12 md:h-12 rounded-xl font-black text-base md:text-lg flex items-center justify-center border transition-all duration-300 ${selectedId === w.id ? 'text-white border-transparent shadow-lg shadow-blue-900/10' : 'bg-slate-900 border-slate-800 text-slate-500 hover:text-white'}`} style={selectedId === w.id ? {backgroundColor: accentColor} : {}}>{w.name}</button>
+            <button key={w.id} onClick={() => { setSelectedId(w.id); setExerciseState({}); setShowLogForm(false); setLogText(''); setLogJustSaved(false); }} className={`w-10 h-10 md:w-12 md:h-12 rounded-xl font-black text-base md:text-lg flex items-center justify-center border transition-all duration-300 ${selectedId === w.id ? 'text-white border-transparent shadow-lg shadow-blue-900/10' : 'bg-slate-900 border-slate-800 text-slate-500 hover:text-white'}`} style={selectedId === w.id ? {backgroundColor: accentColor} : {}}>{w.name}</button>
           ))}
         </div>
       </div>
@@ -286,7 +322,75 @@ const isDone = exerciseState[ex.id] || false;
              </div>
           </div>
 
-         
+          {/* Log Session Section */}
+          <div className="border-t border-white/5 pt-8 space-y-6">
+
+            {/* Client: log form */}
+            {!isCoach && (
+              <div className="space-y-4">
+                {!showLogForm ? (
+                  <button
+                    onClick={() => setShowLogForm(true)}
+                    className="flex items-center gap-3 px-6 py-3 bg-slate-900 border border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white hover:border-slate-600 transition-all group"
+                  >
+                    <NotebookPen size={14} className="group-hover:text-blue-400 transition-colors" />
+                    {logJustSaved ? '✓ Session Logged' : 'Log This Session'}
+                  </button>
+                ) : (
+                  <div className="space-y-4 animate-in fade-in duration-300">
+                    <div>
+                      <p className="text-xs font-black text-slate-300 uppercase tracking-wide">Log this session</p>
+                      <p className="text-[10px] font-medium text-slate-600 mt-1">Track your numbers, how it felt — anything you want your coach to know</p>
+                    </div>
+                    <textarea
+                      autoFocus
+                      value={logText}
+                      onChange={e => setLogText(e.target.value)}
+                      placeholder="e.g. Bench 80kg felt strong, skipped last set of rows, knee a bit sore..."
+                      rows={4}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-5 py-4 text-sm text-slate-200 placeholder-slate-700 font-medium resize-none focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-all"
+                    />
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={handleSubmitLog}
+                        disabled={!logText.trim() || logSaving}
+                        className={`px-8 py-3 rounded-2xl font-black text-xs tracking-widest uppercase transition-all active:scale-95 ${logText.trim() ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-slate-900 border border-slate-800 text-slate-600 cursor-not-allowed'}`}
+                      >
+                        {logSaving ? 'Saving…' : 'Save'}
+                      </button>
+                      <button onClick={() => { setShowLogForm(false); setLogText(''); }} className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:text-white transition-colors">
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Past logs */}
+            {currentLogs.length > 0 && (
+              <div className="space-y-3">
+                <button
+                  onClick={() => setShowAllLogs(p => !p)}
+                  className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.3em] text-slate-600 hover:text-slate-400 transition-colors"
+                >
+                  {showAllLogs ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                  {isCoach ? 'Client Logs' : 'Past Logs'} ({currentLogs.length})
+                </button>
+                {showAllLogs && (
+                  <div className="space-y-3 animate-in fade-in duration-300">
+                    {currentLogs.map(log => (
+                      <div key={log.id} className="px-5 py-4 bg-slate-950/60 border border-slate-800/50 rounded-2xl space-y-1">
+                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-600">{formatLogDate(log.loggedAt)}</p>
+                        <p className="text-sm font-medium text-slate-300 leading-relaxed">{log.note}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
         </div>
       )}
 

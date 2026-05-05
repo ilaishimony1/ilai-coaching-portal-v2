@@ -21,7 +21,7 @@ import {
 } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
-import { ClientData, LandingPageConfig, WorkoutTemplate, WeeklyCheckIn } from "./types";
+import { ClientData, LandingPageConfig, WorkoutTemplate, WeeklyCheckIn, WorkoutLog } from "./types";
 
 // ===============================
 // Firebase Config
@@ -127,6 +127,18 @@ export class FirebaseSyncService {
       onError
     );
 
+    const unsubWorkoutLogs = onSnapshot(
+      collection(this.db, "workout_logs"),
+      snap => {
+        const logs = snap.docs.map(d => ({ ...(d.data() as WorkoutLog), id: d.id }));
+        onUpdate({ type: "workoutLogs", payload: logs });
+      },
+      (err) => {
+        console.warn("workout_logs listener:", err.message);
+        onUpdate({ type: "workoutLogs", payload: [] });
+      }
+    );
+
     const unsubCheckIns = onSnapshot(
       collection(this.db, "check_ins"),
       snap => {
@@ -148,6 +160,7 @@ export class FirebaseSyncService {
       unsubArchived();
       unsubLibrary();
       unsubBranding();
+      unsubWorkoutLogs();
       unsubCheckIns();
     };
   }
@@ -193,6 +206,13 @@ export class FirebaseSyncService {
     });
 
     await batch.commit();
+  }
+
+  async submitWorkoutLog(log: Omit<WorkoutLog, 'id'>): Promise<void> {
+    await addDoc(collection(this.db, "workout_logs"), {
+      ...log,
+      lastSync: serverTimestamp()
+    });
   }
 
   async submitCheckIn(checkIn: Omit<WeeklyCheckIn, 'id'>): Promise<string> {

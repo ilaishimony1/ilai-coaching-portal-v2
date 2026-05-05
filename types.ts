@@ -78,6 +78,17 @@ export interface ClientSummary {
 
 export type ViewMode = 'ADMIN' | 'TRAINER' | 'CLIENT' | 'LANDING_EDITOR' | 'ARCHIVE' | 'ACADEMY' | 'CHAT' | 'SAVED_PROGRAMS' | 'WEEKLY_CHECKIN';
 
+export interface WorkoutLog {
+  id: string;
+  clientId: string;
+  clientName: string;
+  workoutId: string;
+  workoutName: string;
+  workoutTitle: string;
+  loggedAt: string;
+  note: string;
+}
+
 export interface WeeklyCheckIn {
   id: string;
   clientId: string;

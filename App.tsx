@@ -460,6 +460,7 @@ const MainApp: React.FC = () => {
                     workouts={currentClientData.workouts || []}
                     clientData={currentClientData}
                     accentColor={landingConfig.accentColor}
+                    isCoach={authStatus.type === 'COACH'}
                   />
                 </div>
               </div>
