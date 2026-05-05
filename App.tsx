@@ -52,7 +52,7 @@ const mergeClient = (client: ClientData): ClientData => ({
 });
 
 const MainApp: React.FC = () => {
-  const { clients, setClients, archivedClients, setArchivedClients, landingConfig, setLandingConfig, cloudSync, syncService, unreadCheckInsCount, checkIns } = useApp();
+  const { clients, setClients, archivedClients, setArchivedClients, landingConfig, setLandingConfig, cloudSync, syncService, unreadCheckInsCount, unreadWorkoutLogsCount, checkIns } = useApp();
   const [authStatus, setAuthStatus] = useState<AuthStatus>({ type: 'NONE' });
   const [viewMode, setViewMode] = useState<ViewMode>('ADMIN');
   const [currentClientData, setCurrentClientData] = useState<ClientData | null>(null);
@@ -71,7 +71,7 @@ const MainApp: React.FC = () => {
           <NavBtn active={viewMode === 'ACADEMY'} onClick={() => setViewMode('ACADEMY')} icon={<Video />} color={landingConfig.accentColor} />
           <NavBtn active={viewMode === 'SAVED_PROGRAMS'} onClick={() => setViewMode('SAVED_PROGRAMS')} icon={<Library />} color={landingConfig.accentColor} />
           <NavBtn active={viewMode === 'ARCHIVE'} onClick={() => setViewMode('ARCHIVE')} icon={<Archive />} color={landingConfig.accentColor} />
-          <NavBtn active={viewMode === 'WEEKLY_CHECKIN'} onClick={() => setViewMode('WEEKLY_CHECKIN')} icon={<ClipboardList />} color={landingConfig.accentColor} badge={unreadCheckInsCount} />
+          <NavBtn active={viewMode === 'WEEKLY_CHECKIN'} onClick={() => setViewMode('WEEKLY_CHECKIN')} icon={<ClipboardList />} color={landingConfig.accentColor} badge={unreadCheckInsCount + unreadWorkoutLogsCount} />
           <NavBtn active={viewMode === 'LANDING_EDITOR'} onClick={() => setViewMode('LANDING_EDITOR')} icon={<Palette />} color={landingConfig.accentColor} />
         </>
       )}

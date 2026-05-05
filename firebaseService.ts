@@ -215,6 +215,10 @@ export class FirebaseSyncService {
     });
   }
 
+  async markWorkoutLogRead(id: string): Promise<void> {
+    await this.updateDocument("workout_logs", id, { readByCoach: true });
+  }
+
   async submitCheckIn(checkIn: Omit<WeeklyCheckIn, 'id'>): Promise<string> {
     const docRef = await addDoc(collection(this.db, "check_ins"), {
       ...checkIn,

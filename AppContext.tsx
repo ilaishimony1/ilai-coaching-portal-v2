@@ -26,7 +26,9 @@ interface AppContextType {
   submitCheckIn: (checkIn: Omit<WeeklyCheckIn, 'id'>) => Promise<void>;
   markCheckInRead: (id: string) => Promise<void>;
   workoutLogs: WorkoutLog[];
+  unreadWorkoutLogsCount: number;
   submitWorkoutLog: (log: Omit<WorkoutLog, 'id'>) => Promise<void>;
+  markWorkoutLogRead: (id: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -66,8 +68,18 @@ const [clients, setClients] = useState<ClientData[] | null>(null);
     await syncService.submitCheckIn(checkIn);
   }, [syncService]);
 
+  const unreadWorkoutLogsCount = useMemo(
+    () => workoutLogs.filter(l => !l.readByCoach).length,
+    [workoutLogs]
+  );
+
   const submitWorkoutLog = useCallback(async (log: Omit<WorkoutLog, 'id'>) => {
     await syncService.submitWorkoutLog(log);
+  }, [syncService]);
+
+  const markWorkoutLogRead = useCallback(async (id: string) => {
+    setWorkoutLogs(prev => prev.map(l => l.id === id ? { ...l, readByCoach: true } : l));
+    await syncService.markWorkoutLogRead(id);
   }, [syncService]);
 
   const markCheckInRead = useCallback(async (id: string) => {
@@ -177,7 +189,9 @@ const [clients, setClients] = useState<ClientData[] | null>(null);
       submitCheckIn,
       markCheckInRead,
       workoutLogs,
+      unreadWorkoutLogsCount,
       submitWorkoutLog,
+      markWorkoutLogRead,
     }}>
       {children}
     </AppContext.Provider>

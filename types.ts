@@ -87,6 +87,7 @@ export interface WorkoutLog {
   workoutTitle: string;
   loggedAt: string;
   note: string;
+  readByCoach: boolean;
 }
 
 export interface WeeklyCheckIn {

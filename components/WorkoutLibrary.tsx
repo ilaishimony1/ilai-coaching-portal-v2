@@ -108,6 +108,7 @@ useEffect(() => {
         workoutTitle: current.title,
         loggedAt: new Date().toISOString(),
         note: logText.trim(),
+        readByCoach: false,
       });
       setLogText('');
       setShowLogForm(false);
