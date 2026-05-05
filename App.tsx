@@ -24,6 +24,7 @@ import MasterLibrary from './components/MasterLibrary';
 import WeeklyCheckInComponent from './components/WeeklyCheckIn';
 import CoachCheckIns from './components/CoachCheckIns';
 import { AppProvider, useApp } from './AppContext';
+import { useCoachNotifications } from './hooks/useCoachNotifications';
 
 const APP_VERSION = "2.10.0";
 
@@ -57,6 +58,8 @@ const MainApp: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('ADMIN');
   const [currentClientData, setCurrentClientData] = useState<ClientData | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  useCoachNotifications(authStatus.type === 'COACH');
 
   const NavButtons = (
     <>
