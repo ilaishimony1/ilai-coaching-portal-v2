@@ -420,6 +420,14 @@ const MainApp: React.FC = () => {
                     Command Center
                   </button>
                 )}
+                {authStatus.type === 'CLIENT' && (
+                  <button
+                    onClick={() => document.getElementById('workout-section')?.scrollIntoView({ behavior: 'smooth' })}
+                    className="flex items-center gap-2 px-5 py-3 bg-slate-900/60 border border-slate-800 rounded-2xl text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-white hover:border-slate-600 transition-all active:scale-95"
+                  >
+                    Workout ↓
+                  </button>
+                )}
               </header>
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
@@ -429,38 +437,34 @@ const MainApp: React.FC = () => {
                     const submitted = checkIns.some(c => c.clientId === currentClientData.id && new Date(c.submittedAt).getTime() > twoDaysAgo);
                     const day = new Date().getDay();
                     const weekend = day === 0 || day === 6;
+                    const inactive = submitted || !weekend;
+
+                    if (inactive) return (
+                      <button
+                        onClick={() => setViewMode('WEEKLY_CHECKIN')}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-800 bg-slate-950/40 text-slate-600 hover:text-slate-400 hover:border-slate-700 transition-all text-[10px] font-bold uppercase tracking-widest"
+                      >
+                        <ClipboardList size={12} />
+                        {submitted ? 'Check-in submitted ✓' : 'Check-in — opens weekends'}
+                      </button>
+                    );
+
                     return (
                       <button
                         onClick={() => setViewMode('WEEKLY_CHECKIN')}
-                        className={`w-full flex items-center justify-between px-8 py-6 rounded-[2rem] border transition-all group ${
-                          submitted
-                            ? 'bg-emerald-500/5 border-emerald-500/20 hover:bg-emerald-500/10 hover:border-emerald-500/30 active:scale-[0.99]'
-                            : weekend
-                            ? 'bg-blue-600/5 border-blue-500/20 hover:bg-blue-600/10 hover:border-blue-500/40 active:scale-[0.99]'
-                            : 'bg-slate-950/40 border-slate-800/50 cursor-not-allowed opacity-60'
-                        }`}
+                        className="w-full flex items-center justify-between px-8 py-6 rounded-[2rem] border transition-all group bg-blue-600/5 border-blue-500/20 hover:bg-blue-600/10 hover:border-blue-500/40 active:scale-[0.99]"
                       >
                         <div className="flex items-center gap-5">
-                          <div className={`p-3 rounded-2xl ${submitted ? 'bg-emerald-500/10' : weekend ? 'bg-blue-600/10' : 'bg-slate-900'}`}>
-                            <ClipboardList size={22} className={submitted ? 'text-emerald-400' : weekend ? 'text-blue-400' : 'text-slate-600'} />
+                          <div className="p-3 rounded-2xl bg-blue-600/10">
+                            <ClipboardList size={22} className="text-blue-400" />
                           </div>
                           <div className="text-left">
-                            <p className={`text-sm font-black uppercase tracking-wide ${submitted ? 'text-emerald-300' : weekend ? 'text-white' : 'text-slate-500'}`}>
-                              Weekly Check-In
-                            </p>
-                            <p className={`text-[10px] font-bold mt-0.5 ${submitted ? 'text-emerald-600' : weekend ? 'text-slate-500' : 'text-slate-700'}`}>
-                              {submitted ? 'Submitted this weekend — view your history' : weekend ? "This week's review is ready to fill" : 'Available on weekends'}
-                            </p>
+                            <p className="text-sm font-black uppercase tracking-wide text-white">Weekly Check-In</p>
+                            <p className="text-[10px] font-bold mt-0.5 text-slate-500">This week's review is ready to fill</p>
                           </div>
                         </div>
-                        <div className={`flex items-center gap-2 text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-xl border ${
-                          submitted
-                            ? 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20'
-                            : weekend
-                            ? 'text-blue-400 bg-blue-500/10 border-blue-500/20 group-hover:bg-blue-500/20'
-                            : 'text-slate-700 bg-slate-900 border-slate-800'
-                        }`}>
-                          {submitted ? '✓ Done' : weekend ? 'Fill Now →' : 'Locked'}
+                        <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-xl border text-blue-400 bg-blue-500/10 border-blue-500/20 group-hover:bg-blue-500/20">
+                          Fill Now →
                         </div>
                       </button>
                     );
@@ -471,12 +475,14 @@ const MainApp: React.FC = () => {
                     isCoach={authStatus.type === 'COACH'}
                     onToggleMiniGoal={(goalId, miniIdx) => handleToggleMiniGoal(currentClientData.id, goalId, miniIdx)}
                   />
-                  <WorkoutLibrary
-                    workouts={currentClientData.workouts || []}
-                    clientData={currentClientData}
-                    accentColor={landingConfig.accentColor}
-                    isCoach={authStatus.type === 'COACH'}
-                  />
+                  <div id="workout-section">
+                    <WorkoutLibrary
+                      workouts={currentClientData.workouts || []}
+                      clientData={currentClientData}
+                      accentColor={landingConfig.accentColor}
+                      isCoach={authStatus.type === 'COACH'}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
