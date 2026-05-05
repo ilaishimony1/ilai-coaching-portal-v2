@@ -234,7 +234,7 @@ const MainApp: React.FC = () => {
       }
     });
     return () => unsubscribe();
-  }, [clients]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const auth = getAuth();
@@ -519,7 +519,7 @@ const NavBtn = ({ active, icon, onClick, color, badge }: any) => (
       {icon}
     </button>
     {badge > 0 && (
-      <div className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 rounded-full flex items-center justify-center text-[9px] font-black text-white shadow-lg pointer-events-none">
+      <div className="absolute -top-1 -right-1 min-w-[20px] h-[20px] px-1.5 bg-red-500 rounded-full flex items-center justify-center text-[10px] font-black text-white shadow-lg pointer-events-none leading-none">
         {badge > 9 ? '9+' : badge}
       </div>
     )}
