@@ -244,33 +244,36 @@ const isDone = exerciseState[ex.id] || false;
           <div className="hidden md:flex col-span-2 flex-col items-center"><span className={`text-sm font-black uppercase ${isDone ? 'text-slate-600' : 'text-white'}`}>{ex.reps || ex.duration}</span></div>
           <div className="hidden md:flex col-span-1 flex-col items-center"><span className={`text-[10px] font-black uppercase ${isDone ? 'text-slate-700' : 'text-amber-500'}`}>{ex.restTime || '90s'}</span></div>
 
-          <div className="col-span-1 md:col-span-3 flex items-center justify-end gap-3">
-            <div className="md:hidden flex flex-1 items-center gap-4">
-  <div className="flex flex-col">
-    <span className="text-[7px] font-black text-slate-600 uppercase">Sets</span>
-    <span className="text-xs font-black text-blue-400">{ex.sets}</span>
-  </div>
-
-  <div className="flex flex-col">
-    <span className="text-[7px] font-black text-slate-600 uppercase">Target</span>
-    <span className="text-xs font-black text-white">
-      {ex.reps || ex.duration}
-    </span>
-  </div>
-
-  <div className="flex flex-col">
-    <span className="text-[7px] font-black text-slate-600 uppercase">Rest</span>
-    <span className="text-xs font-black text-amber-500">
-      {ex.restTime || '90s'}
-    </span>
-  </div>
-</div>
-
-            
-            <div className="flex items-center gap-2">
-              {ex.videoUrl && <button onClick={() => { setActiveVideoUrl(ex.videoUrl!); setActiveVideoName(ex.name); }} className="w-10 h-10 md:w-9 md:h-9 flex items-center justify-center bg-blue-600/10 text-blue-500 rounded-xl md:rounded-lg"><PlayCircle size={20} /></button>}
+          <div className="col-span-1 md:col-span-3 flex items-center justify-end gap-2">
+            <div className="md:hidden flex flex-shrink-0 items-center gap-4">
+              <div className="flex flex-col">
+                <span className="text-[7px] font-black text-slate-600 uppercase">Sets</span>
+                <span className="text-xs font-black text-blue-400">{ex.sets}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[7px] font-black text-slate-600 uppercase">Target</span>
+                <span className="text-xs font-black text-white">{ex.reps || ex.duration}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[7px] font-black text-slate-600 uppercase">Rest</span>
+                <span className="text-xs font-black text-amber-500">{ex.restTime || '90s'}</span>
               </div>
             </div>
+
+            {!isCoach && !isDone && (
+              <input
+                type="text"
+                value={exerciseNotes[ex.id] || ''}
+                onChange={e => setExerciseNotes(prev => ({ ...prev, [ex.id]: e.target.value }))}
+                placeholder="Log notes..."
+                className="flex-1 min-w-0 bg-slate-900/80 border border-slate-800/60 rounded-xl px-3 py-2 text-xs text-slate-300 placeholder-slate-700 font-medium focus:outline-none focus:border-blue-500/40 transition-all"
+              />
+            )}
+
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {ex.videoUrl && <button onClick={() => { setActiveVideoUrl(ex.videoUrl!); setActiveVideoName(ex.name); }} className="w-10 h-10 md:w-9 md:h-9 flex items-center justify-center bg-blue-600/10 text-blue-500 rounded-xl md:rounded-lg"><PlayCircle size={20} /></button>}
+            </div>
+          </div>
         </div>
         {ex.notes && !isDone && (
           <div className="mx-4 md:mx-10 py-3 px-4 bg-blue-500/5 border-x border-b border-blue-500/10 rounded-b-xl mb-1">
@@ -278,17 +281,6 @@ const isDone = exerciseState[ex.id] || false;
               <Info size={12} className="text-blue-500 mt-0.5 shrink-0" />
               <p className="text-[10px] text-slate-500 font-medium italic leading-relaxed">Cues: {ex.notes}</p>
             </div>
-          </div>
-        )}
-        {!isCoach && !isDone && (
-          <div className="mx-4 md:mx-10 pb-3">
-            <input
-              type="text"
-              value={exerciseNotes[ex.id] || ''}
-              onChange={e => setExerciseNotes(prev => ({ ...prev, [ex.id]: e.target.value }))}
-              placeholder="Log your notes, e.g. number of reps for this exercise"
-              className="w-full bg-slate-950/80 border border-slate-800/60 rounded-xl px-4 py-2.5 text-xs text-slate-300 placeholder-slate-700 font-medium focus:outline-none focus:border-blue-500/40 focus:ring-1 focus:ring-blue-500/10 transition-all"
-            />
           </div>
         )}
       </div>
