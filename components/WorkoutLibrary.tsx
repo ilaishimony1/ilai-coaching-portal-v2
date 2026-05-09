@@ -48,6 +48,20 @@ const WorkoutLibrary: React.FC<Props> = ({ workouts, clientData, accentColor, is
   const [exerciseState, setExerciseState] = useState<Record<string, boolean>>({});
   const [exerciseNotes, setExerciseNotes] = useState<Record<string, string>>({});
   const [showConfirm, setShowConfirm] = useState(false);
+
+  // Pre-fill exercise notes with prescribed values when workout changes
+  useEffect(() => {
+    if (isCoach) return;
+    const current = workouts.find(w => w.id === selectedId);
+    if (!current) return;
+    const prefilled: Record<string, string> = {};
+    current.exercises.forEach(ex => {
+      if (ex.category !== 'header') {
+        prefilled[ex.id] = `${ex.sets}×${ex.reps || ex.duration}`;
+      }
+    });
+    setExerciseNotes(prefilled);
+  }, [selectedId, isCoach]);
   const [activeVideoUrl, setActiveVideoUrl] = useState<string | null>(null);
   useEffect(() => {
   if (!activeVideoUrl) return;
@@ -260,15 +274,18 @@ const isDone = exerciseState[ex.id] || false;
               </div>
             </div>
 
-            {!isCoach && !isDone && (
-              <input
-                type="text"
-                value={exerciseNotes[ex.id] || ''}
-                onChange={e => setExerciseNotes(prev => ({ ...prev, [ex.id]: e.target.value }))}
-                placeholder={`${ex.sets}×${ex.reps || ex.duration} ${ex.name}`}
-                className="flex-1 min-w-0 bg-slate-900/80 border border-slate-800/60 rounded-xl px-4 py-[14px] text-sm text-slate-300 placeholder-slate-700 font-medium focus:outline-none focus:border-blue-500/40 transition-all"
-              />
-            )}
+            {!isCoach && !isDone && (() => {
+              const prescribed = `${ex.sets}×${ex.reps || ex.duration}`;
+              const isDefault = exerciseNotes[ex.id] === prescribed;
+              return (
+                <input
+                  type="text"
+                  value={exerciseNotes[ex.id] || ''}
+                  onChange={e => setExerciseNotes(prev => ({ ...prev, [ex.id]: e.target.value }))}
+                  className={`flex-1 min-w-0 bg-slate-900/80 border border-slate-800/60 rounded-xl px-4 py-[14px] text-xs font-medium focus:outline-none focus:border-blue-500/40 transition-all ${isDefault ? 'text-slate-500' : 'text-white'}`}
+                />
+              );
+            })()}
 
             <div className="flex items-center gap-2 flex-shrink-0">
               {ex.videoUrl && <button onClick={() => { setActiveVideoUrl(ex.videoUrl!); setActiveVideoName(ex.name); }} className="w-10 h-10 md:w-9 md:h-9 flex items-center justify-center bg-blue-600/10 text-blue-500 rounded-xl md:rounded-lg"><PlayCircle size={20} /></button>}
