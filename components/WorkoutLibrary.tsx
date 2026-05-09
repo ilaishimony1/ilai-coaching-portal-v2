@@ -46,6 +46,8 @@ const WorkoutLibrary: React.FC<Props> = ({ workouts, clientData, accentColor, is
   const [logJustSaved, setLogJustSaved] = useState(false);
   const [showAllLogs, setShowAllLogs] = useState(false);
   const [exerciseState, setExerciseState] = useState<Record<string, boolean>>({});
+  const [exerciseNotes, setExerciseNotes] = useState<Record<string, string>>({});
+  const [showConfirm, setShowConfirm] = useState(false);
   const [activeVideoUrl, setActiveVideoUrl] = useState<string | null>(null);
   useEffect(() => {
   if (!activeVideoUrl) return;
@@ -97,7 +99,12 @@ useEffect(() => {
     .sort((a, b) => new Date(b.loggedAt).getTime() - new Date(a.loggedAt).getTime());
 
   const handleSubmitLog = async () => {
-    if (!logText.trim() || !current || logSaving) return;
+    if (!current || logSaving) return;
+    const exLines = (current.exercises || [])
+      .filter(ex => ex.category !== 'header' && exerciseNotes[ex.id]?.trim())
+      .map(ex => `${ex.name}: ${exerciseNotes[ex.id].trim()}`);
+    const combined = [...exLines, ...(logText.trim() ? [logText.trim()] : [])].join('\n');
+    if (!combined) return;
     setLogSaving(true);
     try {
       await submitWorkoutLog({
@@ -107,11 +114,13 @@ useEffect(() => {
         workoutName: current.name,
         workoutTitle: current.title,
         loggedAt: new Date().toISOString(),
-        note: logText.trim(),
+        note: combined,
         readByCoach: false,
       });
       setLogText('');
+      setExerciseNotes({});
       setShowLogForm(false);
+      setShowConfirm(false);
       setLogJustSaved(true);
       setTimeout(() => setLogJustSaved(false), 3000);
     } catch {
@@ -264,11 +273,22 @@ const isDone = exerciseState[ex.id] || false;
             </div>
         </div>
         {ex.notes && !isDone && (
-          <div className="mx-4 md:mx-10 py-3 px-4 bg-blue-500/5 border-x border-b border-blue-500/10 rounded-b-xl mb-3">
+          <div className="mx-4 md:mx-10 py-3 px-4 bg-blue-500/5 border-x border-b border-blue-500/10 rounded-b-xl mb-1">
             <div className="flex items-start gap-2">
               <Info size={12} className="text-blue-500 mt-0.5 shrink-0" />
               <p className="text-[10px] text-slate-500 font-medium italic leading-relaxed">Cues: {ex.notes}</p>
             </div>
+          </div>
+        )}
+        {!isCoach && !isDone && (
+          <div className="mx-4 md:mx-10 pb-3">
+            <input
+              type="text"
+              value={exerciseNotes[ex.id] || ''}
+              onChange={e => setExerciseNotes(prev => ({ ...prev, [ex.id]: e.target.value }))}
+              placeholder="Log your numbers, e.g. 60kg × 8, 65kg × 6"
+              className="w-full bg-slate-950/80 border border-slate-800/60 rounded-xl px-4 py-2.5 text-xs text-slate-300 placeholder-slate-700 font-medium focus:outline-none focus:border-blue-500/40 focus:ring-1 focus:ring-blue-500/10 transition-all"
+            />
           </div>
         )}
       </div>
@@ -329,39 +349,58 @@ const isDone = exerciseState[ex.id] || false;
             {/* Client: log form */}
             {!isCoach && (
               <div className="space-y-4">
-                {!showLogForm ? (
-                  <button
-                    onClick={() => setShowLogForm(true)}
-                    className="flex items-center gap-3 px-6 py-3 bg-slate-900 border border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white hover:border-slate-600 transition-all group"
-                  >
-                    <NotebookPen size={14} className="group-hover:text-blue-400 transition-colors" />
-                    {logJustSaved ? '✓ Session Logged' : 'Log This Session'}
-                  </button>
+                {logJustSaved ? (
+                  <p className="text-xs font-black uppercase tracking-widest text-emerald-500">✓ Session Logged</p>
                 ) : (
-                  <div className="space-y-4 animate-in fade-in duration-300">
+                  <div className="space-y-3 animate-in fade-in duration-300">
                     <div>
-                      <p className="text-xs font-black text-slate-300 uppercase tracking-wide">Log this session</p>
-                      <p className="text-[10px] font-medium text-slate-600 mt-1">Track your numbers, how it felt — anything you want me to know</p>
+                      <p className="text-xs font-black text-slate-300 uppercase tracking-wide">Anything else to add?</p>
+                      <p className="text-[10px] font-medium text-slate-600 mt-1">How it felt, injuries, anything you want me to know</p>
                     </div>
                     <textarea
-                      autoFocus
                       value={logText}
                       onChange={e => setLogText(e.target.value)}
-                      placeholder="e.g. did only 4 sets of chest to wall cause had some wrist pain. every set 20 sec."
-                      rows={4}
+                      placeholder="e.g. felt strong today, wrist was a bit sore on last set"
+                      rows={2}
                       className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-5 py-4 text-sm text-slate-200 placeholder-slate-700 font-medium resize-none focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-all"
                     />
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={handleSubmitLog}
-                        disabled={!logText.trim() || logSaving}
-                        className={`px-8 py-3 rounded-2xl font-black text-xs tracking-widest uppercase transition-all active:scale-95 ${logText.trim() ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-slate-900 border border-slate-800 text-slate-600 cursor-not-allowed'}`}
-                      >
-                        {logSaving ? 'Saving…' : 'Save'}
-                      </button>
-                      <button onClick={() => { setShowLogForm(false); setLogText(''); }} className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:text-white transition-colors">
-                        Cancel
-                      </button>
+                    <button
+                      onClick={() => {
+                        const hasAny = logText.trim() || Object.values(exerciseNotes).some(v => v.trim());
+                        if (!hasAny) return;
+                        setShowConfirm(true);
+                      }}
+                      className="w-full py-4 rounded-2xl font-black text-xs tracking-widest uppercase transition-all active:scale-95 bg-blue-600 hover:bg-blue-500 text-white"
+                    >
+                      <NotebookPen size={14} className="inline mr-2" />
+                      Submit Session Log
+                    </button>
+                  </div>
+                )}
+
+                {/* Confirmation modal */}
+                {showConfirm && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-6">
+                    <div className="bg-slate-900 border border-slate-700 rounded-3xl p-8 max-w-sm w-full space-y-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+                      <div className="space-y-2">
+                        <p className="text-base font-black uppercase tracking-wide text-white">Submit this log?</p>
+                        <p className="text-xs text-slate-500 font-medium">Your numbers and notes will be sent to your coach.</p>
+                      </div>
+                      <div className="flex gap-3">
+                        <button
+                          onClick={handleSubmitLog}
+                          disabled={logSaving}
+                          className="flex-1 py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase tracking-widest transition-all active:scale-95"
+                        >
+                          {logSaving ? 'Saving…' : 'Yes, Submit'}
+                        </button>
+                        <button
+                          onClick={() => setShowConfirm(false)}
+                          className="flex-1 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-black text-xs uppercase tracking-widest transition-all"
+                        >
+                          Cancel
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
