@@ -216,7 +216,7 @@ const isDone = exerciseState[ex.id] || false;
 
     return (
       <div key={ex.id} className="group">
-        <div className={`grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 px-4 md:px-8 py-4 md:py-5 border-x border-b border-white/5 ${idx === 0 ? 'border-t' : ''} ${isLast ? 'rounded-b-2xl' : ''} transition-all items-center ${isDone ? 'bg-emerald-500/5 opacity-60' : 'bg-slate-950/30 hover:bg-slate-900/40'}`}>
+        <div className={`grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 px-4 md:px-8 py-5 md:py-6 border-x border-b border-white/5 ${idx === 0 ? 'border-t' : ''} ${isLast ? 'rounded-b-2xl' : ''} transition-all items-center ${isDone ? 'bg-emerald-500/5 opacity-60' : 'bg-slate-950/30 hover:bg-slate-900/40'}`}>
           <div className="col-span-1 md:col-span-4 flex items-center gap-3">
             <div
   onClick={() =>
@@ -240,13 +240,11 @@ const isDone = exerciseState[ex.id] || false;
             </div>
           </div>
           
-          <div className="hidden md:flex col-span-3 items-center gap-4">
-            <span className={`text-sm font-black ${isDone ? 'text-slate-600' : 'text-blue-400'}`}>{ex.sets}</span>
-            <span className={`text-sm font-black uppercase ${isDone ? 'text-slate-600' : 'text-white'}`}>{ex.reps || ex.duration}</span>
-            <span className={`text-[10px] font-black uppercase ${isDone ? 'text-slate-700' : 'text-amber-500'}`}>{ex.restTime || '90s'}</span>
-          </div>
+          <div className="hidden md:flex col-span-1 justify-center"><span className={`text-sm font-black ${isDone ? 'text-slate-600' : 'text-blue-400'}`}>{ex.sets}</span></div>
+          <div className="hidden md:flex col-span-1 justify-center"><span className={`text-sm font-black uppercase ${isDone ? 'text-slate-600' : 'text-white'}`}>{ex.reps || ex.duration}</span></div>
+          <div className="hidden md:flex col-span-1 justify-center"><span className={`text-[10px] font-black uppercase ${isDone ? 'text-slate-700' : 'text-amber-500'}`}>{ex.restTime || '90s'}</span></div>
 
-          <div className="col-span-1 md:col-span-5 flex items-center justify-end gap-2">
+          <div className="col-span-1 md:col-span-5 flex items-center gap-2">
             <div className="md:hidden flex flex-shrink-0 items-center gap-4">
               <div className="flex flex-col">
                 <span className="text-[7px] font-black text-slate-600 uppercase">Sets</span>
@@ -267,8 +265,8 @@ const isDone = exerciseState[ex.id] || false;
                 type="text"
                 value={exerciseNotes[ex.id] || ''}
                 onChange={e => setExerciseNotes(prev => ({ ...prev, [ex.id]: e.target.value }))}
-                placeholder="Log notes..."
-                className="flex-1 min-w-0 bg-slate-900/80 border border-slate-800/60 rounded-xl px-3 py-2 text-xs text-slate-300 placeholder-slate-700 font-medium focus:outline-none focus:border-blue-500/40 transition-all"
+                placeholder="Log your notes..."
+                className="flex-1 min-w-0 bg-slate-900/80 border border-slate-800/60 rounded-xl px-4 py-3 text-sm text-slate-300 placeholder-slate-700 font-medium focus:outline-none focus:border-blue-500/40 transition-all"
               />
             )}
 
@@ -328,10 +326,10 @@ const isDone = exerciseState[ex.id] || false;
              <div className="space-y-1">
                 <div className="hidden md:grid grid-cols-12 gap-4 px-8 py-3 bg-white/5 rounded-t-2xl border-x border-t border-white/5">
                   <div className="col-span-4 text-[8px] font-black uppercase text-slate-500 tracking-widest">Movement</div>
-                  <div className="col-span-3 text-[8px] font-black uppercase text-slate-500 tracking-widest flex gap-4">
-                    <span>Sets</span><span>Target</span><span>Rest</span>
-                  </div>
-                  <div className="col-span-5 text-[8px] font-black uppercase text-slate-500 tracking-widest">Log</div>
+                  <div className="col-span-1 text-[8px] font-black uppercase text-slate-500 tracking-widest text-center">Sets</div>
+                  <div className="col-span-1 text-[8px] font-black uppercase text-slate-500 tracking-widest text-center">Target</div>
+                  <div className="col-span-1 text-[8px] font-black uppercase text-slate-500 tracking-widest text-center">Rest</div>
+                  <div className="col-span-5 text-[8px] font-black uppercase text-slate-500 tracking-widest pl-2">Log</div>
                 </div>
                 {current.exercises.map((ex, i) => renderExerciseRow(ex, i, i === current.exercises.length - 1))}
              </div>
