@@ -329,7 +329,7 @@ const isDone = exerciseState[ex.id] || false;
                   <div className="col-span-1 text-[8px] font-black uppercase text-slate-500 tracking-widest text-center">Sets</div>
                   <div className="col-span-1 text-[8px] font-black uppercase text-slate-500 tracking-widest text-center">Target</div>
                   <div className="col-span-1 text-[8px] font-black uppercase text-slate-500 tracking-widest text-center">Rest</div>
-                  <div className="col-span-5 text-[8px] font-black uppercase text-slate-500 tracking-widest pl-2">Log</div>
+                  <div className="col-span-5 text-[8px] font-black uppercase text-slate-500 tracking-widest pl-2">Track your numbers</div>
                 </div>
                 {current.exercises.map((ex, i) => renderExerciseRow(ex, i, i === current.exercises.length - 1))}
              </div>
