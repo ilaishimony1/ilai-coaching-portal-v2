@@ -266,7 +266,7 @@ const isDone = exerciseState[ex.id] || false;
                 value={exerciseNotes[ex.id] || ''}
                 onChange={e => setExerciseNotes(prev => ({ ...prev, [ex.id]: e.target.value }))}
                 placeholder="Log your notes..."
-                className="flex-1 min-w-0 bg-slate-900/80 border border-slate-800/60 rounded-xl px-4 py-3 text-sm text-slate-300 placeholder-slate-700 font-medium focus:outline-none focus:border-blue-500/40 transition-all"
+                className="flex-1 min-w-0 bg-slate-900/80 border border-slate-800/60 rounded-xl px-4 py-[14px] text-sm text-slate-300 placeholder-slate-700 font-medium focus:outline-none focus:border-blue-500/40 transition-all"
               />
             )}
 
