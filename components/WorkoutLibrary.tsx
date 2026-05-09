@@ -286,7 +286,7 @@ const isDone = exerciseState[ex.id] || false;
               type="text"
               value={exerciseNotes[ex.id] || ''}
               onChange={e => setExerciseNotes(prev => ({ ...prev, [ex.id]: e.target.value }))}
-              placeholder="Log your numbers, e.g. 60kg × 8, 65kg × 6"
+              placeholder="Log your notes, e.g. number of reps for this exercise"
               className="w-full bg-slate-950/80 border border-slate-800/60 rounded-xl px-4 py-2.5 text-xs text-slate-300 placeholder-slate-700 font-medium focus:outline-none focus:border-blue-500/40 focus:ring-1 focus:ring-blue-500/10 transition-all"
             />
           </div>
