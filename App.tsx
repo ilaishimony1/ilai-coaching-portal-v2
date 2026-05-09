@@ -8,7 +8,7 @@ import {
   inMemoryPersistence
 } from "firebase/auth";
 import React, { useState, useRef, useEffect } from 'react';
-import { Home, LogOut, Palette, User, ChevronLeft, Archive, BookOpen, Video, Camera, Library, ClipboardList, Bell, BellOff } from 'lucide-react';
+import { Home, LogOut, Palette, User, ChevronLeft, Archive, BookOpen, Video, Camera, Library, ClipboardList, Bell, BellOff, Smartphone, Monitor } from 'lucide-react';
 import { ViewMode, AuthStatus, ClientData } from './types';
 import LoginPage from './components/LoginPage'; 
 import GoalTracker from './components/GoalTracker';
@@ -60,6 +60,7 @@ const MainApp: React.FC = () => {
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const { permission: notifPermission, requestPermission: requestNotifPermission } = useCoachNotifications(authStatus.type === 'COACH');
+  const [mobilePreview, setMobilePreview] = useState(false);
 
   const NavButtons = (
     <>
@@ -287,6 +288,11 @@ const MainApp: React.FC = () => {
             <BellOff size={20} />
           </button>
         )}
+        {authStatus.type === 'COACH' && (
+          <button onClick={() => setMobilePreview(p => !p)} title={mobilePreview ? 'Switch to desktop view' : 'Switch to mobile view'} className={`p-4 transition-colors ${mobilePreview ? 'text-blue-400' : 'text-slate-600 hover:text-slate-300'}`}>
+            {mobilePreview ? <Monitor size={20} /> : <Smartphone size={20} />}
+          </button>
+        )}
         <button onClick={() => setAuthStatus({ type: 'NONE' })} className="mt-auto p-4 text-slate-700 hover:text-red-500 transition-colors">
           <LogOut size={24} />
         </button>
@@ -322,7 +328,7 @@ const MainApp: React.FC = () => {
       </nav>
 
       <main className="flex-1 overflow-y-auto p-4 md:p-12 pb-24 md:pb-12 no-scrollbar">
-        <div className="max-w-6xl mx-auto">
+        <div className={`mx-auto transition-all duration-300 ${mobilePreview && authStatus.type === 'COACH' ? 'max-w-[390px]' : 'max-w-6xl'}`}>
 
           {viewMode === 'ADMIN' && (
             <AdminDashboard
