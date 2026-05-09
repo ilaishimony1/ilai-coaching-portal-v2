@@ -276,13 +276,22 @@ const isDone = exerciseState[ex.id] || false;
 
             {!isCoach && !isDone && (() => {
               const prescribed = `${ex.sets}×${ex.reps || ex.duration}`;
-              const isDefault = exerciseNotes[ex.id] === prescribed;
               return (
                 <input
                   type="text"
                   value={exerciseNotes[ex.id] || ''}
                   onChange={e => setExerciseNotes(prev => ({ ...prev, [ex.id]: e.target.value }))}
-                  className={`flex-1 min-w-0 bg-slate-900/80 border border-slate-800/60 rounded-xl px-4 py-[14px] text-xs font-medium focus:outline-none focus:border-blue-500/40 transition-all ${isDefault ? 'text-slate-500' : 'text-white'}`}
+                  onFocus={() => {
+                    if (exerciseNotes[ex.id] === prescribed) {
+                      setExerciseNotes(prev => ({ ...prev, [ex.id]: '' }));
+                    }
+                  }}
+                  onBlur={() => {
+                    if (!exerciseNotes[ex.id]?.trim()) {
+                      setExerciseNotes(prev => ({ ...prev, [ex.id]: prescribed }));
+                    }
+                  }}
+                  className="flex-1 min-w-0 bg-slate-900/80 border border-slate-800/60 rounded-xl px-4 py-[14px] text-xs text-white font-medium focus:outline-none focus:border-blue-500/40 transition-all"
                 />
               );
             })()}
