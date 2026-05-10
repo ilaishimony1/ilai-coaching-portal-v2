@@ -274,12 +274,70 @@ const CoachCheckIns: React.FC = () => {
                           </div>
                         ))}
                       </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-600">Session Note</p>
-                        <p className="text-sm font-medium text-slate-300 leading-relaxed">{(item.data as WorkoutLog).note}</p>
-                      </div>
-                    )}
+                    ) : (() => {
+                      const log = item.data as WorkoutLog;
+                      const workout = clients.find(c => c.id === log.clientId)?.workouts.find(w => w.name === log.workoutName);
+
+                      // Parse note into per-exercise map: "EXERCISE NAME: value"
+                      const noteMap: Record<string, string> = {};
+                      let generalNote = '';
+                      log.note.split('\n').forEach(line => {
+                        const colonIdx = line.indexOf(':');
+                        if (colonIdx > 0) {
+                          const key = line.slice(0, colonIdx).trim().toUpperCase();
+                          const val = line.slice(colonIdx + 1).trim();
+                          noteMap[key] = val;
+                        } else if (line.trim()) {
+                          generalNote += (generalNote ? ' ' : '') + line.trim();
+                        }
+                      });
+
+                      return (
+                        <div className="space-y-4">
+                          <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-600">
+                            Workout {log.workoutName} — {log.workoutTitle}
+                          </p>
+
+                          {workout ? (
+                            <div className="space-y-1">
+                              {/* Header row */}
+                              <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-white/5 rounded-xl">
+                                <div className="col-span-5 text-[8px] font-black uppercase text-slate-600 tracking-widest">Exercise</div>
+                                <div className="col-span-3 text-[8px] font-black uppercase text-slate-600 tracking-widest">Prescribed</div>
+                                <div className="col-span-4 text-[8px] font-black uppercase text-slate-600 tracking-widest">Logged</div>
+                              </div>
+                              {workout.exercises.map(ex => {
+                                if (ex.category === 'header') return (
+                                  <p key={ex.id} className="text-[9px] font-black uppercase tracking-widest text-slate-500 pt-3 pb-1 border-b border-white/5 px-4">{ex.name}</p>
+                                );
+                                const logged = noteMap[ex.name.toUpperCase()];
+                                return (
+                                  <div key={ex.id} className={`grid grid-cols-12 gap-2 px-4 py-3 rounded-xl ${logged ? 'bg-slate-900/60' : 'bg-slate-950/30'}`}>
+                                    <div className="col-span-5 text-xs font-black text-white uppercase">{ex.name}</div>
+                                    <div className="col-span-3 text-xs font-bold text-slate-500">{ex.sets}×{ex.reps || ex.duration}</div>
+                                    <div className="col-span-4 text-xs font-bold">
+                                      {logged
+                                        ? <span className="text-emerald-400">{logged}</span>
+                                        : <span className="text-slate-700 italic">not logged</span>
+                                      }
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <p className="text-sm font-medium text-slate-300 leading-relaxed whitespace-pre-line">{log.note}</p>
+                          )}
+
+                          {generalNote && (
+                            <div className="pt-3 border-t border-white/5">
+                              <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-600 mb-1">Session Notes</p>
+                              <p className="text-sm font-medium text-slate-400 leading-relaxed">{generalNote}</p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </div>
