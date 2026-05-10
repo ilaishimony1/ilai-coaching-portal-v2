@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback } from 'react';
-import { Users, UserPlus, Palette, Settings2, RefreshCw, ChevronRight, Inbox, AlertCircle, Database, Cpu, Shield, Clock, GripVertical } from 'lucide-react';
+import { Users, UserPlus, Palette, Settings2, RefreshCw, ChevronRight, Inbox, AlertCircle, Database, Cpu, Shield, Clock, GripVertical, ClipboardList, Dumbbell, Archive, Library } from 'lucide-react';
 import { ClientSummary, ClientData } from '../types';
 import { useApp } from '../AppContext';
 
@@ -43,7 +43,12 @@ const statusStyles = {
 const AdminDashboard: React.FC<Props> = ({
   clients, fullClients, onOpenPortal, onEditPortal, onArchiveClient, onAddClient, onOpenBranding
 }) => {
-  const { cloudSync, cloudError, lastServerUpdate } = useApp();
+  const { cloudSync, cloudError, lastServerUpdate, checkIns, workoutLogs, archivedClients, savedWorkouts, unreadCheckInsCount, unreadWorkoutLogsCount } = useApp();
+
+  const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const checkInsThisWeek = useMemo(() => checkIns.filter(c => new Date(c.submittedAt).getTime() > oneWeekAgo).length, [checkIns]);
+  const logsThisWeek = useMemo(() => workoutLogs.filter(l => new Date(l.loggedAt).getTime() > oneWeekAgo).length, [workoutLogs]);
+  const totalUnread = unreadCheckInsCount + unreadWorkoutLogsCount;
 
   // Drag-to-reorder state — starts from localStorage if available, else alphabetical
   const initialOrder = useMemo(() => {
@@ -162,8 +167,13 @@ const AdminDashboard: React.FC<Props> = ({
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-1 gap-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <StatCard label="Active Athletes" value={clients.length.toString()} icon={<Users className="text-blue-400" />} />
+        <StatCard label="Check-ins This Week" value={checkInsThisWeek.toString()} icon={<ClipboardList className="text-blue-400" />} />
+        <StatCard label="Workouts Logged This Week" value={logsThisWeek.toString()} icon={<Dumbbell className="text-emerald-400" />} />
+        <StatCard label="Unread Activity" value={totalUnread.toString()} icon={<ClipboardList className={totalUnread > 0 ? 'text-red-400' : 'text-slate-600'} />} alert={totalUnread > 0} />
+        <StatCard label="In The Vault" value={archivedClients.length.toString()} icon={<Archive className="text-slate-500" />} />
+        <StatCard label="Programs in Library" value={savedWorkouts.length.toString()} icon={<Library className="text-purple-400" />} />
       </div>
 
       <div className="space-y-6 pt-8">
@@ -279,14 +289,13 @@ const AdminDashboard: React.FC<Props> = ({
   );
 };
 
-const StatCard = ({ label, value, icon, highlight }: any) => (
-  <div className={`glass-card p-10 rounded-[3rem] border-slate-800/60 flex flex-col gap-6 shadow-2xl relative overflow-hidden transition-all duration-500 ${highlight ? 'border-blue-500/40 bg-blue-600/5' : 'bg-slate-950/20'}`}>
-    <div className={`w-fit p-4 bg-slate-950 rounded-2xl border border-slate-800 z-10 ${highlight ? 'border-blue-500/40 shadow-[0_0_40px_rgba(37,99,235,0.1)]' : ''}`}>{icon}</div>
+const StatCard = ({ label, value, icon, highlight, alert }: any) => (
+  <div className={`glass-card p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border-slate-800/60 flex flex-col gap-4 md:gap-6 shadow-2xl relative overflow-hidden transition-all duration-500 ${alert ? 'border-red-500/30 bg-red-500/5' : highlight ? 'border-blue-500/40 bg-blue-600/5' : 'bg-slate-950/20'}`}>
+    <div className={`w-fit p-3 md:p-4 bg-slate-950 rounded-2xl border border-slate-800 z-10 ${alert ? 'border-red-500/30' : highlight ? 'border-blue-500/40' : ''}`}>{icon}</div>
     <div className="z-10">
-      <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.4em] mb-1">{label}</p>
-      <p className={`text-6xl font-black brand-font leading-none ${highlight ? 'text-white' : 'text-slate-500'}`}>{value}</p>
+      <p className="text-[9px] font-black text-slate-600 uppercase tracking-[0.3em] mb-1">{label}</p>
+      <p className={`text-4xl md:text-6xl font-black brand-font leading-none ${alert ? 'text-red-400' : highlight ? 'text-white' : 'text-slate-500'}`}>{value}</p>
     </div>
-    {highlight && <div className="absolute inset-0 bg-blue-600/5 animate-pulse pointer-events-none"></div>}
   </div>
 );
 
