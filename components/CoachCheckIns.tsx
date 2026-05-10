@@ -23,7 +23,7 @@ const formatDate = (iso: string) =>
     hour: '2-digit', minute: '2-digit',
   });
 
-type Tab = 'ALL' | 'REVIEWS' | 'WORKOUTS';
+type Tab = 'ALL' | 'REVIEWS' | 'WORKOUTS' | 'CLIENT';
 
 type FeedItem =
   | { kind: 'checkin'; data: WeeklyCheckIn; date: number }
@@ -48,7 +48,7 @@ const CoachCheckIns: React.FC = () => {
     let list = feed;
     if (tab === 'REVIEWS')  list = list.filter(i => i.kind === 'checkin');
     if (tab === 'WORKOUTS') list = list.filter(i => i.kind === 'workout');
-    if (filterClient !== 'ALL') list = list.filter(i => i.data.clientId === filterClient);
+    if (tab === 'CLIENT' || filterClient !== 'ALL') list = list.filter(i => i.data.clientId === filterClient);
     return list;
   }, [feed, tab, filterClient]);
 
@@ -110,7 +110,7 @@ const CoachCheckIns: React.FC = () => {
         {(['ALL', 'REVIEWS', 'WORKOUTS'] as Tab[]).map(t => (
           <button
             key={t}
-            onClick={() => setTab(t)}
+            onClick={() => { setTab(t); setFilterClient('ALL'); }}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
               tab === t ? 'bg-blue-600 text-white' : 'bg-slate-900 border border-slate-800 text-slate-500 hover:text-white'
             }`}
@@ -125,32 +125,45 @@ const CoachCheckIns: React.FC = () => {
             )}
           </button>
         ))}
+        <button
+          onClick={() => { setTab('CLIENT'); setFilterClient('ALL'); }}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
+            tab === 'CLIENT' ? 'bg-blue-600 text-white' : 'bg-slate-900 border border-slate-800 text-slate-500 hover:text-white'
+          }`}
+        >
+          <User size={12} />
+          By Client
+        </button>
       </div>
 
-      {/* Client filter */}
-      {clientsInFeed.length > 1 && (
-        <div className="flex gap-2 flex-wrap">
-          <button
-            onClick={() => setFilterClient('ALL')}
-            className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${filterClient === 'ALL' ? 'bg-slate-700 text-white' : 'bg-slate-900 border border-slate-800 text-slate-500 hover:text-white'}`}
-          >
-            All clients
-          </button>
-          {clientsInFeed.map(c => (
-            <button
-              key={c.id}
-              onClick={() => setFilterClient(c.id)}
-              className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${filterClient === c.id ? 'bg-slate-700 text-white' : 'bg-slate-900 border border-slate-800 text-slate-500 hover:text-white'}`}
-            >
-              {c.avatar ? <img src={c.avatar} className="w-4 h-4 rounded-full object-cover" /> : <User size={10} />}
-              {c.name.split(' ')[0]}
-              {(unreadPerClient[c.id] || 0) > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 bg-red-500 rounded-full text-[8px] font-black text-white flex items-center justify-center">
-                  +{unreadPerClient[c.id]}
-                </span>
-              )}
-            </button>
-          ))}
+      {/* By Client picker */}
+      {tab === 'CLIENT' && (
+        <div className="space-y-3">
+          <p className="text-[9px] font-black uppercase tracking-widest text-slate-600">Select a client</p>
+          <div className="flex gap-2 flex-wrap">
+            {clientsInFeed.map(c => (
+              <button
+                key={c.id}
+                onClick={() => setFilterClient(c.id)}
+                className={`relative flex items-center gap-2 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                  filterClient === c.id
+                    ? 'bg-blue-600 text-white border border-blue-500'
+                    : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:border-slate-600'
+                }`}
+              >
+                {c.avatar
+                  ? <img src={c.avatar} className="w-5 h-5 rounded-full object-cover" />
+                  : <div className="w-5 h-5 rounded-full bg-slate-700 flex items-center justify-center text-[8px] font-black">{c.name[0]}</div>
+                }
+                {c.name.split(' ')[0]}
+                {(unreadPerClient[c.id] || 0) > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 bg-red-500 rounded-full text-[8px] font-black text-white flex items-center justify-center">
+                    +{unreadPerClient[c.id]}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
