@@ -74,8 +74,8 @@ const MainApp: React.FC = () => {
           <NavBtn active={viewMode === 'ADMIN'} onClick={() => setViewMode('ADMIN')} icon={<Home />} color={landingConfig.accentColor} />
           <NavBtn active={viewMode === 'ACADEMY'} onClick={() => setViewMode('ACADEMY')} icon={<Video />} color={landingConfig.accentColor} />
           <NavBtn active={viewMode === 'SAVED_PROGRAMS'} onClick={() => setViewMode('SAVED_PROGRAMS')} icon={<Library />} color={landingConfig.accentColor} />
-          <NavBtn active={viewMode === 'ARCHIVE'} onClick={() => setViewMode('ARCHIVE')} icon={<Archive />} color={landingConfig.accentColor} />
           <NavBtn active={viewMode === 'WEEKLY_CHECKIN'} onClick={() => setViewMode('WEEKLY_CHECKIN')} icon={<ClipboardList />} color={landingConfig.accentColor} badge={unreadCheckInsCount + unreadWorkoutLogsCount} />
+          <NavBtn active={viewMode === 'ARCHIVE'} onClick={() => setViewMode('ARCHIVE')} icon={<Archive />} color={landingConfig.accentColor} />
           <NavBtn active={viewMode === 'LANDING_EDITOR'} onClick={() => setViewMode('LANDING_EDITOR')} icon={<Palette />} color={landingConfig.accentColor} />
         </>
       )}
