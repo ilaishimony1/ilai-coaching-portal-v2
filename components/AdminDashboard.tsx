@@ -167,13 +167,12 @@ const AdminDashboard: React.FC<Props> = ({
         </div>
       )}
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label="Active Athletes" value={clients.length.toString()} icon={<Users className="text-blue-400" />} />
         <StatCard label="Check-ins This Week" value={checkInsThisWeek.toString()} icon={<ClipboardList className="text-blue-400" />} />
-        <StatCard label="Workouts Logged This Week" value={logsThisWeek.toString()} icon={<Dumbbell className="text-emerald-400" />} />
+        <StatCard label="Workouts This Week" value={logsThisWeek.toString()} icon={<Dumbbell className="text-emerald-400" />} />
         <StatCard label="Unread Activity" value={totalUnread.toString()} icon={<ClipboardList className={totalUnread > 0 ? 'text-red-400' : 'text-slate-600'} />} alert={totalUnread > 0} />
         <StatCard label="In The Vault" value={archivedClients.length.toString()} icon={<Archive className="text-slate-500" />} />
-        <StatCard label="Programs in Library" value={savedWorkouts.length.toString()} icon={<Library className="text-purple-400" />} />
       </div>
 
       <div className="space-y-6 pt-8">
