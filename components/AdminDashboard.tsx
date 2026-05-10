@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback } from 'react';
-import { Users, UserPlus, Palette, Settings2, RefreshCw, ChevronRight, Inbox, AlertCircle, Database, Cpu, Shield, Clock, GripVertical, ClipboardList, Dumbbell, Archive, Library } from 'lucide-react';
+import { Users, UserPlus, Palette, Settings2, RefreshCw, ChevronRight, Inbox, AlertCircle, Database, Cpu, Shield, Clock, GripVertical, ClipboardList, Dumbbell, Archive, Library, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { ClientSummary, ClientData } from '../types';
 import { useApp } from '../AppContext';
 
@@ -49,6 +49,23 @@ const AdminDashboard: React.FC<Props> = ({
   const checkInsThisWeek = useMemo(() => checkIns.filter(c => new Date(c.submittedAt).getTime() > oneWeekAgo).length, [checkIns]);
   const logsThisWeek = useMemo(() => workoutLogs.filter(l => new Date(l.loggedAt).getTime() > oneWeekAgo).length, [workoutLogs]);
   const totalUnread = unreadCheckInsCount + unreadWorkoutLogsCount;
+
+  // Clients ending within 14 days, sorted by soonest first
+  const endingSoon = useMemo(() => {
+    const now = Date.now();
+    return clients
+      .filter(c => {
+        if (!c.programEndDate) return false;
+        const daysLeft = Math.ceil((new Date(c.programEndDate).getTime() - now) / (1000 * 60 * 60 * 24));
+        return daysLeft >= 0 && daysLeft <= 14;
+      })
+      .map(c => ({
+        id: c.id,
+        name: c.name.split(' ')[0], // first name only
+        daysLeft: Math.ceil((new Date(c.programEndDate!).getTime() - now) / (1000 * 60 * 60 * 24)),
+      }))
+      .sort((a, b) => a.daysLeft - b.daysLeft);
+  }, [clients]);
 
   // Drag-to-reorder state — starts from localStorage if available, else alphabetical
   const initialOrder = useMemo(() => {
@@ -170,6 +187,7 @@ const AdminDashboard: React.FC<Props> = ({
         <StatCard label="Workouts This Week" value={logsThisWeek.toString()} icon={<Dumbbell className="text-emerald-400" />} />
         <StatCard label="Unread Activity" value={totalUnread.toString()} icon={<ClipboardList className={totalUnread > 0 ? 'text-red-400' : 'text-slate-600'} />} alert={totalUnread > 0} />
         <StatCard label="In The Vault" value={archivedClients.length.toString()} icon={<Archive className="text-slate-500" />} />
+        <EndingSoonCard clients={endingSoon} className="col-span-2 md:col-span-4" />
       </div>
 
       <div className="space-y-6 pt-8">
@@ -284,6 +302,39 @@ const AdminDashboard: React.FC<Props> = ({
     </div>
   );
 };
+
+const EndingSoonCard = ({ clients, className }: { clients: { id: string; name: string; daysLeft: number }[]; className?: string }) => (
+  <div className={`glass-card p-5 md:p-7 rounded-[2rem] border-slate-800/60 bg-slate-950/20 shadow-2xl ${clients.length > 0 ? 'border-amber-500/20 bg-amber-500/5' : ''} ${className ?? ''}`}>
+    <div className="flex items-center gap-3 mb-4">
+      <div className={`p-2.5 rounded-xl border ${clients.length > 0 ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' : 'bg-slate-950 border-slate-800 text-slate-600'}`}>
+        {clients.length > 0 ? <AlertTriangle size={16} /> : <CheckCircle2 size={16} />}
+      </div>
+      <p className="text-[9px] font-black text-slate-600 uppercase tracking-[0.3em]">Ending Soon — Next 14 Days</p>
+    </div>
+    {clients.length === 0 ? (
+      <p className="text-sm font-black text-slate-700 uppercase tracking-widest">All clear ✓</p>
+    ) : (
+      <div className="flex flex-wrap gap-2">
+        {clients.map(c => (
+          <div key={c.id} className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-black uppercase tracking-wide ${
+            c.daysLeft <= 3
+              ? 'bg-red-500/10 border-red-500/30 text-red-400'
+              : c.daysLeft <= 7
+              ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+              : 'bg-slate-900 border-slate-700 text-slate-300'
+          }`}>
+            {c.name}
+            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-lg ${
+              c.daysLeft <= 3 ? 'bg-red-500/20 text-red-300' : c.daysLeft <= 7 ? 'bg-amber-500/20 text-amber-300' : 'bg-slate-800 text-slate-500'
+            }`}>
+              {c.daysLeft}d
+            </span>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+);
 
 const StatCard = ({ label, value, icon, highlight, alert }: any) => (
   <div className={`glass-card p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border-slate-800/60 flex flex-col gap-4 md:gap-6 shadow-2xl relative overflow-hidden transition-all duration-500 ${alert ? 'border-red-500/30 bg-red-500/5' : highlight ? 'border-blue-500/40 bg-blue-600/5' : 'bg-slate-950/20'}`}>
