@@ -102,56 +102,54 @@ const AdminDashboard: React.FC<Props> = ({
 
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-top-4 duration-700 pb-20">
-      <header className="flex flex-col gap-8">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-          <div className="flex items-center gap-4 bg-slate-900/40 border border-slate-800/60 p-4 pr-8 rounded-3xl backdrop-blur-xl">
-            <div className={`p-3 rounded-2xl ${cloudSync.isSyncing ? 'bg-amber-500/10 text-amber-500' : (cloudError ? 'bg-red-500/10 text-red-500' : 'bg-blue-600/10 text-blue-500 shadow-[0_0_20px_rgba(37,99,235,0.2)]')}`}>
-              <Database size={24} className={cloudSync.isSyncing ? 'animate-spin' : ''} />
+      <header className="flex flex-col gap-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          {/* Sync status — compact on mobile */}
+          <div className="flex items-center gap-3 bg-slate-900/40 border border-slate-800/60 p-3 md:p-4 pr-5 md:pr-8 rounded-2xl md:rounded-3xl backdrop-blur-xl">
+            <div className={`p-2 md:p-3 rounded-xl md:rounded-2xl ${cloudSync.isSyncing ? 'bg-amber-500/10 text-amber-500' : (cloudError ? 'bg-red-500/10 text-red-500' : 'bg-blue-600/10 text-blue-500 shadow-[0_0_20px_rgba(37,99,235,0.2)]')}`}>
+              <Database size={18} className={cloudSync.isSyncing ? 'animate-spin' : ''} />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${cloudError ? 'text-red-500' : 'text-blue-500'}`}>
-                  Server: {cloudSync.isSyncing ? 'Syncing...' : (cloudError ? 'Disconnected' : 'Live')}
+                  {cloudSync.isSyncing ? 'Syncing…' : (cloudError ? 'Disconnected' : 'Live')}
                 </p>
                 <div className={`w-1.5 h-1.5 rounded-full ${cloudSync.isSyncing ? 'bg-amber-500 animate-pulse' : (cloudError ? 'bg-red-500' : 'bg-emerald-500')}`}></div>
               </div>
-              <div className="flex items-center gap-3 mt-1">
-                {lastServerUpdate ? (
-                  <div className="flex items-center gap-1 text-slate-500">
-                    <Clock size={10} />
-                    <span className="text-[8px] font-black uppercase tracking-tighter">Last Sync: {lastServerUpdate.toLocaleTimeString()}</span>
-                  </div>
-                ) : (
-                  <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Awaiting Neural Link...</p>
-                )}
-              </div>
+              {lastServerUpdate && (
+                <div className="flex items-center gap-1 text-slate-500 mt-0.5">
+                  <Clock size={9} />
+                  <span className="text-[8px] font-black uppercase tracking-tighter">{lastServerUpdate.toLocaleTimeString()}</span>
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="flex gap-4">
+          <div className="flex gap-2 md:gap-4 w-full md:w-auto">
             <button
               onClick={cloudSync.forceSync}
               disabled={cloudSync.isSyncing}
-              className="flex items-center gap-2 px-5 py-3 bg-slate-900/60 border border-slate-800 rounded-2xl text-[9px] font-black uppercase text-slate-400 hover:text-blue-400 transition-all group disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2.5 md:px-5 md:py-3 bg-slate-900/60 border border-slate-800 rounded-xl md:rounded-2xl text-[9px] font-black uppercase text-slate-400 hover:text-blue-400 transition-all group disabled:opacity-50"
             >
               <RefreshCw size={12} className={cloudSync.isSyncing ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'} />
-              Manual Cloud Push
+              <span className="hidden sm:inline">Manual Cloud Push</span>
+              <span className="sm:hidden">Sync</span>
             </button>
-            <button onClick={onAddClient} className="bg-emerald-600 hover:bg-emerald-500 text-white px-8 py-4 rounded-2xl font-black text-xs tracking-widest uppercase flex items-center gap-3 shadow-2xl transition-all active:scale-95">
-              <UserPlus size={18} /> Add Client
+            <button onClick={onAddClient} className="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 md:px-8 md:py-4 rounded-xl md:rounded-2xl font-black text-xs tracking-widest uppercase flex items-center justify-center gap-2 md:gap-3 shadow-2xl transition-all active:scale-95">
+              <UserPlus size={16} /> <span>Add Client</span>
             </button>
           </div>
         </div>
 
-        <div className="flex justify-between items-end border-b border-white/5 pb-8">
+        <div className="flex justify-between items-end border-b border-white/5 pb-6 md:pb-8">
           <div>
-            <h2 className="text-7xl font-black brand-font uppercase text-white tracking-tighter leading-none">Command Center</h2>
-            <p className="text-blue-500/60 font-black uppercase tracking-[0.6em] text-[10px] mt-3 ml-1 flex items-center gap-3">
-              <Cpu size={12} /> Management Terminal
+            <h2 className="text-4xl md:text-7xl font-black brand-font uppercase text-white tracking-tighter leading-none">Command Center</h2>
+            <p className="text-blue-500/60 font-black uppercase tracking-[0.4em] md:tracking-[0.6em] text-[10px] mt-2 md:mt-3 ml-1 flex items-center gap-2 md:gap-3">
+              <Cpu size={10} /> Management Terminal
             </p>
           </div>
-          <button onClick={onOpenBranding} className="p-4 bg-slate-950 border border-slate-900 rounded-2xl text-slate-700 hover:text-white transition-all group">
-            <Palette size={20} className="group-hover:scale-110 transition-transform" />
+          <button onClick={onOpenBranding} className="p-3 md:p-4 bg-slate-950 border border-slate-900 rounded-xl md:rounded-2xl text-slate-700 hover:text-white transition-all group">
+            <Palette size={18} className="group-hover:scale-110 transition-transform" />
           </button>
         </div>
       </header>
@@ -211,35 +209,34 @@ const AdminDashboard: React.FC<Props> = ({
                   onDragOver={(e) => handleDragOver(e, clientSummary.id)}
                   onDrop={() => handleDrop(clientSummary.id)}
                   onDragEnd={handleDragEnd}
-                  className={`glass-card p-8 rounded-[2.5rem] border-slate-800/50 flex items-center justify-between group transition-all shadow-xl bg-slate-950/20
+                  className={`glass-card p-4 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] border-slate-800/50 flex items-center justify-between group transition-all shadow-xl bg-slate-950/20
                     ${isDragging ? 'opacity-40 scale-[0.98]' : ''}
                     ${isDragOver ? 'border-blue-500/60 bg-blue-500/5 scale-[1.01]' : 'hover:border-blue-500/40'}
                   `}
                 >
-                  {/* Drag handle */}
-                  <div className="mr-4 text-slate-800 group-hover:text-slate-600 cursor-grab active:cursor-grabbing transition-colors shrink-0">
+                  {/* Drag handle — hidden on mobile */}
+                  <div className="hidden md:block mr-4 text-slate-800 group-hover:text-slate-600 cursor-grab active:cursor-grabbing transition-colors shrink-0">
                     <GripVertical size={20} />
                   </div>
 
-                  <div className="flex items-center gap-8 flex-1 min-w-0">
-                    <div className="w-20 h-20 rounded-3xl bg-slate-900 border-2 border-slate-800 overflow-hidden relative shadow-inner shrink-0">
+                  <div className="flex items-center gap-4 md:gap-8 flex-1 min-w-0">
+                    <div className="w-12 h-12 md:w-20 md:h-20 rounded-2xl md:rounded-3xl bg-slate-900 border-2 border-slate-800 overflow-hidden relative shadow-inner shrink-0">
                       {clientSummary.avatar
                         ? <img src={clientSummary.avatar} className="w-full h-full object-cover" />
-                        : <div className="w-full h-full flex items-center justify-center text-slate-700 font-black italic text-2xl">IS</div>
+                        : <div className="w-full h-full flex items-center justify-center text-slate-700 font-black italic text-sm md:text-2xl">IS</div>
                       }
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h4 className="text-3xl font-black text-white brand-font tracking-tight truncate">
+                      <h4 className="text-lg md:text-3xl font-black text-white brand-font tracking-tight truncate">
                         {clientSummary.name}
                       </h4>
-                      <div className="flex items-center gap-4 mt-2 flex-wrap">
-                        <div className={`border px-3 py-1 rounded-lg ${styles.badge}`}>
-                          <span className="text-[9px] uppercase font-black tracking-[0.1em]">
-                            {clientSummary.programLength || '3'} Month Protocol
+                      <div className="flex items-center gap-2 md:gap-4 mt-1 md:mt-2 flex-wrap">
+                        <div className={`border px-2 py-0.5 md:px-3 md:py-1 rounded-lg ${styles.badge}`}>
+                          <span className="text-[8px] md:text-[9px] uppercase font-black tracking-[0.1em]">
+                            {clientSummary.programLength || '3'}M
                           </span>
                         </div>
-                        <div className="w-1 h-1 rounded-full bg-slate-800"></div>
-                        <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${styles.text}`}>
+                        <p className={`text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] ${styles.text}`}>
                           {daysLeft === null
                             ? 'No end date'
                             : daysLeft <= 0
@@ -250,8 +247,8 @@ const AdminDashboard: React.FC<Props> = ({
 
                       {/* Progress bar */}
                       {status !== 'none' && (
-                        <div className="mt-3 w-full max-w-[200px]">
-                          <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                        <div className="mt-2 md:mt-3 w-full max-w-[160px] md:max-w-[200px]">
+                          <div className="h-1 md:h-1.5 bg-slate-800 rounded-full overflow-hidden">
                             <div
                               className={`h-full rounded-full transition-all duration-700 ${styles.bar}`}
                               style={{ width: `${Math.round(progress * 100)}%` }}
@@ -262,19 +259,20 @@ const AdminDashboard: React.FC<Props> = ({
                     </div>
                   </div>
 
-                  <div className="flex gap-3 shrink-0 ml-4">
+                  <div className="flex gap-2 md:gap-3 shrink-0 ml-2 md:ml-4">
                     <button
                       onClick={() => onEditPortal(clientSummary.id)}
-                      className="p-5 bg-slate-950 rounded-2xl text-slate-600 hover:text-blue-400 transition-colors border border-white/5 group-hover:bg-slate-900 group-hover:border-blue-500/20"
+                      className="p-3 md:p-5 bg-slate-950 rounded-xl md:rounded-2xl text-slate-600 hover:text-blue-400 transition-colors border border-white/5 group-hover:bg-slate-900 group-hover:border-blue-500/20"
                       title="Edit Protocol"
                     >
-                      <Settings2 size={24} />
+                      <Settings2 size={18} />
                     </button>
                     <button
                       onClick={() => onOpenPortal(clientSummary.id)}
-                      className="px-10 py-5 bg-blue-600 rounded-2xl text-white font-black text-xs tracking-widest uppercase flex items-center justify-center gap-3 hover:bg-blue-500 transition-all shadow-2xl active:scale-95 group/btn"
+                      className="px-4 py-3 md:px-10 md:py-5 bg-blue-600 rounded-xl md:rounded-2xl text-white font-black text-xs tracking-widest uppercase flex items-center justify-center gap-1 md:gap-3 hover:bg-blue-500 transition-all shadow-2xl active:scale-95 group/btn"
                     >
-                      Open Portal <ChevronRight size={18} className="group-hover/btn:translate-x-1 transition-transform" />
+                      <span className="hidden sm:inline">Open Portal</span>
+                      <ChevronRight size={16} className="group-hover/btn:translate-x-1 transition-transform" />
                     </button>
                   </div>
                 </div>

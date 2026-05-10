@@ -90,15 +90,15 @@ const CoachCheckIns: React.FC = () => {
     <div className="space-y-10 animate-in fade-in slide-in-from-top-4 duration-700">
 
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-white/5 pb-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-3 border-b border-white/5 pb-6 md:pb-8">
         <div>
-          <h2 className="text-7xl font-black brand-font uppercase text-white tracking-tighter leading-none">Check-Ins</h2>
-          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-600 mt-3 ml-1">Client Activity Feed</p>
+          <h2 className="text-4xl md:text-7xl font-black brand-font uppercase text-white tracking-tighter leading-none">Check-Ins</h2>
+          <p className="text-[10px] font-black uppercase tracking-[0.4em] md:tracking-[0.5em] text-slate-600 mt-2 md:mt-3 ml-1">Client Activity Feed</p>
         </div>
         {totalUnread > 0 && (
-          <div className="flex items-center gap-3 px-6 py-3 bg-red-500/10 border border-red-500/30 rounded-2xl">
+          <div className="flex items-center gap-2 px-4 py-2 md:px-6 md:py-3 bg-red-500/10 border border-red-500/30 rounded-xl md:rounded-2xl">
             <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-            <span className="text-red-400 text-[11px] font-black uppercase tracking-widest">
+            <span className="text-red-400 text-[10px] md:text-[11px] font-black uppercase tracking-widest">
               {totalUnread} unread
             </span>
           </div>
@@ -190,7 +190,7 @@ const CoachCheckIns: React.FC = () => {
               >
                 <button
                   onClick={() => handleExpand(item)}
-                  className="w-full px-8 py-6 flex items-center gap-5 hover:bg-white/2 transition-colors group text-left"
+                  className="w-full px-4 py-4 md:px-8 md:py-6 flex items-center gap-3 md:gap-5 hover:bg-white/2 transition-colors group text-left"
                 >
                   {/* Unread dot */}
                   <div className="w-2 shrink-0">
@@ -260,7 +260,7 @@ const CoachCheckIns: React.FC = () => {
                 </button>
 
                 {isOpen && (
-                  <div className="px-8 pb-8 border-t border-white/5 pt-6 animate-in fade-in duration-300">
+                  <div className="px-4 pb-4 md:px-8 md:pb-8 border-t border-white/5 pt-4 md:pt-6 animate-in fade-in duration-300">
                     {isReview ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {CHECKIN_FIELDS.map(field => (
@@ -352,7 +352,7 @@ const CoachCheckIns: React.FC = () => {
           <div className="relative w-full max-w-2xl bg-[#0a0f1a] border border-slate-800 rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 max-h-[85vh] flex flex-col">
 
             {/* Modal header */}
-            <div className="flex items-center justify-between px-8 py-6 border-b border-white/5 shrink-0">
+            <div className="flex items-center justify-between px-5 py-4 md:px-8 md:py-6 border-b border-white/5 shrink-0">
               <div>
                 <p className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-600 mb-1">{previewWorkout.clientName} · Sector {previewWorkout.workout.name}</p>
                 <h3 className="text-2xl font-black brand-font uppercase text-white tracking-tight">{previewWorkout.workout.title}</h3>
@@ -363,7 +363,7 @@ const CoachCheckIns: React.FC = () => {
             </div>
 
             {/* Exercise list */}
-            <div className="overflow-y-auto px-8 py-6 space-y-2">
+            <div className="overflow-y-auto px-5 py-4 md:px-8 md:py-6 space-y-2">
               {previewWorkout.workout.exercises.map(ex => {
                 if (ex.category === 'header') {
                   return (
