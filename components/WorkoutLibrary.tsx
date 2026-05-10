@@ -230,76 +230,106 @@ const isDone = exerciseState[ex.id] || false;
 
     return (
       <div key={ex.id} className="group">
-        <div className={`grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 px-4 md:px-8 py-5 md:py-6 border-x border-b border-white/5 ${idx === 0 ? 'border-t' : ''} ${isLast ? 'rounded-b-2xl' : ''} transition-all items-center ${isDone ? 'bg-emerald-500/5 opacity-60' : 'bg-slate-950/30 hover:bg-slate-900/40'}`}>
-          <div className="col-span-1 md:col-span-4 flex items-center gap-3">
-            <div
-  onClick={() =>
-    setExerciseState(prev => ({
-      ...prev,
-      [ex.id]: !prev[ex.id]
-    }))
-  }
-  className={`w-5 h-5 cursor-pointer rounded-lg border flex items-center justify-center shrink-0 transition-all ${isDone ? 'bg-emerald-500 border-emerald-500' : 'border-slate-800 bg-slate-900'}`}
->
-  {isDone ? (
-    <Check size={12} className="text-white" strokeWidth={4} />
-  ) : (
-    <div className="w-1 h-1 rounded-full bg-slate-700"></div>
-  )}
-</div>
+        <div className={`px-4 md:px-8 py-4 md:py-6 border-x border-b border-white/5 ${idx === 0 ? 'border-t' : ''} ${isLast ? 'rounded-b-2xl' : ''} transition-all ${isDone ? 'bg-emerald-500/5 opacity-60' : 'bg-slate-950/30 hover:bg-slate-900/40'}`}>
 
-            <div className="flex flex-col">
-              <h4 className={`font-black uppercase text-base md:text-lg brand-font tracking-tight leading-tight ${isDone ? 'text-emerald-500/70 line-through' : 'text-white'}`}>{ex.name}</h4>
-              {ex.category === 'mobility' && <span className="text-[7px] font-black text-emerald-500 uppercase tracking-widest mt-1">Mobility</span>}
-            </div>
-          </div>
-          
-          <div className="hidden md:flex col-span-1 justify-center"><span className={`text-sm font-black ${isDone ? 'text-slate-600' : 'text-blue-400'}`}>{ex.sets}</span></div>
-          <div className="hidden md:flex col-span-1 justify-center"><span className={`text-sm font-black uppercase ${isDone ? 'text-slate-600' : 'text-white'}`}>{ex.reps || ex.duration}</span></div>
-          <div className="hidden md:flex col-span-1 justify-center"><span className={`text-[10px] font-black uppercase ${isDone ? 'text-slate-700' : 'text-amber-500'}`}>{ex.restTime || '90s'}</span></div>
-
-          <div className="col-span-1 md:col-span-5 flex items-center gap-2">
-            <div className="md:hidden flex flex-shrink-0 items-center gap-4">
-              <div className="flex flex-col">
-                <span className="text-[7px] font-black text-slate-600 uppercase">Sets</span>
-                <span className="text-xs font-black text-blue-400">{ex.sets}</span>
+          {/* ── Desktop layout ── */}
+          <div className="hidden md:grid grid-cols-12 gap-4 items-center">
+            <div className="col-span-4 flex items-center gap-3">
+              <div
+                onClick={() => setExerciseState(prev => ({ ...prev, [ex.id]: !prev[ex.id] }))}
+                className={`w-5 h-5 cursor-pointer rounded-lg border flex items-center justify-center shrink-0 transition-all ${isDone ? 'bg-emerald-500 border-emerald-500' : 'border-slate-800 bg-slate-900'}`}
+              >
+                {isDone ? <Check size={12} className="text-white" strokeWidth={4} /> : <div className="w-1 h-1 rounded-full bg-slate-700" />}
               </div>
               <div className="flex flex-col">
-                <span className="text-[7px] font-black text-slate-600 uppercase">Target</span>
-                <span className="text-xs font-black text-white">{ex.reps || ex.duration}</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[7px] font-black text-slate-600 uppercase">Rest</span>
-                <span className="text-xs font-black text-amber-500">{ex.restTime || '90s'}</span>
+                <h4 className={`font-black uppercase text-lg brand-font tracking-tight leading-tight ${isDone ? 'text-emerald-500/70 line-through' : 'text-white'}`}>{ex.name}</h4>
+                {ex.category === 'mobility' && <span className="text-[7px] font-black text-emerald-500 uppercase tracking-widest mt-1">Mobility</span>}
               </div>
             </div>
-
-            {!isCoach && !isDone && (() => {
-              const prescribed = `${ex.sets}×${ex.reps || ex.duration}`;
-              return (
-                <input
-                  type="text"
-                  value={exerciseNotes[ex.id] || ''}
-                  onChange={e => setExerciseNotes(prev => ({ ...prev, [ex.id]: e.target.value }))}
-                  onFocus={() => {
-                    if (exerciseNotes[ex.id] === prescribed) {
-                      setExerciseNotes(prev => ({ ...prev, [ex.id]: '' }));
-                    }
-                  }}
-                  onBlur={() => {
-                    if (!exerciseNotes[ex.id]?.trim()) {
-                      setExerciseNotes(prev => ({ ...prev, [ex.id]: prescribed }));
-                    }
-                  }}
-                  className="flex-1 min-w-0 bg-slate-900/80 border border-slate-800/60 rounded-xl px-4 py-[14px] text-xs text-white font-medium focus:outline-none focus:border-blue-500/40 transition-all"
-                />
-              );
-            })()}
+            <div className="col-span-1 flex justify-center"><span className={`text-sm font-black ${isDone ? 'text-slate-600' : 'text-blue-400'}`}>{ex.sets}</span></div>
+            <div className="col-span-1 flex justify-center"><span className={`text-sm font-black uppercase ${isDone ? 'text-slate-600' : 'text-white'}`}>{ex.reps || ex.duration}</span></div>
+            <div className="col-span-1 flex justify-center"><span className={`text-[10px] font-black uppercase ${isDone ? 'text-slate-700' : 'text-amber-500'}`}>{ex.restTime || '90s'}</span></div>
+            <div className="col-span-5 flex items-center gap-2">
+              {!isCoach && !isDone && (() => {
+                const prescribed = `${ex.sets}×${ex.reps || ex.duration}`;
+                return (
+                  <input
+                    type="text"
+                    value={exerciseNotes[ex.id] || ''}
+                    onChange={e => setExerciseNotes(prev => ({ ...prev, [ex.id]: e.target.value }))}
+                    onFocus={() => { if (exerciseNotes[ex.id] === prescribed) setExerciseNotes(prev => ({ ...prev, [ex.id]: '' })); }}
+                    onBlur={() => { if (!exerciseNotes[ex.id]?.trim()) setExerciseNotes(prev => ({ ...prev, [ex.id]: prescribed })); }}
+                    className="flex-1 min-w-0 bg-slate-900/80 border border-slate-800/60 rounded-xl px-4 py-[14px] text-xs text-white font-medium focus:outline-none focus:border-blue-500/40 transition-all"
+                  />
+                );
+              })()}
 
             <div className="flex items-center gap-2 flex-shrink-0">
               {ex.videoUrl && <button onClick={() => { setActiveVideoUrl(ex.videoUrl!); setActiveVideoName(ex.name); }} className="w-10 h-10 md:w-9 md:h-9 flex items-center justify-center bg-blue-600/10 text-blue-500 rounded-xl md:rounded-lg"><PlayCircle size={20} /></button>}
             </div>
           </div>
+          </div>
+
+          {/* ── Mobile layout ── */}
+          <div className="md:hidden space-y-3">
+            {/* Row 1: checkbox + name + video button */}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div
+                  onClick={() => setExerciseState(prev => ({ ...prev, [ex.id]: !prev[ex.id] }))}
+                  className={`w-5 h-5 cursor-pointer rounded-lg border flex items-center justify-center shrink-0 transition-all ${isDone ? 'bg-emerald-500 border-emerald-500' : 'border-slate-800 bg-slate-900'}`}
+                >
+                  {isDone ? <Check size={12} className="text-white" strokeWidth={4} /> : <div className="w-1 h-1 rounded-full bg-slate-700" />}
+                </div>
+                <div className="flex flex-col">
+                  <h4 className={`font-black uppercase text-base brand-font tracking-tight leading-tight ${isDone ? 'text-emerald-500/70 line-through' : 'text-white'}`}>{ex.name}</h4>
+                  {ex.category === 'mobility' && <span className="text-[7px] font-black text-emerald-500 uppercase tracking-widest mt-0.5">Mobility</span>}
+                </div>
+              </div>
+              {ex.videoUrl && (
+                <button onClick={() => { setActiveVideoUrl(ex.videoUrl!); setActiveVideoName(ex.name); }} className="w-9 h-9 flex items-center justify-center bg-blue-600/10 text-blue-500 rounded-xl shrink-0">
+                  <PlayCircle size={18} />
+                </button>
+              )}
+            </div>
+
+            {/* Row 2: Sets / Target / Rest */}
+            <div className="flex items-center gap-4 ml-8">
+              <div className="flex flex-col items-center">
+                <span className="text-[7px] font-black text-slate-600 uppercase tracking-widest">Sets</span>
+                <span className={`text-sm font-black ${isDone ? 'text-slate-600' : 'text-blue-400'}`}>{ex.sets}</span>
+              </div>
+              <div className="w-px h-6 bg-slate-800" />
+              <div className="flex flex-col items-center">
+                <span className="text-[7px] font-black text-slate-600 uppercase tracking-widest">Target</span>
+                <span className={`text-sm font-black uppercase ${isDone ? 'text-slate-600' : 'text-white'}`}>{ex.reps || ex.duration}</span>
+              </div>
+              <div className="w-px h-6 bg-slate-800" />
+              <div className="flex flex-col items-center">
+                <span className="text-[7px] font-black text-slate-600 uppercase tracking-widest">Rest</span>
+                <span className={`text-sm font-black uppercase ${isDone ? 'text-slate-700' : 'text-amber-500'}`}>{ex.restTime || '90s'}</span>
+              </div>
+            </div>
+
+            {/* Row 3: Log input with clear label */}
+            {!isCoach && !isDone && (() => {
+              const prescribed = `${ex.sets}×${ex.reps || ex.duration}`;
+              return (
+                <div className="ml-8 space-y-1">
+                  <p className="text-[8px] font-black uppercase tracking-[0.25em] text-slate-500">Log your sets ↓</p>
+                  <input
+                    type="text"
+                    value={exerciseNotes[ex.id] || ''}
+                    onChange={e => setExerciseNotes(prev => ({ ...prev, [ex.id]: e.target.value }))}
+                    onFocus={() => { if (exerciseNotes[ex.id] === prescribed) setExerciseNotes(prev => ({ ...prev, [ex.id]: '' })); }}
+                    onBlur={() => { if (!exerciseNotes[ex.id]?.trim()) setExerciseNotes(prev => ({ ...prev, [ex.id]: prescribed })); }}
+                    className="w-full bg-slate-900/80 border border-slate-800/60 rounded-xl px-4 py-3 text-sm text-white font-medium focus:outline-none focus:border-blue-500/40 transition-all"
+                  />
+                </div>
+              );
+            })()}
+          </div>
+
         </div>
         {ex.notes && !isDone && (
           <div className="mx-4 md:mx-10 py-3 px-4 bg-blue-500/5 border-x border-b border-blue-500/10 rounded-b-xl mb-1">
