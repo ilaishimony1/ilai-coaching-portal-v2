@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ClipboardList, Dumbbell, ChevronDown, ChevronUp, CheckCheck, Inbox, User, X, Info, Calendar } from 'lucide-react';
-
+import { ClipboardList, Dumbbell, ChevronDown, ChevronUp, CheckCheck, Inbox, User, X, Info, Calendar, ChevronRight } from 'lucide-react';
 import { WeeklyCheckIn, WorkoutLog, Workout } from '../types';
 import { useApp } from '../AppContext';
 
@@ -58,6 +57,7 @@ const CoachCheckIns: React.FC = () => {
   const [filterClient, setFilterClient] = useState<string>('ALL');
   const [filterWeek, setFilterWeek] = useState<number | null>(null);
   const [previewWorkout, setPreviewWorkout] = useState<{ workout: Workout; clientName: string } | null>(null);
+  const [activeSessionLog, setActiveSessionLog] = useState<WorkoutLog | null>(null);
 
   const feed = useMemo<FeedItem[]>(() => {
     const items: FeedItem[] = [
@@ -340,15 +340,22 @@ const CoachCheckIns: React.FC = () => {
                             ) : (
                               <div className="divide-y divide-white/5">
                                 {weekLogs.map(l => (
-                                  <div key={l.id} className="px-5 py-3 flex items-center justify-between gap-3">
+                                  <button
+                                    key={l.id}
+                                    onClick={() => setActiveSessionLog(l)}
+                                    className="w-full px-5 py-3 flex items-center justify-between gap-3 hover:bg-white/5 transition-colors text-left group"
+                                  >
                                     <div className="flex items-center gap-2">
                                       <span className="text-xs font-black text-white uppercase">Workout {l.workoutName}</span>
                                       {l.workoutTitle && <span className="text-[9px] text-slate-600 font-bold uppercase">— {l.workoutTitle}</span>}
                                     </div>
-                                    <span className="text-[9px] font-bold text-slate-600 shrink-0">
-                                      {new Date(l.loggedAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                                    </span>
-                                  </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      <span className="text-[9px] font-bold text-slate-600">
+                                        {new Date(l.loggedAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                      </span>
+                                      <ChevronRight size={12} className="text-slate-700 group-hover:text-blue-400 transition-colors" />
+                                    </div>
+                                  </button>
                                 ))}
                               </div>
                             )}
@@ -437,6 +444,77 @@ const CoachCheckIns: React.FC = () => {
           })}
         </div>
       )}
+      {/* Session log detail modal */}
+      {activeSessionLog && (() => {
+        const log = activeSessionLog;
+        const clientWorkouts = clients.find(c => c.id === log.clientId)?.workouts || [];
+        const workout = clientWorkouts.find(w => w.name === log.workoutName);
+        const noteMap: Record<string, string> = {};
+        let generalNote = '';
+        log.note.split('\n').forEach(line => {
+          const colonIdx = line.indexOf(':');
+          if (colonIdx > 0) {
+            noteMap[line.slice(0, colonIdx).trim().toUpperCase()] = line.slice(colonIdx + 1).trim();
+          } else if (line.trim()) {
+            generalNote += (generalNote ? ' ' : '') + line.trim();
+          }
+        });
+        return (
+          <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-6 animate-in fade-in duration-200">
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-xl" onClick={() => setActiveSessionLog(null)} />
+            <div className="relative w-full max-w-xl bg-[#0a0f1a] border border-slate-800 rounded-t-[2rem] md:rounded-[2rem] overflow-hidden shadow-2xl animate-in slide-in-from-bottom-4 md:zoom-in-95 duration-200 max-h-[85vh] flex flex-col">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 shrink-0">
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-600 mb-0.5">
+                    {log.clientName} · {new Date(log.loggedAt).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                  </p>
+                  <h3 className="text-xl font-black brand-font uppercase text-white tracking-tight">
+                    Workout {log.workoutName} — {log.workoutTitle}
+                  </h3>
+                </div>
+                <button onClick={() => setActiveSessionLog(null)} className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-500 hover:text-white transition-colors">
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="overflow-y-auto px-6 py-5 space-y-2">
+                {workout ? (
+                  <>
+                    <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-white/5 rounded-xl mb-1">
+                      <div className="col-span-5 text-[8px] font-black uppercase text-slate-600 tracking-widest">Exercise</div>
+                      <div className="col-span-3 text-[8px] font-black uppercase text-slate-600 tracking-widest">Prescribed</div>
+                      <div className="col-span-4 text-[8px] font-black uppercase text-slate-600 tracking-widest">Logged</div>
+                    </div>
+                    {workout.exercises.map(ex => {
+                      if (ex.category === 'header') return (
+                        <p key={ex.id} className="text-[9px] font-black uppercase tracking-widest text-slate-500 pt-3 pb-1 border-b border-white/5 px-3">{ex.name}</p>
+                      );
+                      const logged = noteMap[ex.name.toUpperCase()];
+                      return (
+                        <div key={ex.id} className={`grid grid-cols-12 gap-2 px-3 py-2.5 rounded-xl ${logged ? 'bg-slate-900/60' : 'bg-slate-950/30'}`}>
+                          <div className="col-span-5 text-xs font-black text-white uppercase">{ex.name}</div>
+                          <div className="col-span-3 text-xs font-bold text-slate-500">{ex.sets}×{ex.reps || ex.duration}</div>
+                          <div className="col-span-4 text-xs font-bold">
+                            {logged ? <span className="text-emerald-400">{logged}</span> : <span className="text-slate-700 italic">—</span>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </>
+                ) : (
+                  <p className="text-sm text-slate-400 whitespace-pre-line">{log.note}</p>
+                )}
+                {generalNote && (
+                  <div className="pt-3 border-t border-white/5 mt-3">
+                    <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-600 mb-1">Session Notes</p>
+                    <p className="text-sm font-medium text-slate-400 leading-relaxed">{generalNote}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Workout preview modal */}
       {previewWorkout && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-10 animate-in fade-in duration-200">

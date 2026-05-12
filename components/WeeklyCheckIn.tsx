@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import {
   ClipboardList, Lock, CheckCircle2, ChevronDown, ChevronUp,
-  Calendar, Send, Clock, Dumbbell
+  Calendar, Send, Clock, Dumbbell, X, ChevronRight
 } from 'lucide-react';
-import { WeeklyCheckIn as CheckInType, ClientData, WorkoutLog } from '../types';
+import { WeeklyCheckIn as CheckInType, ClientData, WorkoutLog, Workout } from '../types';
 import { useApp } from '../AppContext';
 
 const getWeekStart = (ts: number): number => {
@@ -15,7 +15,7 @@ const getWeekStart = (ts: number): number => {
   return d.getTime();
 };
 
-const SessionsSummary: React.FC<{ logs: WorkoutLog[] }> = ({ logs }) => (
+const SessionsSummary: React.FC<{ logs: WorkoutLog[]; onLogClick: (log: WorkoutLog) => void }> = ({ logs, onLogClick }) => (
   <div className="rounded-2xl border border-slate-800 bg-slate-950/60 overflow-hidden">
     <div className="px-5 py-3 border-b border-white/5 flex items-center gap-2">
       <Dumbbell size={13} className="text-slate-500" />
@@ -26,20 +26,98 @@ const SessionsSummary: React.FC<{ logs: WorkoutLog[] }> = ({ logs }) => (
     ) : (
       <div className="divide-y divide-white/5">
         {logs.map(l => (
-          <div key={l.id} className="px-5 py-3 flex items-center justify-between gap-3">
+          <button
+            key={l.id}
+            onClick={() => onLogClick(l)}
+            className="w-full px-5 py-3 flex items-center justify-between gap-3 hover:bg-white/5 transition-colors text-left group"
+          >
             <div className="flex items-center gap-2">
               <span className="text-xs font-black text-white uppercase">Workout {l.workoutName}</span>
               {l.workoutTitle && <span className="text-[9px] text-slate-600 font-bold uppercase">— {l.workoutTitle}</span>}
             </div>
-            <span className="text-[9px] font-bold text-slate-600 shrink-0">
-              {new Date(l.loggedAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-            </span>
-          </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-[9px] font-bold text-slate-600">
+                {new Date(l.loggedAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+              </span>
+              <ChevronRight size={12} className="text-slate-700 group-hover:text-blue-400 transition-colors" />
+            </div>
+          </button>
         ))}
       </div>
     )}
   </div>
 );
+
+const WorkoutLogModal: React.FC<{ log: WorkoutLog; workouts: Workout[]; onClose: () => void }> = ({ log, workouts, onClose }) => {
+  const workout = workouts.find(w => w.name === log.workoutName);
+  const noteMap: Record<string, string> = {};
+  let generalNote = '';
+  log.note.split('\n').forEach(line => {
+    const colonIdx = line.indexOf(':');
+    if (colonIdx > 0) {
+      noteMap[line.slice(0, colonIdx).trim().toUpperCase()] = line.slice(colonIdx + 1).trim();
+    } else if (line.trim()) {
+      generalNote += (generalNote ? ' ' : '') + line.trim();
+    }
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-6 animate-in fade-in duration-200">
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-xl" onClick={onClose} />
+      <div className="relative w-full max-w-xl bg-[#0a0f1a] border border-slate-800 rounded-t-[2rem] md:rounded-[2rem] overflow-hidden shadow-2xl animate-in slide-in-from-bottom-4 md:zoom-in-95 duration-200 max-h-[85vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 shrink-0">
+          <div>
+            <p className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-600 mb-0.5">
+              {new Date(log.loggedAt).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+            </p>
+            <h3 className="text-xl font-black brand-font uppercase text-white tracking-tight">
+              Workout {log.workoutName} — {log.workoutTitle}
+            </h3>
+          </div>
+          <button onClick={onClose} className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-500 hover:text-white transition-colors">
+            <X size={16} />
+          </button>
+        </div>
+        {/* Body */}
+        <div className="overflow-y-auto px-6 py-5 space-y-2">
+          {workout ? (
+            <>
+              <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-white/5 rounded-xl mb-1">
+                <div className="col-span-5 text-[8px] font-black uppercase text-slate-600 tracking-widest">Exercise</div>
+                <div className="col-span-3 text-[8px] font-black uppercase text-slate-600 tracking-widest">Prescribed</div>
+                <div className="col-span-4 text-[8px] font-black uppercase text-slate-600 tracking-widest">Logged</div>
+              </div>
+              {workout.exercises.map(ex => {
+                if (ex.category === 'header') return (
+                  <p key={ex.id} className="text-[9px] font-black uppercase tracking-widest text-slate-500 pt-3 pb-1 border-b border-white/5 px-3">{ex.name}</p>
+                );
+                const logged = noteMap[ex.name.toUpperCase()];
+                return (
+                  <div key={ex.id} className={`grid grid-cols-12 gap-2 px-3 py-2.5 rounded-xl ${logged ? 'bg-slate-900/60' : 'bg-slate-950/30'}`}>
+                    <div className="col-span-5 text-xs font-black text-white uppercase">{ex.name}</div>
+                    <div className="col-span-3 text-xs font-bold text-slate-500">{ex.sets}×{ex.reps || ex.duration}</div>
+                    <div className="col-span-4 text-xs font-bold">
+                      {logged ? <span className="text-emerald-400">{logged}</span> : <span className="text-slate-700 italic">—</span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </>
+          ) : (
+            <p className="text-sm text-slate-400 whitespace-pre-line">{log.note}</p>
+          )}
+          {generalNote && (
+            <div className="pt-3 border-t border-white/5 mt-3">
+              <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-600 mb-1">Session Notes</p>
+              <p className="text-sm font-medium text-slate-400 leading-relaxed">{generalNote}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 interface Props {
   client: ClientData;
@@ -129,6 +207,7 @@ const WeeklyCheckInComponent: React.FC<Props> = ({ client, accentColor }) => {
   const [submitting, setSubmitting] = useState(false);
   const [justSubmitted, setJustSubmitted] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [activeLog, setActiveLog] = useState<WorkoutLog | null>(null);
 
   const weekend = isWeekend();
   const alreadySubmitted = hasSubmittedThisWeekend(checkIns, client.id);
@@ -272,7 +351,7 @@ const WeeklyCheckInComponent: React.FC<Props> = ({ client, accentColor }) => {
         {!justSubmitted && !formLocked && (
           <div className="px-10 py-10 space-y-8">
             {/* Sessions logged this week — helps fill in sessions completed */}
-            <SessionsSummary logs={thisWeekLogs} />
+            <SessionsSummary logs={thisWeekLogs} onLogClick={setActiveLog} />
 
             {FIELDS.map((field, i) => (
               <div key={field.key} className="space-y-3">
@@ -353,7 +432,7 @@ const WeeklyCheckInComponent: React.FC<Props> = ({ client, accentColor }) => {
 
                   {isOpen && (
                     <div className="px-8 pb-8 space-y-6 border-t border-white/5 pt-6 animate-in fade-in duration-300">
-                      <SessionsSummary logs={getLogsForWeek(new Date(ci.submittedAt).getTime())} />
+                      <SessionsSummary logs={getLogsForWeek(new Date(ci.submittedAt).getTime())} onLogClick={setActiveLog} />
                       {FIELDS.map(field => (
                         <div key={field.key}>
                           <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-600 mb-1">{field.label}</p>
@@ -369,6 +448,14 @@ const WeeklyCheckInComponent: React.FC<Props> = ({ client, accentColor }) => {
             })}
           </div>
         </section>
+      )}
+
+      {activeLog && (
+        <WorkoutLogModal
+          log={activeLog}
+          workouts={client.workouts}
+          onClose={() => setActiveLog(null)}
+        />
       )}
     </div>
   );
