@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { ClipboardList, Dumbbell, ChevronDown, ChevronUp, CheckCheck, Inbox, User, X, Info, Calendar } from 'lucide-react';
+
 import { WeeklyCheckIn, WorkoutLog, Workout } from '../types';
 import { useApp } from '../AppContext';
 
@@ -51,6 +52,7 @@ type FeedItem =
 
 const CoachCheckIns: React.FC = () => {
   const { checkIns, markCheckInRead, workoutLogs, markWorkoutLogRead, clients } = useApp();
+
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('ALL');
   const [filterClient, setFilterClient] = useState<string>('ALL');
@@ -316,20 +318,55 @@ const CoachCheckIns: React.FC = () => {
 
                 {isOpen && (
                   <div className="px-4 pb-4 md:px-8 md:pb-8 border-t border-white/5 pt-4 md:pt-6 animate-in fade-in duration-300">
-                    {isReview ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {CHECKIN_FIELDS.map(field => (
-                          <div key={field.key}>
-                            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-600 mb-1">{field.label}</p>
-                            <p className="text-sm font-medium text-slate-300 leading-relaxed">
-                              {(item.data as WeeklyCheckIn)[field.key]
-                                ? String((item.data as WeeklyCheckIn)[field.key])
-                                : <span className="text-slate-700 italic">—</span>}
-                            </p>
+                    {isReview ? (() => {
+                      const ci = item.data as WeeklyCheckIn;
+                      const ciWeekStart = getWeekStart(new Date(ci.submittedAt).getTime());
+                      const ciWeekEnd = ciWeekStart + 7 * 24 * 60 * 60 * 1000;
+                      const weekLogs = workoutLogs.filter(l =>
+                        l.clientId === ci.clientId &&
+                        new Date(l.loggedAt).getTime() >= ciWeekStart &&
+                        new Date(l.loggedAt).getTime() < ciWeekEnd
+                      );
+                      return (
+                        <div className="space-y-6">
+                          {/* Sessions from this week */}
+                          <div className="rounded-2xl border border-slate-800 bg-slate-950/60 overflow-hidden">
+                            <div className="px-5 py-3 border-b border-white/5 flex items-center gap-2">
+                              <Dumbbell size={13} className="text-slate-500" />
+                              <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500">Sessions logged this week</p>
+                            </div>
+                            {weekLogs.length === 0 ? (
+                              <p className="px-5 py-4 text-[11px] text-slate-700 font-bold italic">No sessions logged this week</p>
+                            ) : (
+                              <div className="divide-y divide-white/5">
+                                {weekLogs.map(l => (
+                                  <div key={l.id} className="px-5 py-3 flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs font-black text-white uppercase">Workout {l.workoutName}</span>
+                                      {l.workoutTitle && <span className="text-[9px] text-slate-600 font-bold uppercase">— {l.workoutTitle}</span>}
+                                    </div>
+                                    <span className="text-[9px] font-bold text-slate-600 shrink-0">
+                                      {new Date(l.loggedAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
-                        ))}
-                      </div>
-                    ) : (() => {
+                          {/* Check-in fields */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {CHECKIN_FIELDS.map(field => (
+                              <div key={field.key}>
+                                <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-600 mb-1">{field.label}</p>
+                                <p className="text-sm font-medium text-slate-300 leading-relaxed">
+                                  {ci[field.key] ? String(ci[field.key]) : <span className="text-slate-700 italic">—</span>}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })() : (() => {
                       const log = item.data as WorkoutLog;
                       const workout = clients.find(c => c.id === log.clientId)?.workouts.find(w => w.name === log.workoutName);
 

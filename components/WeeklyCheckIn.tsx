@@ -1,10 +1,45 @@
 import React, { useState, useMemo } from 'react';
 import {
   ClipboardList, Lock, CheckCircle2, ChevronDown, ChevronUp,
-  Calendar, Send, Clock
+  Calendar, Send, Clock, Dumbbell
 } from 'lucide-react';
-import { WeeklyCheckIn as CheckInType, ClientData } from '../types';
+import { WeeklyCheckIn as CheckInType, ClientData, WorkoutLog } from '../types';
 import { useApp } from '../AppContext';
+
+const getWeekStart = (ts: number): number => {
+  const d = new Date(ts);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+};
+
+const SessionsSummary: React.FC<{ logs: WorkoutLog[] }> = ({ logs }) => (
+  <div className="rounded-2xl border border-slate-800 bg-slate-950/60 overflow-hidden">
+    <div className="px-5 py-3 border-b border-white/5 flex items-center gap-2">
+      <Dumbbell size={13} className="text-slate-500" />
+      <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500">Sessions logged this week</p>
+    </div>
+    {logs.length === 0 ? (
+      <p className="px-5 py-4 text-[11px] text-slate-700 font-bold italic">No sessions logged yet this week</p>
+    ) : (
+      <div className="divide-y divide-white/5">
+        {logs.map(l => (
+          <div key={l.id} className="px-5 py-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-black text-white uppercase">Workout {l.workoutName}</span>
+              {l.workoutTitle && <span className="text-[9px] text-slate-600 font-bold uppercase">— {l.workoutTitle}</span>}
+            </div>
+            <span className="text-[9px] font-bold text-slate-600 shrink-0">
+              {new Date(l.loggedAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+            </span>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+);
 
 interface Props {
   client: ClientData;
@@ -89,7 +124,7 @@ const EMPTY_FORM = (client: ClientData): FormData => ({
 });
 
 const WeeklyCheckInComponent: React.FC<Props> = ({ client, accentColor }) => {
-  const { checkIns, submitCheckIn } = useApp();
+  const { checkIns, submitCheckIn, workoutLogs } = useApp();
   const [form, setForm] = useState<FormData>(() => EMPTY_FORM(client));
   const [submitting, setSubmitting] = useState(false);
   const [justSubmitted, setJustSubmitted] = useState(false);
@@ -106,6 +141,19 @@ const WeeklyCheckInComponent: React.FC<Props> = ({ client, accentColor }) => {
         .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()),
     [checkIns, client.id]
   );
+
+  // Workout logs for a given week (by any date in that week)
+  const getLogsForWeek = (anchorTs: number): WorkoutLog[] => {
+    const weekStart = getWeekStart(anchorTs);
+    const weekEnd = weekStart + 7 * 24 * 60 * 60 * 1000;
+    return workoutLogs.filter(l =>
+      l.clientId === client.id &&
+      new Date(l.loggedAt).getTime() >= weekStart &&
+      new Date(l.loggedAt).getTime() < weekEnd
+    );
+  };
+
+  const thisWeekLogs = useMemo(() => getLogsForWeek(Date.now()), [workoutLogs, client.id]);
 
   const allFilled = FIELDS.every(f => form[f.key].trim() !== '');
 
@@ -223,6 +271,9 @@ const WeeklyCheckInComponent: React.FC<Props> = ({ client, accentColor }) => {
         {/* Form fields */}
         {!justSubmitted && !formLocked && (
           <div className="px-10 py-10 space-y-8">
+            {/* Sessions logged this week — helps fill in sessions completed */}
+            <SessionsSummary logs={thisWeekLogs} />
+
             {FIELDS.map((field, i) => (
               <div key={field.key} className="space-y-3">
                 <label className="block text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">
@@ -302,6 +353,7 @@ const WeeklyCheckInComponent: React.FC<Props> = ({ client, accentColor }) => {
 
                   {isOpen && (
                     <div className="px-8 pb-8 space-y-6 border-t border-white/5 pt-6 animate-in fade-in duration-300">
+                      <SessionsSummary logs={getLogsForWeek(new Date(ci.submittedAt).getTime())} />
                       {FIELDS.map(field => (
                         <div key={field.key}>
                           <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-600 mb-1">{field.label}</p>
