@@ -23,7 +23,7 @@ const formatDate = (iso: string) =>
     hour: '2-digit', minute: '2-digit',
   });
 
-type Tab = 'ALL' | 'REVIEWS' | 'WORKOUTS' | 'CLIENT';
+type Tab = 'ALL' | 'REVIEWS' | 'WORKOUTS';
 
 // Returns the Monday 00:00:00 timestamp for a given timestamp
 const getWeekStart = (ts: number): number => {
@@ -77,8 +77,8 @@ const CoachCheckIns: React.FC = () => {
     let list = feed;
     if (tab === 'REVIEWS')  list = list.filter(i => i.kind === 'checkin');
     if (tab === 'WORKOUTS') list = list.filter(i => i.kind === 'workout');
-    if (tab === 'CLIENT' || filterClient !== 'ALL') list = list.filter(i => i.data.clientId === filterClient);
-    if (tab === 'CLIENT' && filterClient !== 'ALL' && filterWeek !== null) list = list.filter(i => getWeekStart(i.date) === filterWeek);
+    if (filterClient !== 'ALL') list = list.filter(i => i.data.clientId === filterClient);
+    if (filterClient !== 'ALL' && filterWeek !== null) list = list.filter(i => getWeekStart(i.date) === filterWeek);
     return list;
   }, [feed, tab, filterClient, filterWeek]);
 
@@ -140,7 +140,7 @@ const CoachCheckIns: React.FC = () => {
         {(['ALL', 'REVIEWS', 'WORKOUTS'] as Tab[]).map(t => (
           <button
             key={t}
-            onClick={() => { setTab(t); setFilterClient('ALL'); }}
+            onClick={() => setTab(t)}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
               tab === t ? 'bg-blue-600 text-white' : 'bg-slate-900 border border-slate-800 text-slate-500 hover:text-white'
             }`}
@@ -155,86 +155,72 @@ const CoachCheckIns: React.FC = () => {
             )}
           </button>
         ))}
-        <button
-          onClick={() => { setTab('CLIENT'); setFilterClient('ALL'); setFilterWeek(null); }}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
-            tab === 'CLIENT' ? 'bg-blue-600 text-white' : 'bg-slate-900 border border-slate-800 text-slate-500 hover:text-white'
-          }`}
-        >
-          <User size={12} />
-          By Client
-        </button>
       </div>
 
-      {/* By Client picker + week sub-filter */}
-      {tab === 'CLIENT' && (
-        <div className="space-y-4">
-          {/* Client selector */}
-          <div className="space-y-2">
-            <p className="text-[9px] font-black uppercase tracking-widest text-slate-600">Select a client</p>
-            <div className="flex gap-2 flex-wrap">
-              {clientsInFeed.map(c => (
-                <button
-                  key={c.id}
-                  onClick={() => { setFilterClient(c.id); setFilterWeek(null); }}
-                  className={`relative flex items-center gap-2 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                    filterClient === c.id
-                      ? 'bg-blue-600 text-white border border-blue-500'
-                      : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:border-slate-600'
-                  }`}
-                >
-                  {c.avatar
-                    ? <img src={c.avatar} className="w-5 h-5 rounded-full object-cover" />
-                    : <div className="w-5 h-5 rounded-full bg-slate-700 flex items-center justify-center text-[8px] font-black">{c.name[0]}</div>
-                  }
-                  {c.name.split(' ')[0]}
-                  {(unreadPerClient[c.id] || 0) > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 bg-red-500 rounded-full text-[8px] font-black text-white flex items-center justify-center">
-                      +{unreadPerClient[c.id]}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Week sub-filter — only shows once a client is selected */}
-          {filterClient !== 'ALL' && weeksForClient.length > 0 && (
-            <div className="space-y-2 pl-1 border-l-2 border-blue-600/30">
-              <p className="text-[9px] font-black uppercase tracking-widest text-slate-600 pl-3">Filter by week</p>
-              <div className="flex gap-2 flex-wrap pl-3">
-                <button
-                  onClick={() => setFilterWeek(null)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                    filterWeek === null
-                      ? 'bg-slate-600 text-white'
-                      : 'bg-slate-900 border border-slate-800 text-slate-500 hover:text-white'
-                  }`}
-                >
-                  All
-                </button>
-                {weeksForClient.map((ws, idx) => (
-                  <button
-                    key={ws}
-                    onClick={() => setFilterWeek(ws)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                      filterWeek === ws
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-slate-900 border border-slate-800 text-slate-500 hover:text-white'
-                    }`}
-                  >
-                    <Calendar size={10} />
-                    Week {idx + 1}
-                    <span className="text-[8px] opacity-50">
-                      {feed.filter(i => i.data.clientId === filterClient && getWeekStart(i.date) === ws).length}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+      {/* Client filter — always visible below tabs */}
+      <div className="space-y-3">
+        <div className="flex gap-2 flex-wrap items-center">
+          <button
+            onClick={() => { setFilterClient('ALL'); setFilterWeek(null); }}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+              filterClient === 'ALL'
+                ? 'bg-slate-600 text-white'
+                : 'bg-slate-900 border border-slate-800 text-slate-500 hover:text-white'
+            }`}
+          >
+            All Clients
+          </button>
+          {clientsInFeed.map(c => (
+            <button
+              key={c.id}
+              onClick={() => { setFilterClient(c.id); setFilterWeek(null); }}
+              className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                filterClient === c.id
+                  ? 'bg-blue-600 text-white border border-blue-500'
+                  : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:border-slate-600'
+              }`}
+            >
+              {c.avatar
+                ? <img src={c.avatar} className="w-5 h-5 rounded-full object-cover" />
+                : <div className="w-5 h-5 rounded-full bg-slate-700 flex items-center justify-center text-[8px] font-black">{c.name[0]}</div>
+              }
+              {c.name.split(' ')[0]}
+              {(unreadPerClient[c.id] || 0) > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 bg-red-500 rounded-full text-[8px] font-black text-white flex items-center justify-center">
+                  +{unreadPerClient[c.id]}
+                </span>
+              )}
+            </button>
+          ))}
         </div>
-      )}
+
+        {/* Week sub-filter — appears when a client is selected */}
+        {filterClient !== 'ALL' && weeksForClient.length > 0 && (
+          <div className="flex gap-2 flex-wrap pl-2 border-l-2 border-blue-600/30">
+            <button
+              onClick={() => setFilterWeek(null)}
+              className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+                filterWeek === null ? 'bg-slate-600 text-white' : 'bg-slate-900 border border-slate-800 text-slate-500 hover:text-white'
+              }`}
+            >
+              All weeks
+            </button>
+            {weeksForClient.map((ws, idx) => (
+              <button
+                key={ws}
+                onClick={() => setFilterWeek(ws)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+                  filterWeek === ws ? 'bg-blue-600 text-white' : 'bg-slate-900 border border-slate-800 text-slate-500 hover:text-white'
+                }`}
+              >
+                <Calendar size={9} />
+                Week {idx + 1}
+                <span className="opacity-50">{feed.filter(i => i.data.clientId === filterClient && getWeekStart(i.date) === ws).length}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Feed */}
       {filtered.length === 0 ? (
