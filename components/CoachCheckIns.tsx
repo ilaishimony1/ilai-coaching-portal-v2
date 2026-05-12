@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ClipboardList, Dumbbell, ChevronDown, ChevronUp, CheckCheck, Inbox, User, X, Info } from 'lucide-react';
+import { ClipboardList, Dumbbell, ChevronDown, ChevronUp, CheckCheck, Inbox, User, X, Info, Calendar } from 'lucide-react';
 import { WeeklyCheckIn, WorkoutLog, Workout } from '../types';
 import { useApp } from '../AppContext';
 
@@ -23,7 +23,27 @@ const formatDate = (iso: string) =>
     hour: '2-digit', minute: '2-digit',
   });
 
-type Tab = 'ALL' | 'REVIEWS' | 'WORKOUTS' | 'CLIENT';
+type Tab = 'ALL' | 'REVIEWS' | 'WORKOUTS' | 'CLIENT' | 'WEEK';
+
+// Returns the Monday 00:00:00 timestamp for a given timestamp
+const getWeekStart = (ts: number): number => {
+  const d = new Date(ts);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+};
+
+const formatWeekLabel = (weekStart: number): string => {
+  const thisWeekStart = getWeekStart(Date.now());
+  const weeksAgo = Math.round((thisWeekStart - weekStart) / (7 * 24 * 60 * 60 * 1000));
+  if (weeksAgo === 0) return 'This Week';
+  if (weeksAgo === 1) return 'Last Week';
+  const end = new Date(weekStart + 6 * 24 * 60 * 60 * 1000);
+  const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return `${fmt(new Date(weekStart))} – ${fmt(end)}`;
+};
 
 type FeedItem =
   | { kind: 'checkin'; data: WeeklyCheckIn; date: number }
@@ -34,6 +54,7 @@ const CoachCheckIns: React.FC = () => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('ALL');
   const [filterClient, setFilterClient] = useState<string>('ALL');
+  const [filterWeek, setFilterWeek] = useState<number | null>(null);
   const [previewWorkout, setPreviewWorkout] = useState<{ workout: Workout; clientName: string } | null>(null);
 
   const feed = useMemo<FeedItem[]>(() => {
@@ -44,13 +65,20 @@ const CoachCheckIns: React.FC = () => {
     return items.sort((a, b) => b.date - a.date);
   }, [checkIns, workoutLogs]);
 
+  const weeksInFeed = useMemo(() => {
+    const seen = new Set<number>();
+    feed.forEach(i => seen.add(getWeekStart(i.date)));
+    return Array.from(seen).sort((a, b) => b - a);
+  }, [feed]);
+
   const filtered = useMemo(() => {
     let list = feed;
     if (tab === 'REVIEWS')  list = list.filter(i => i.kind === 'checkin');
     if (tab === 'WORKOUTS') list = list.filter(i => i.kind === 'workout');
     if (tab === 'CLIENT' || filterClient !== 'ALL') list = list.filter(i => i.data.clientId === filterClient);
+    if (tab === 'WEEK' && filterWeek !== null) list = list.filter(i => getWeekStart(i.date) === filterWeek);
     return list;
-  }, [feed, tab, filterClient]);
+  }, [feed, tab, filterClient, filterWeek]);
 
   const totalUnread = useMemo(() =>
     feed.filter(i => !i.data.readByCoach).length,
@@ -134,7 +162,42 @@ const CoachCheckIns: React.FC = () => {
           <User size={12} />
           By Client
         </button>
+        <button
+          onClick={() => { setTab('WEEK'); setFilterWeek(getWeekStart(Date.now())); }}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
+            tab === 'WEEK' ? 'bg-blue-600 text-white' : 'bg-slate-900 border border-slate-800 text-slate-500 hover:text-white'
+          }`}
+        >
+          <Calendar size={12} />
+          By Week
+        </button>
       </div>
+
+      {/* By Week picker */}
+      {tab === 'WEEK' && (
+        <div className="space-y-3">
+          <p className="text-[9px] font-black uppercase tracking-widest text-slate-600">Select a week</p>
+          <div className="flex gap-2 flex-wrap">
+            {weeksInFeed.map(ws => (
+              <button
+                key={ws}
+                onClick={() => setFilterWeek(ws)}
+                className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                  filterWeek === ws
+                    ? 'bg-blue-600 text-white border border-blue-500'
+                    : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:border-slate-600'
+                }`}
+              >
+                <Calendar size={11} />
+                {formatWeekLabel(ws)}
+                <span className="text-[8px] opacity-60 ml-1">
+                  {feed.filter(i => getWeekStart(i.date) === ws).length}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* By Client picker */}
       {tab === 'CLIENT' && (
