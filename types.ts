@@ -63,6 +63,7 @@ export interface ClientData {
   workouts: Workout[];
   assignedVideoUids?: string[];
   unseenVideoUids?: string[];
+  coachNotes?: string;
   weeklyCheckInEnabled?: boolean;
   lastSync?: any;
 }

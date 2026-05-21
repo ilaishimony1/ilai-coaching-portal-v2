@@ -1,5 +1,5 @@
-import React, { useMemo, useState, useCallback } from 'react';
-import { Users, UserPlus, Palette, Settings2, RefreshCw, ChevronRight, Inbox, AlertCircle, Database, Cpu, Shield, Clock, GripVertical, ClipboardList, Dumbbell, Archive, Library, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
+import { Users, UserPlus, Palette, Settings2, RefreshCw, ChevronRight, Inbox, AlertCircle, Database, Cpu, Shield, Clock, GripVertical, ClipboardList, Dumbbell, Archive, Library, AlertTriangle, CheckCircle2, StickyNote, X } from 'lucide-react';
 import { ClientSummary, ClientData } from '../types';
 import { useApp } from '../AppContext';
 
@@ -43,7 +43,7 @@ const statusStyles = {
 const AdminDashboard: React.FC<Props> = ({
   clients, fullClients, onOpenPortal, onEditPortal, onArchiveClient, onAddClient, onOpenBranding
 }) => {
-  const { cloudSync, cloudError, lastServerUpdate, checkIns, workoutLogs, archivedClients, savedWorkouts, unreadCheckInsCount, unreadWorkoutLogsCount } = useApp();
+  const { cloudSync, cloudError, lastServerUpdate, checkIns, workoutLogs, archivedClients, savedWorkouts, unreadCheckInsCount, unreadWorkoutLogsCount, syncService } = useApp();
 
   const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const checkInsThisWeek = useMemo(() => checkIns.filter(c => new Date(c.submittedAt).getTime() > oneWeekAgo).length, [checkIns]);
@@ -116,6 +116,29 @@ const AdminDashboard: React.FC<Props> = ({
     setDraggedId(null);
     setDragOverId(null);
   }, []);
+
+  // Coach notes modal
+  const [notesClient, setNotesClient] = useState<ClientData | null>(null);
+  const [notesText, setNotesText] = useState('');
+  const [notesSaving, setNotesSaving] = useState(false);
+  const notesSavedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [notesSaved, setNotesSaved] = useState(false);
+
+  const openNotes = (client: ClientData) => {
+    setNotesClient(client);
+    setNotesText(client.coachNotes || '');
+    setNotesSaved(false);
+  };
+
+  const saveNotes = async () => {
+    if (!notesClient) return;
+    setNotesSaving(true);
+    await syncService.updateDocument('clients', notesClient.id, { coachNotes: notesText });
+    setNotesSaving(false);
+    setNotesSaved(true);
+    if (notesSavedTimer.current) clearTimeout(notesSavedTimer.current);
+    notesSavedTimer.current = setTimeout(() => setNotesSaved(false), 2000);
+  };
 
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-top-4 duration-700 pb-20">
@@ -279,6 +302,16 @@ const AdminDashboard: React.FC<Props> = ({
 
                   <div className="flex gap-2 md:gap-3 shrink-0 ml-2 md:ml-4">
                     <button
+                      onClick={() => openNotes(fullClients.find(f => f.id === clientSummary.id) || { ...clientSummary, goals: [], schedule: [], workouts: [] })}
+                      className={`p-3 md:p-5 bg-slate-950 rounded-xl md:rounded-2xl transition-colors border border-white/5 group-hover:bg-slate-900 relative ${fullClients.find(f => f.id === clientSummary.id)?.coachNotes ? 'text-amber-400 border-amber-500/20' : 'text-slate-600 hover:text-amber-400 group-hover:border-amber-500/10'}`}
+                      title="Coach Notes"
+                    >
+                      <StickyNote size={18} />
+                      {fullClients.find(f => f.id === clientSummary.id)?.coachNotes && (
+                        <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-amber-400" />
+                      )}
+                    </button>
+                    <button
                       onClick={() => onEditPortal(clientSummary.id)}
                       className="p-3 md:p-5 bg-slate-950 rounded-xl md:rounded-2xl text-slate-600 hover:text-blue-400 transition-colors border border-white/5 group-hover:bg-slate-900 group-hover:border-blue-500/20"
                       title="Edit Protocol"
@@ -299,6 +332,51 @@ const AdminDashboard: React.FC<Props> = ({
           )}
         </div>
       </div>
+      {/* Coach Notes Modal */}
+      {notesClient && (
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-6 animate-in fade-in duration-200">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-xl" onClick={() => setNotesClient(null)} />
+          <div className="relative w-full max-w-lg bg-[#0a0f1a] border border-slate-800 rounded-t-[2rem] md:rounded-[2rem] overflow-hidden shadow-2xl animate-in slide-in-from-bottom-4 md:zoom-in-95 duration-200 flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
+              <div className="flex items-center gap-3">
+                <StickyNote size={16} className="text-amber-400" />
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-600">Private · Coach Only</p>
+                  <h3 className="text-base font-black text-white uppercase tracking-tight">{notesClient.name}</h3>
+                </div>
+              </div>
+              <button onClick={() => setNotesClient(null)} className="p-2 bg-slate-900 border border-slate-800 rounded-xl text-slate-500 hover:text-white transition-colors">
+                <X size={16} />
+              </button>
+            </div>
+            {/* Textarea */}
+            <div className="px-6 py-5">
+              <textarea
+                value={notesText}
+                onChange={e => setNotesText(e.target.value)}
+                placeholder="Write private notes about this client — injuries, goals, reminders, renewal dates…"
+                rows={8}
+                className="w-full bg-slate-950/60 border border-slate-800 rounded-2xl px-5 py-4 text-sm text-slate-200 placeholder-slate-700 font-medium resize-none focus:outline-none focus:border-amber-500/40 transition-all leading-relaxed"
+                autoFocus
+              />
+            </div>
+            {/* Footer */}
+            <div className="px-6 pb-6 flex items-center justify-between">
+              <span className={`text-[9px] font-black uppercase tracking-widest transition-colors ${notesSaved ? 'text-emerald-400' : 'text-slate-700'}`}>
+                {notesSaved ? '✓ Saved' : `${notesText.length} chars`}
+              </span>
+              <button
+                onClick={saveNotes}
+                disabled={notesSaving}
+                className="px-6 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs tracking-widest uppercase rounded-xl transition-all active:scale-95 disabled:opacity-50"
+              >
+                {notesSaving ? 'Saving…' : 'Save Notes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
