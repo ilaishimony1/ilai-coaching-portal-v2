@@ -5,6 +5,7 @@ import {
   createSkillVideo,
   updateSkillVideoOrders,
   deleteSkillVideo,
+  updateSkillVideo,
   SkillVideo
 } from "../firebase/skillVideos";
 
@@ -22,6 +23,7 @@ import {
   getAssignedExplanationUids,
   updateExplanationVideoOrders,
   deleteExplanationVideo,
+  updateExplanationVideoName,
 } from "../firebase/explanationVideos";
 
 
@@ -235,9 +237,24 @@ await loadVideos();
   };
 
 
-  const updateVideo = async () => {
-  alert("Skill updates are not wired to Firestore yet.");
-};
+  const updateVideo = async (video: VideoFile, updates: Partial<VideoFile>) => {
+    try {
+      if (updates.name) {
+        if (activeFolder?.cat === 'skill' && video.id) {
+          await updateSkillVideo(String(video.id), { name: updates.name });
+        } else if (activeFolder?.cat === 'explanation' && video.uid) {
+          await updateExplanationVideoName(video.uid, updates.name);
+        }
+        setVideos(prev => prev.map(v =>
+          (video.id ? v.id === video.id : v.uid === video.uid)
+            ? { ...v, name: updates.name! }
+            : v
+        ));
+      }
+    } catch (e) {
+      alert('Failed to save name. Please try again.');
+    }
+  };
 
 
   const [dragOverVideoId, setDragOverVideoId] = useState<number | string | null>(null);
@@ -513,11 +530,7 @@ const onDragStart = (id: number | string) => {
 
   onDelete={() => deleteVideo(video)}
 
-  onUpdate={(updates) => {
-   if (activeFolder?.cat === "skill") {
-  return;
-}
-  }}
+  onUpdate={(updates) => updateVideo(video, updates)}
 
   onDragStart={() => {
     if (activeFolder?.cat === "skill" && video.id) {

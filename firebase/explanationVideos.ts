@@ -234,6 +234,14 @@ export async function getAssignedExplanationUids(
 }
 
 /* =========================
+   UPDATE NAME
+========================= */
+export async function updateExplanationVideoName(uid: string, name: string) {
+  const db = syncService.getDb();
+  await updateDoc(doc(db, "explanation_videos", uid), { name });
+}
+
+/* =========================
    DELETE
 ========================= */
 export async function deleteExplanationVideo(uid: string) {

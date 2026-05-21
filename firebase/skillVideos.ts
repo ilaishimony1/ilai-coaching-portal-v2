@@ -7,6 +7,7 @@ import {
   addDoc,
   getDocs,
   deleteDoc,
+  updateDoc,
   serverTimestamp,
   query,
   orderBy,
@@ -67,6 +68,13 @@ export const updateSkillVideoOrders = async (videos: { id: string; order: number
 // ===============================
 export const deleteSkillVideo = async (id: string) => {
   await deleteDoc(doc(db, "skill_videos", id));
+};
+
+// ===============================
+// Update Skill Video (name etc.)
+// ===============================
+export const updateSkillVideo = async (id: string, updates: { name?: string }) => {
+  await updateDoc(doc(db, "skill_videos", id), updates);
 };
 
 // ===============================
