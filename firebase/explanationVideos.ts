@@ -233,6 +233,26 @@ export async function getAssignedExplanationUids(
   return snapshot.docs.map(d => d.data().videoUid);
 }
 
+/* =========================
+   DELETE
+========================= */
+export async function deleteExplanationVideo(uid: string) {
+  const db = syncService.getDb();
+
+  // Delete the video document
+  await deleteDoc(doc(db, "explanation_videos", uid));
+
+  // Delete all client assignments for this video
+  const q = query(
+    collection(db, "explanation_assignments"),
+    where("videoUid", "==", uid)
+  );
+  const snapshot = await getDocs(q);
+  const batch = writeBatch(db);
+  snapshot.docs.forEach(d => batch.delete(d.ref));
+  await batch.commit();
+}
+
 export const uploadExplanationThumbnail = async (
   videoUid: string,
   file: File

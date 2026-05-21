@@ -6,6 +6,7 @@ import {
   collection,
   addDoc,
   getDocs,
+  deleteDoc,
   serverTimestamp,
   query,
   orderBy,
@@ -59,6 +60,13 @@ export const updateSkillVideoOrders = async (videos: { id: string; order: number
     batch.update(doc(db, "skill_videos", id), { order });
   });
   await batch.commit();
+};
+
+// ===============================
+// Delete Skill Video
+// ===============================
+export const deleteSkillVideo = async (id: string) => {
+  await deleteDoc(doc(db, "skill_videos", id));
 };
 
 // ===============================

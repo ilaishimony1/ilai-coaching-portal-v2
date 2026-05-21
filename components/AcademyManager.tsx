@@ -4,6 +4,7 @@ import {
   getSkillVideos,
   createSkillVideo,
   updateSkillVideoOrders,
+  deleteSkillVideo,
   SkillVideo
 } from "../firebase/skillVideos";
 
@@ -20,6 +21,7 @@ import {
   unassignExplanationFromClient,
   getAssignedExplanationUids,
   updateExplanationVideoOrders,
+  deleteExplanationVideo,
 } from "../firebase/explanationVideos";
 
 
@@ -217,9 +219,20 @@ await loadVideos();
   }
 };
 
-  const deleteVideo = async () => {
-  alert("Skill deletion is not wired to Firestore yet.");
-};
+  const deleteVideo = async (video: VideoFile) => {
+    if (!window.confirm(`Delete "${video.name}"? This cannot be undone.`)) return;
+    try {
+      if (activeFolder?.cat === 'skill' && video.id) {
+        await deleteSkillVideo(String(video.id));
+        setVideos(prev => prev.filter(v => v.id !== video.id));
+      } else if (activeFolder?.cat === 'explanation' && video.uid) {
+        await deleteExplanationVideo(video.uid);
+        setVideos(prev => prev.filter(v => v.uid !== video.uid));
+      }
+    } catch (e) {
+      alert('Failed to delete video. Please try again.');
+    }
+  };
 
 
   const updateVideo = async () => {
@@ -498,14 +511,7 @@ const onDragStart = (id: number | string) => {
     }
   }}
 
-  onDelete={() => {
-   if (activeFolder?.cat === "skill") {
-  deleteVideo();
-}
-else {
-      alert("Explanation videos must be deleted from Firebase (for now).");
-    }
-  }}
+  onDelete={() => deleteVideo(video)}
 
   onUpdate={(updates) => {
    if (activeFolder?.cat === "skill") {
