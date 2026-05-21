@@ -585,6 +585,8 @@ const VideoManagementCard: React.FC<{
 
   const handleNameSave = () => {
     const finalName = tempName.trim() ? tempName.toUpperCase() : video.name;
+    if (finalName === video.name) { setIsEditing(false); setTempName(""); return; }
+    if (!window.confirm(`Rename to "${finalName}"?`)) return;
     onUpdate({ name: finalName });
     setIsEditing(false);
     setTempName("");
