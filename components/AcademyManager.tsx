@@ -37,6 +37,8 @@ const SUB_CATEGORIES = [
   "HS Foundations",
   "HS Balance & Control",
   "Advanced HS Skills",
+  "Front Lever",
+  "Planche",
   "Mentality"
 ];
 
