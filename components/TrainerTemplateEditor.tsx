@@ -316,6 +316,37 @@ const addHeader = (workoutId: string, afterExerciseId?: string) => {
   }));
 };
 
+const addSuperset = (workoutId: string, afterExerciseId?: string) => {
+  const groupId = generateUniqueId('ss');
+  const ex1: Exercise = { id: generateUniqueId('ex'), name: '', sets: '', reps: '', notes: '', restTime: '', category: 'strength', supersetGroup: groupId };
+  const ex2: Exercise = { id: generateUniqueId('ex'), name: '', sets: '', reps: '', notes: '', restTime: '', category: 'strength', supersetGroup: groupId };
+  setLocalClient((prev: ClientData) => ({
+    ...prev,
+    workouts: prev.workouts.map((w: Workout) => {
+      if (w.id !== workoutId) return w;
+      if (!afterExerciseId) return { ...w, exercises: [...w.exercises, ex1, ex2] };
+      const index = w.exercises.findIndex(ex => ex.id === afterExerciseId);
+      const newExercises = [...w.exercises];
+      newExercises.splice(index + 1, 0, ex1, ex2);
+      return { ...w, exercises: newExercises };
+    })
+  }));
+};
+
+const addToSuperset = (workoutId: string, afterExerciseId: string, groupId: string) => {
+  const newEx: Exercise = { id: generateUniqueId('ex'), name: '', sets: '', reps: '', notes: '', restTime: '', category: 'strength', supersetGroup: groupId };
+  setLocalClient((prev: ClientData) => ({
+    ...prev,
+    workouts: prev.workouts.map((w: Workout) => {
+      if (w.id !== workoutId) return w;
+      const index = w.exercises.findIndex(ex => ex.id === afterExerciseId);
+      const newExercises = [...w.exercises];
+      newExercises.splice(index + 1, 0, newEx);
+      return { ...w, exercises: newExercises };
+    })
+  }));
+};
+
   const executeDeleteExercise = (workoutId: string, exerciseId: string) => {
     setLocalClient((prev: ClientData) => ({
       ...prev,
@@ -799,155 +830,206 @@ const matches = [...startsWithMatches, ...includesMatches];
             </div>
 
             <div className="grid grid-cols-1 gap-6">
-              {activeWorkout.exercises.map((ex: Exercise) => (
-                <div key={ex.id} className="bg-slate-950/50 p-8 rounded-[2rem] border border-slate-900 space-y-6 relative group/ex overflow-hidden">
-                  {deletingExerciseId === ex.id && (
-                    <div className="absolute inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col items-center justify-start p-6 pt-10 animate-in fade-in duration-300">
-                      <p className="text-white font-black brand-font uppercase text-xs mb-6 tracking-widest text-center">Delete this {ex.category === 'header' ? 'Header' : 'Movement'}?</p>
-                      <div className="flex gap-4 w-full max-w-[240px]">
-                        <button onClick={() => setDeletingExerciseId(null)} className="flex-1 py-3 bg-slate-800 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-700 transition-all">No</button>
-                        <button onClick={() => executeDeleteExercise(activeWorkout.id, ex.id)} className="flex-1 py-3 bg-red-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-red-500 transition-all">Yes</button>
-                      </div>
-                    </div>
-                  )}
+              {(() => {
+                const nodes: React.ReactNode[] = [];
+                const seen = new Set<string>();
 
-                  {ex.category === 'header' ? (
-                    <div className="space-y-6">
-                      <div className="flex justify-between items-center gap-4 border-b border-blue-500/20 pb-4">
-                         <div className="flex items-center gap-3">
-                            <div className="p-2 bg-blue-600/10 text-blue-500 rounded-lg">
-                               <Type size={18} />
-                            </div>
-                            <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Section Header</span>
-                         </div>
-                         <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeletingExerciseId(ex.id); }} className="p-3 bg-slate-900/80 text-slate-700 hover:text-red-500 rounded-xl transition-all">
-                          <X size={20} className="pointer-events-none" />
-                        </button>
-                      </div>
-                      <div className="space-y-4">
-                        <div className="space-y-1">
-                          <label className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Header Title</label>
-                          <input 
-                            value={ex.name || ''} 
-                            onChange={e => updateExercise(activeWorkout.id, ex.id, 'name', e.target.value)} 
-                            className="bg-slate-900 font-black text-white uppercase text-2xl brand-font outline-none w-full border border-slate-800 p-4 rounded-2xl focus:ring-1 ring-blue-500" 
-                            placeholder="e.g. ENDURANCE PHASE" 
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Sub-header Description</label>
-                          <textarea 
-                            value={ex.notes || ''} 
-                            onChange={e => updateExercise(activeWorkout.id, ex.id, 'notes', e.target.value)} 
-                            className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 text-xs text-slate-400 outline-none resize-none h-20 focus:ring-1 ring-blue-500" 
-                            placeholder="Provide context for this section..." 
-                          />
+                const renderCard = (ex: Exercise, inSuperset = false) => (
+                  <div key={ex.id} className={`${inSuperset ? 'bg-slate-950/60 p-6 rounded-[1.5rem]' : 'bg-slate-950/50 p-8 rounded-[2rem]'} border border-slate-900 space-y-5 relative group/ex overflow-hidden`}>
+                    {deletingExerciseId === ex.id && (
+                      <div className="absolute inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col items-center justify-start p-6 pt-10 animate-in fade-in duration-300">
+                        <p className="text-white font-black brand-font uppercase text-xs mb-6 tracking-widest text-center">Delete this {ex.category === 'header' ? 'Header' : 'Movement'}?</p>
+                        <div className="flex gap-4 w-full max-w-[240px]">
+                          <button onClick={() => setDeletingExerciseId(null)} className="flex-1 py-3 bg-slate-800 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-700 transition-all">No</button>
+                          <button onClick={() => executeDeleteExercise(activeWorkout.id, ex.id)} className="flex-1 py-3 bg-red-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-red-500 transition-all">Yes</button>
                         </div>
                       </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="flex justify-between items-center gap-4 border-b border-white/5 pb-4">
-                         <div className="flex-1 relative">
-                            <input 
-                              value={ex.name || ''} 
-                              onChange={e => updateExercise(activeWorkout.id, ex.id, 'name', e.target.value)} 
-                              className="bg-transparent font-black text-white uppercase text-2xl brand-font outline-none w-full" 
-                              placeholder="Enter Movement Name" 
-                            />
-                            {exerciseSuggestions[ex.id]?.length > 0 && (
-                             <div className="absolute z-50 left-0 right-0 top-full mt-2 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200 max-h-64 overflow-y-auto">
-                                 {exerciseSuggestions[ex.id].map(suggestion => (
-                                   <button 
-                                     key={suggestion.uid}
-                                     onMouseDown={(e) => {
-                                       e.preventDefault();
-                                       selectExerciseSuggestion(activeWorkout.id, ex.id, suggestion);
-                                     }}
-                                     className="w-full text-left px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-300 hover:bg-blue-600 hover:text-white transition-colors border-b border-white/5 last:border-0 flex justify-between items-center"
-                                   >
-                                      <span>{suggestion.name}</span>
-                                      <span className="text-[8px] opacity-40">AUTO-LINK SKILL</span>
-                                   </button>
-                                 ))}
+                    )}
+
+                    {ex.category === 'header' ? (
+                      <div className="space-y-6">
+                        <div className="flex justify-between items-center gap-4 border-b border-blue-500/20 pb-4">
+                           <div className="flex items-center gap-3">
+                              <div className="p-2 bg-blue-600/10 text-blue-500 rounded-lg">
+                                 <Type size={18} />
                               </div>
-                            )}
-                         </div>
-                         <div className="flex items-center gap-3">
-                            {ex.videoUrl && (
-                              <button
-                                type="button"
-                                onClick={() => setPreviewVideoUrl(ex.videoUrl!)}
-                                className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-500 hover:text-blue-400 hover:border-blue-500/40 transition-all"
-                                title="Preview linked video"
-                              >
-                                <PlayCircle size={18} />
+                              <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Section Header</span>
+                           </div>
+                           <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeletingExerciseId(ex.id); }} className="p-3 bg-slate-900/80 text-slate-700 hover:text-red-500 rounded-xl transition-all">
+                            <X size={20} className="pointer-events-none" />
+                          </button>
+                        </div>
+                        <div className="space-y-4">
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Header Title</label>
+                            <input
+                              value={ex.name || ''}
+                              onChange={e => updateExercise(activeWorkout.id, ex.id, 'name', e.target.value)}
+                              className="bg-slate-900 font-black text-white uppercase text-2xl brand-font outline-none w-full border border-slate-800 p-4 rounded-2xl focus:ring-1 ring-blue-500"
+                              placeholder="e.g. ENDURANCE PHASE"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Sub-header Description</label>
+                            <textarea
+                              value={ex.notes || ''}
+                              onChange={e => updateExercise(activeWorkout.id, ex.id, 'notes', e.target.value)}
+                              className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 text-xs text-slate-400 outline-none resize-none h-20 focus:ring-1 ring-blue-500"
+                              placeholder="Provide context for this section..."
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex justify-between items-center gap-4 border-b border-white/5 pb-4">
+                           <div className="flex-1 relative">
+                              <input
+                                value={ex.name || ''}
+                                onChange={e => updateExercise(activeWorkout.id, ex.id, 'name', e.target.value)}
+                                className="bg-transparent font-black text-white uppercase text-2xl brand-font outline-none w-full"
+                                placeholder="Enter Movement Name"
+                              />
+                              {exerciseSuggestions[ex.id]?.length > 0 && (
+                               <div className="absolute z-50 left-0 right-0 top-full mt-2 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200 max-h-64 overflow-y-auto">
+                                   {exerciseSuggestions[ex.id].map(suggestion => (
+                                     <button
+                                       key={suggestion.uid}
+                                       onMouseDown={(e) => {
+                                         e.preventDefault();
+                                         selectExerciseSuggestion(activeWorkout.id, ex.id, suggestion);
+                                       }}
+                                       className="w-full text-left px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-300 hover:bg-blue-600 hover:text-white transition-colors border-b border-white/5 last:border-0 flex justify-between items-center"
+                                     >
+                                        <span>{suggestion.name}</span>
+                                        <span className="text-[8px] opacity-40">AUTO-LINK SKILL</span>
+                                     </button>
+                                   ))}
+                                </div>
+                              )}
+                           </div>
+                           <div className="flex items-center gap-3">
+                              {ex.videoUrl && (
+                                <button
+                                  type="button"
+                                  onClick={() => setPreviewVideoUrl(ex.videoUrl!)}
+                                  className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-500 hover:text-blue-400 hover:border-blue-500/40 transition-all"
+                                  title="Preview linked video"
+                                >
+                                  <PlayCircle size={18} />
+                                </button>
+                              )}
+                              <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800">
+                                 <button
+                                  type="button"
+                                  onClick={() => updateExercise(activeWorkout.id, ex.id, 'category', 'strength')}
+                                  className={`px-4 py-2 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all ${ex.category === 'strength' || !ex.category ? 'bg-blue-600 text-white' : 'text-slate-600 hover:text-white'}`}
+                                 >
+                                  Strength
+                                 </button>
+                                 <button
+                                  type="button"
+                                  onClick={() => updateExercise(activeWorkout.id, ex.id, 'category', 'mobility')}
+                                  className={`px-4 py-2 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all ${ex.category === 'mobility' ? 'bg-emerald-600 text-white' : 'text-slate-600 hover:text-white'}`}
+                                 >
+                                  Mobility
+                                 </button>
+                              </div>
+                              <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeletingExerciseId(ex.id); }} className="p-3 bg-slate-900/80 text-slate-700 hover:text-red-500 rounded-xl transition-all">
+                                <X size={20} className="pointer-events-none" />
                               </button>
-                            )}
-                            <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800">
-                               <button 
-                                type="button" 
-                                onClick={() => updateExercise(activeWorkout.id, ex.id, 'category', 'strength')}
-                                className={`px-4 py-2 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all ${ex.category === 'strength' || !ex.category ? 'bg-blue-600 text-white' : 'text-slate-600 hover:text-white'}`}
-                               >
-                                Strength
-                               </button>
-                               <button 
-                                type="button" 
-                                onClick={() => updateExercise(activeWorkout.id, ex.id, 'category', 'mobility')}
-                                className={`px-4 py-2 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all ${ex.category === 'mobility' ? 'bg-emerald-600 text-white' : 'text-slate-600 hover:text-white'}`}
-                               >
-                                Mobility
-                               </button>
-                            </div>
-                            <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeletingExerciseId(ex.id); }} className="p-3 bg-slate-900/80 text-slate-700 hover:text-red-500 rounded-xl transition-all">
-                              <X size={20} className="pointer-events-none" />
-                            </button>
-                         </div>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                         <InfoFieldInline label="Sets" value={ex.sets} onChange={(v: string) => updateExercise(activeWorkout.id, ex.id, 'sets', v)} placeholder="4" />
-                         <InfoFieldInline label="Target" value={ex.reps || ''} onChange={(v: string) => updateExercise(activeWorkout.id, ex.id, 'reps', v)} placeholder="10-12" />
-                         <InfoFieldInline label="Rest" value={ex.restTime || ''} onChange={(v: string) => updateExercise(activeWorkout.id, ex.id, 'restTime', v)} placeholder="90s" />
-                      </div>
+                           </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                           <InfoFieldInline label="Sets" value={ex.sets} onChange={(v: string) => updateExercise(activeWorkout.id, ex.id, 'sets', v)} placeholder="4" />
+                           <InfoFieldInline label="Target" value={ex.reps || ''} onChange={(v: string) => updateExercise(activeWorkout.id, ex.id, 'reps', v)} placeholder="10-12" />
+                           <InfoFieldInline label="Rest" value={ex.restTime || ''} onChange={(v: string) => updateExercise(activeWorkout.id, ex.id, 'restTime', v)} placeholder="90s" />
+                        </div>
                         <div className="space-y-1">
                           <label className="text-[8px] font-black text-slate-600 uppercase">Technical Cues</label>
                           <textarea value={ex.notes || ''} onChange={e => updateExercise(activeWorkout.id, ex.id, 'notes', e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-4 text-xs text-slate-400 outline-none resize-none h-14" placeholder="Cues..." />
-<div className="flex justify-center gap-4 pt-4">
-  <button
-    type="button"
-    onClick={() => addExercise(activeWorkout.id, ex.id)}
-    className="text-[9px] font-black uppercase tracking-widest text-slate-600 hover:text-blue-400"
-  >
-    + Insert Exercise
-  </button>
-
-  <button
-    type="button"
-    onClick={() => addHeader(activeWorkout.id, ex.id)}
-    className="text-[9px] font-black uppercase tracking-widest text-slate-600 hover:text-amber-400"
-  >
-    + Insert Header
-  </button>
-</div>
+                          {!inSuperset && (
+                            <div className="flex justify-center gap-4 pt-4">
+                              <button type="button" onClick={() => addExercise(activeWorkout.id, ex.id)} className="text-[9px] font-black uppercase tracking-widest text-slate-600 hover:text-blue-400">+ Insert Exercise</button>
+                              <button type="button" onClick={() => addHeader(activeWorkout.id, ex.id)} className="text-[9px] font-black uppercase tracking-widest text-slate-600 hover:text-amber-400">+ Insert Header</button>
+                            </div>
+                          )}
                         </div>
-                    </>
-                  )}
-                </div>
-              ))}
+                      </>
+                    )}
+                  </div>
+                );
+
+                activeWorkout.exercises.forEach((ex: Exercise) => {
+                  if (seen.has(ex.id)) return;
+
+                  if (ex.supersetGroup) {
+                    const group = activeWorkout.exercises.filter(e => e.supersetGroup === ex.supersetGroup);
+                    group.forEach(e => seen.add(e.id));
+                    const groupId = ex.supersetGroup;
+
+                    nodes.push(
+                      <div key={groupId} className="rounded-[2rem] border border-purple-500/20 bg-purple-500/[0.03] overflow-hidden">
+                        <div className="flex items-center gap-3 px-8 py-3 border-b border-purple-500/15 bg-purple-500/5">
+                          <Zap size={12} className="text-purple-400" />
+                          <span className="text-[9px] font-black uppercase tracking-widest text-purple-400">Superset</span>
+                          <span className="text-[8px] text-purple-400/40 font-black uppercase ml-2">· No rest between movements</span>
+                        </div>
+                        <div className="p-4 space-y-2">
+                          {group.map((ssEx, ssIdx) => (
+                            <React.Fragment key={ssEx.id}>
+                              {renderCard(ssEx, true)}
+                              {ssIdx < group.length - 1 && (
+                                <div className="flex items-center justify-center py-1.5">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-16 border-t border-dashed border-purple-500/25" />
+                                    <span className="text-[8px] font-black text-purple-400/60 uppercase tracking-widest">⚡ No Rest · Straight Into Next</span>
+                                    <div className="w-16 border-t border-dashed border-purple-500/25" />
+                                  </div>
+                                </div>
+                              )}
+                            </React.Fragment>
+                          ))}
+                          {group.length < 3 && (
+                            <button
+                              type="button"
+                              onClick={() => addToSuperset(activeWorkout.id, group[group.length - 1].id, groupId)}
+                              className="w-full py-3 mt-1 text-[9px] font-black uppercase tracking-widest text-purple-400/50 hover:text-purple-400 transition-colors border border-dashed border-purple-500/20 rounded-xl"
+                            >
+                              + Add 3rd Movement to Superset
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  } else {
+                    seen.add(ex.id);
+                    nodes.push(renderCard(ex, false));
+                  }
+                });
+
+                return nodes;
+              })()}
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
-              <button 
-                type="button" 
-                onClick={() => addExercise(activeWorkout.id)} 
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+              <button
+                type="button"
+                onClick={() => addExercise(activeWorkout.id)}
                 className="py-10 border-2 border-dashed border-slate-800 rounded-[2.5rem] text-slate-600 hover:text-blue-500 font-black uppercase text-[11px] tracking-[0.2em] transition-all flex items-center justify-center gap-3 bg-slate-950/20"
               >
-                <Plus size={24} /> ADD NEW MOVEMENT
+                <Plus size={24} /> ADD MOVEMENT
               </button>
-              <button 
-                type="button" 
-                onClick={() => addHeader(activeWorkout.id)} 
+              <button
+                type="button"
+                onClick={() => addSuperset(activeWorkout.id)}
+                className="py-10 border-2 border-dashed border-purple-500/30 rounded-[2.5rem] text-slate-600 hover:text-purple-400 font-black uppercase text-[11px] tracking-[0.2em] transition-all flex items-center justify-center gap-3 bg-purple-500/5"
+              >
+                <Zap size={24} /> ADD SUPERSET
+              </button>
+              <button
+                type="button"
+                onClick={() => addHeader(activeWorkout.id)}
                 className="py-10 border-2 border-dashed border-slate-800 rounded-[2.5rem] text-slate-600 hover:text-amber-500 font-black uppercase text-[11px] tracking-[0.2em] transition-all flex items-center justify-center gap-3 bg-slate-950/20"
               >
                 <Type size={24} /> ADD HEADER

@@ -8,6 +8,7 @@ export interface Exercise {
   videoId?: string;
   restTime?: string;
   category?: 'strength' | 'mobility' | 'header';
+  supersetGroup?: string;
 }
 
 export interface Workout {

@@ -387,7 +387,44 @@ const isDone = exerciseState[ex.id] || false;
                   <div className="col-span-1 text-[8px] font-black uppercase text-slate-500 tracking-widest text-center">Rest</div>
                   <div className="col-span-5 text-[8px] font-black uppercase text-slate-500 tracking-widest pl-2">Track your progress</div>
                 </div>
-                {current.exercises.map((ex, i) => renderExerciseRow(ex, i, i === current.exercises.length - 1))}
+                {(() => {
+                  const nodes: React.ReactNode[] = [];
+                  const seen = new Set<string>();
+                  const exercises = current.exercises;
+
+                  exercises.forEach((ex, i) => {
+                    if (seen.has(ex.id)) return;
+
+                    if (ex.supersetGroup) {
+                      const group = exercises.filter(e => e.supersetGroup === ex.supersetGroup);
+                      const startIdx = exercises.indexOf(ex);
+                      group.forEach(e => seen.add(e.id));
+
+                      nodes.push(
+                        <div key={ex.supersetGroup} className="rounded-2xl border border-purple-500/20 overflow-hidden">
+                          <div className="flex items-center gap-2 px-4 md:px-8 py-2.5 bg-purple-500/5 border-b border-purple-500/15">
+                            <span className="text-[8px] font-black uppercase tracking-widest text-purple-400">⚡ Superset · Perform back-to-back · No rest between</span>
+                          </div>
+                          {group.map((ssEx, ssIdx) => (
+                            <React.Fragment key={ssEx.id}>
+                              {renderExerciseRow(ssEx, startIdx + ssIdx, false)}
+                              {ssIdx < group.length - 1 && (
+                                <div className="flex items-center justify-center py-2 bg-purple-500/5 border-y border-purple-500/10">
+                                  <span className="text-[8px] font-black text-purple-400/70 uppercase tracking-widest">↓ No Rest · Next Movement</span>
+                                </div>
+                              )}
+                            </React.Fragment>
+                          ))}
+                        </div>
+                      );
+                    } else {
+                      seen.add(ex.id);
+                      nodes.push(renderExerciseRow(ex, i, i === exercises.length - 1));
+                    }
+                  });
+
+                  return nodes;
+                })()}
              </div>
           </div>
 
