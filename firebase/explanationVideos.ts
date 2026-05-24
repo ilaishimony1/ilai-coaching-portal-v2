@@ -107,7 +107,7 @@ export async function getExplanationVideos(): Promise<ExplanationVideo[]> {
 // Upload explanation video (coach)
 export async function uploadExplanationVideo(
   videoFile: File,
-  thumbnailFile: File,
+  thumbnailFile: File | null,
   name: string,
   subCategory: string
 ) {
@@ -135,20 +135,18 @@ await new Promise<void>((resolve, reject) => {
   );
 });
 
-
 const downloadURL = await getDownloadURL(videoRef);
 
-  /* THUMBNAIL */
-  if (!thumbnailFile.type.startsWith("image/")) {
-    throw new Error("Thumbnail must be an image file");
+  /* THUMBNAIL (optional) */
+  let thumbnailURL: string | null = null;
+  if (thumbnailFile) {
+    if (!thumbnailFile.type.startsWith("image/")) {
+      throw new Error("Thumbnail must be an image file");
+    }
+    const thumbRef = ref(storage, `videos/explanations/${uid}.jpg`);
+    await uploadBytes(thumbRef, thumbnailFile, { contentType: thumbnailFile.type });
+    thumbnailURL = await getDownloadURL(thumbRef);
   }
-
-  const thumbRef = ref(storage, `videos/explanations/${uid}.jpg`);
-  await uploadBytes(thumbRef, thumbnailFile, {
-  contentType: thumbnailFile.type,
-});
-
-  const thumbnailURL = await getDownloadURL(thumbRef);
 
   /* FIRESTORE (FIXED ID) */
   const videoDocRef = doc(db, "explanation_videos", uid);

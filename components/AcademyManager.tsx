@@ -50,7 +50,6 @@ const AcademyManager: React.FC<Props> = ({ accentColor, clients, onToggleAssignm
   const [videos, setVideos] = useState<VideoFile[]>([]);
   const [explanationVideos, setExplanationVideos] = useState<ExplanationVideo[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [search, setSearch] = useState('');
   const [activeFolder, setActiveFolder] = useState<{cat: 'explanation' | 'skill', sub: string} | null>(null);
   const [isRearrangeMode, setIsRearrangeMode] = useState(false);
@@ -162,28 +161,13 @@ const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
   try {
 
 if (activeFolder.cat === "explanation") {
-  // Use selected thumbnail if exists, otherwise use a default
-  if (!thumbnailFile) {
-  alert("Please select a thumbnail image first.");
-setIsUploading(false);
-if (e?.target) {
-  e.target.value = "";
-}
-
-  return;
-}
-
-const finalThumbnail = thumbnailFile;
-
-
   await uploadExplanationVideo(
-    file,                 // VIDEO
-    finalThumbnail,       // IMAGE
+    file,
+    null,  // thumbnail added later via card button
     file.name.split(".")[0].toUpperCase(),
     activeFolder.sub
   );
 
-  setThumbnailFile(null);
   await loadExplanationVideos();
 } else {
   /* =========================
@@ -245,14 +229,27 @@ await loadVideos();
         } else if (activeFolder?.cat === 'explanation' && video.uid) {
           await updateExplanationVideoName(video.uid, updates.name);
         }
+      }
+      // Update local state (name + thumbnail)
+      if (activeFolder?.cat === 'explanation') {
+        setExplanationVideos(prev => prev.map(v =>
+          v.uid === video.uid
+            ? {
+                ...v,
+                ...(updates.name ? { name: updates.name! } : {}),
+                ...(updates.thumbnail !== undefined ? { thumbnailURL: updates.thumbnail } : {}),
+              }
+            : v
+        ));
+      } else {
         setVideos(prev => prev.map(v =>
           (video.id ? v.id === video.id : v.uid === video.uid)
-            ? { ...v, name: updates.name! }
+            ? { ...v, ...(updates.name ? { name: updates.name! } : {}), ...(updates.thumbnail !== undefined ? { thumbnail: updates.thumbnail } : {}) }
             : v
         ));
       }
     } catch (e) {
-      alert('Failed to save name. Please try again.');
+      alert('Failed to save. Please try again.');
     }
   };
 
@@ -461,19 +458,6 @@ const onDragStart = (id: number | string) => {
                   <Layers size={18} /> {isRearrangeMode ? 'DONE REARRANGING' : 'REARRANGE'}
                 </button>
 <div className="flex items-center gap-4">
-  {/* Thumbnail picker */}
-  <label className="cursor-pointer">
-    <input
-      type="file"
-      accept="image/*"
-      className="hidden"
-      onChange={(e) => setThumbnailFile(e.target.files?.[0] ?? null)}
-    />
-    <div className="bg-slate-800 text-white px-6 py-4 rounded-2xl font-black text-xs tracking-widest uppercase flex items-center gap-3 shadow-xl hover:bg-slate-700">
-      <ImageIcon size={18} /> THUMBNAIL
-    </div>
-  </label>
-
   {/* Video picker */}
   <label className="cursor-pointer">
     <input
@@ -481,7 +465,6 @@ const onDragStart = (id: number | string) => {
       accept="video/*"
       className="hidden"
       onChange={handleFileUpload}
-      
     />
     <div className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-2xl font-black text-xs tracking-widest uppercase flex items-center gap-3 shadow-2xl transition-all active:scale-95">
       <Plus size={18} /> {isUploading ? 'SYNCING...' : 'ADD VIDEO'}
@@ -600,7 +583,6 @@ const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => 
     try {
       const newURL = await uploadExplanationThumbnail(video.uid, file);
       onUpdate({ thumbnail: newURL });
-      alert("Thumbnail updated!");
     } catch (err) {
       console.error(err);
       alert("Failed to upload thumbnail.");
