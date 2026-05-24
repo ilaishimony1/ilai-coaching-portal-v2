@@ -951,6 +951,7 @@ const matches = [...startsWithMatches, ...includesMatches];
                           {!inSuperset && (
                             <div className="flex justify-center gap-4 pt-4">
                               <button type="button" onClick={() => addExercise(activeWorkout.id, ex.id)} className="text-[9px] font-black uppercase tracking-widest text-slate-600 hover:text-blue-400">+ Insert Exercise</button>
+                              <button type="button" onClick={() => addSuperset(activeWorkout.id, ex.id)} className="text-[9px] font-black uppercase tracking-widest text-slate-600 hover:text-purple-400">⚡ Insert Superset</button>
                               <button type="button" onClick={() => addHeader(activeWorkout.id, ex.id)} className="text-[9px] font-black uppercase tracking-widest text-slate-600 hover:text-amber-400">+ Insert Header</button>
                             </div>
                           )}
