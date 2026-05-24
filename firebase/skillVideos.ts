@@ -16,9 +16,12 @@ import {
 } from "firebase/firestore";
 
 import { syncService } from "../firebaseService";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { getApp } from "firebase/app";
 
 // 🔥 Get Firestore instance from the singleton
 const db = syncService.getDb();
+const storage = getStorage(getApp());
 
 // ===============================
 // Types
@@ -28,6 +31,7 @@ export interface SkillVideo {
   uid: string;
   name: string;
   url: string;
+  thumbnailURL?: string;
   category: "skill";
   subCategory: string;
   order: number;
@@ -75,6 +79,17 @@ export const deleteSkillVideo = async (id: string) => {
 // ===============================
 export const updateSkillVideo = async (id: string, updates: { name?: string }) => {
   await updateDoc(doc(db, "skill_videos", id), updates);
+};
+
+// ===============================
+// Upload / Replace Skill Thumbnail
+// ===============================
+export const uploadSkillThumbnail = async (id: string, file: File): Promise<string> => {
+  const storageRef = ref(storage, `skill_thumbnails/${id}`);
+  await uploadBytes(storageRef, file, { contentType: file.type });
+  const downloadURL = await getDownloadURL(storageRef);
+  await updateDoc(doc(db, "skill_videos", id), { thumbnailURL: downloadURL });
+  return downloadURL;
 };
 
 // ===============================

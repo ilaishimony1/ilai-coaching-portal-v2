@@ -6,13 +6,17 @@ import {
   updateSkillVideoOrders,
   deleteSkillVideo,
   updateSkillVideo,
+  uploadSkillThumbnail,
   SkillVideo
 } from "../firebase/skillVideos";
 
 import { ClientData } from '../types';
 import { uploadVideoToFirebase } from "../firebaseService";
 import { ExplanationVideo } from "../firebase/explanationVideos";
-import { getStorage, ref, listAll, getDownloadURL } from "firebase/storage";
+import { getStorage, ref, listAll, getDownloadURL, uploadBytes } from "firebase/storage";
+import { getApp } from "firebase/app";
+
+const storage = getStorage(getApp());
 
 import {
   uploadExplanationVideo,
@@ -50,6 +54,8 @@ const AcademyManager: React.FC<Props> = ({ accentColor, clients, onToggleAssignm
   const [videos, setVideos] = useState<VideoFile[]>([]);
   const [explanationVideos, setExplanationVideos] = useState<ExplanationVideo[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [pendingSkillVideo, setPendingSkillVideo] = useState<File | null>(null);
+  const [showFramePicker, setShowFramePicker] = useState(false);
   const [search, setSearch] = useState('');
   const [activeFolder, setActiveFolder] = useState<{cat: 'explanation' | 'skill', sub: string} | null>(null);
   const [isRearrangeMode, setIsRearrangeMode] = useState(false);
@@ -66,6 +72,7 @@ const loadVideos = async () => {
     uid: v.uid,
     name: v.name,
     url: v.url,
+    thumbnail: v.thumbnailURL ?? "",
     category: "skill",
     subCategory: v.subCategory,
     uploadDate: v.createdAt,
@@ -170,30 +177,12 @@ if (activeFolder.cat === "explanation") {
 
   await loadExplanationVideos();
 } else {
-  /* =========================
-     SKILLS - UNCHANGED
-  ========================== */
-  const folderVideos = videos.filter(
-    v => v.category === activeFolder.cat && v.subCategory === activeFolder.sub
-  );
-
-  const maxOrder =
-    folderVideos.length > 0
-      ? Math.max(...folderVideos.map(v => v.order))
-      : 0;
-
-  const videoId = `v-${Date.now()}`;
-
-const videoUrl = await uploadVideoToFirebase(file, videoId);
-
-await createSkillVideo({
-  uid: videoId,
-  name: file.name.split(".")[0].toUpperCase(),
-  url: videoUrl,
-  subCategory: activeFolder.sub,
-  order: maxOrder + 1,
-});
-await loadVideos();
+  /* SKILLS — show frame picker first */
+  setPendingSkillVideo(file);
+  setShowFramePicker(true);
+  setIsUploading(false);
+  if (e?.target) e.target.value = "";
+  return;
 }
 
 
@@ -202,6 +191,43 @@ await loadVideos();
     alert("Upload failed");
   } finally {
     setIsUploading(false);
+  }
+};
+
+const handleSkillVideoUpload = async (thumbnailFile: File | null) => {
+  if (!activeFolder || !pendingSkillVideo) return;
+  setShowFramePicker(false);
+  setIsUploading(true);
+  try {
+    const folderVideos = videos.filter(
+      v => v.category === activeFolder.cat && v.subCategory === activeFolder.sub
+    );
+    const maxOrder = folderVideos.length > 0 ? Math.max(...folderVideos.map(v => v.order)) : 0;
+    const videoId = `v-${Date.now()}`;
+    const videoUrl = await uploadVideoToFirebase(pendingSkillVideo, videoId);
+
+    let thumbnailURL: string | undefined;
+    if (thumbnailFile) {
+      const storageRef = ref(storage, `skill_thumbnails/${videoId}`);
+      await uploadBytes(storageRef, thumbnailFile, { contentType: thumbnailFile.type });
+      thumbnailURL = await getDownloadURL(storageRef);
+    }
+
+    await createSkillVideo({
+      uid: videoId,
+      name: pendingSkillVideo.name.split(".")[0].toUpperCase(),
+      url: videoUrl,
+      subCategory: activeFolder.sub,
+      order: maxOrder + 1,
+      ...(thumbnailURL ? { thumbnailURL } : {}),
+    } as any);
+    await loadVideos();
+  } catch (err) {
+    console.error("UPLOAD ERROR:", err);
+    alert("Upload failed");
+  } finally {
+    setIsUploading(false);
+    setPendingSkillVideo(null);
   }
 };
 
@@ -302,6 +328,7 @@ const onDragStart = (id: number | string) => {
   };
 
   return (
+    <>
     <div className="flex flex-col lg:flex-row gap-10 animate-in fade-in duration-700 pb-20">
       {/* Persistent Left Sidebar: Client Assignment */}
       <aside className="lg:w-80 shrink-0 space-y-6">
@@ -467,7 +494,7 @@ const onDragStart = (id: number | string) => {
       onChange={handleFileUpload}
     />
     <div className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-2xl font-black text-xs tracking-widest uppercase flex items-center gap-3 shadow-2xl transition-all active:scale-95">
-      <Plus size={18} /> {isUploading ? 'SYNCING...' : 'ADD VIDEO'}
+      <Plus size={18} /> {isUploading ? 'SYNCING...' : showFramePicker ? 'PICKING FRAME...' : 'ADD VIDEO'}
     </div>
   </label>
 </div>
@@ -543,6 +570,144 @@ const onDragStart = (id: number | string) => {
         )}
       </div>
     </div>
+
+    {/* Frame picker modal for skill videos */}
+    {showFramePicker && pendingSkillVideo && (
+      <FramePickerModal
+        file={pendingSkillVideo}
+        onUse={(thumb) => handleSkillVideoUpload(thumb)}
+        onSkip={() => handleSkillVideoUpload(null)}
+        onCancel={() => { setShowFramePicker(false); setPendingSkillVideo(null); }}
+      />
+    )}
+  </>
+  );
+};
+
+const FramePickerModal: React.FC<{
+  file: File;
+  onUse: (thumb: File) => void;
+  onSkip: () => void;
+  onCancel: () => void;
+}> = ({ file, onUse, onSkip, onCancel }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [captureDataUrl, setCaptureDataUrl] = useState<string | null>(null);
+  const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
+  const objUrl = React.useMemo(() => URL.createObjectURL(file), [file]);
+
+  useEffect(() => () => URL.revokeObjectURL(objUrl), [objUrl]);
+
+  const formatTime = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  };
+
+  const capture = () => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas || video.readyState < 2) return;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d')?.drawImage(video, 0, 0);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+    setCaptureDataUrl(dataUrl);
+    canvas.toBlob(blob => { if (blob) setCapturedBlob(blob); }, 'image/jpeg', 0.85);
+  };
+
+  const handleUse = () => {
+    if (!capturedBlob) return;
+    onUse(new File([capturedBlob], 'thumbnail.jpg', { type: 'image/jpeg' }));
+  };
+
+  return (
+    <div className="fixed inset-0 z-[800] flex items-center justify-center p-4 animate-in fade-in duration-200">
+      <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={onCancel} />
+      <div className="relative bg-slate-900 border border-slate-700 rounded-3xl p-8 max-w-2xl w-full space-y-5 shadow-2xl">
+        <div>
+          <h3 className="text-white font-black uppercase tracking-widest text-sm">Choose Thumbnail Frame</h3>
+          <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mt-1">Scrub to the moment you want, then capture</p>
+        </div>
+
+        <div className="bg-black rounded-2xl overflow-hidden aspect-video">
+          <video
+            ref={videoRef}
+            src={objUrl}
+            className="w-full h-full object-contain"
+            onLoadedMetadata={() => {
+              const d = videoRef.current?.duration || 0;
+              setDuration(d);
+              if (videoRef.current) videoRef.current.currentTime = d * 0.1;
+            }}
+            onTimeUpdate={() => setCurrentTime(videoRef.current?.currentTime || 0)}
+            onPlay={() => setIsPlaying(true)}
+            onPause={() => setIsPlaying(false)}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <input
+            type="range"
+            min={0}
+            max={duration || 1}
+            step={0.05}
+            value={currentTime}
+            onChange={e => {
+              const t = parseFloat(e.target.value);
+              if (videoRef.current) { videoRef.current.currentTime = t; videoRef.current.pause(); }
+              setCurrentTime(t);
+            }}
+            className="w-full accent-blue-500"
+          />
+          <div className="flex justify-between text-[9px] font-black text-slate-600 uppercase tracking-widest">
+            <span>{formatTime(currentTime)}</span>
+            <span>{formatTime(duration)}</span>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={() => isPlaying ? videoRef.current?.pause() : videoRef.current?.play()}
+              className="px-6 py-3 bg-slate-800 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-700 transition-all flex items-center gap-2"
+            >
+              {isPlaying ? <Pause size={14} /> : <Play size={14} />}
+              {isPlaying ? 'Pause' : 'Play'}
+            </button>
+            <button
+              onClick={capture}
+              className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-500 transition-all flex items-center justify-center gap-2"
+            >
+              <ImageIcon size={14} /> Capture This Frame
+            </button>
+          </div>
+        </div>
+
+        {captureDataUrl && (
+          <div className="flex items-center gap-4 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl animate-in fade-in duration-300">
+            <img src={captureDataUrl} className="w-24 h-14 object-cover rounded-xl shrink-0" alt="captured" />
+            <div>
+              <p className="text-emerald-400 font-black text-xs uppercase tracking-widest">Frame captured ✓</p>
+              <p className="text-slate-500 text-[9px] font-black uppercase mt-1">Scrub to a different frame and capture again to replace</p>
+            </div>
+          </div>
+        )}
+
+        <canvas ref={canvasRef} className="hidden" />
+
+        <div className="flex gap-3 pt-1">
+          <button onClick={onSkip} className="flex-1 py-4 bg-slate-800 text-slate-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-700 transition-all">
+            Upload Without Thumbnail
+          </button>
+          {captureDataUrl && (
+            <button onClick={handleUse} className="flex-1 py-4 bg-emerald-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-500 transition-all">
+              ✓ Use This Frame
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
   );
 };
 
@@ -590,12 +755,17 @@ const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => 
     return;
   }
 
-  // Existing behavior for skill videos
-  const reader = new FileReader();
-  reader.onloadend = () => {
-    onUpdate({ thumbnail: reader.result as string });
-  };
-  reader.readAsDataURL(file);
+  // Skill videos — upload to Firebase Storage + update Firestore
+  if (video.category === "skill" && video.id) {
+    try {
+      const newURL = await uploadSkillThumbnail(String(video.id), file);
+      onUpdate({ thumbnail: newURL });
+    } catch (err) {
+      console.error(err);
+      alert("Failed to upload thumbnail.");
+    }
+    return;
+  }
 };
 
 
