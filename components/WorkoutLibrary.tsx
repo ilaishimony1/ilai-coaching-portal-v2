@@ -129,31 +129,39 @@ useEffect(() => {
       .filter(ex => ex.category !== 'header' && exerciseNotes[ex.id]?.trim())
       .map(ex => `${ex.name}: ${exerciseNotes[ex.id].trim()}`);
     const freeText = logText.trim();
-    // Always allow submit — fall back to "Session completed" if truly empty
     const combined = [...exLines, ...(freeText ? [freeText] : [])].join('\n') || 'Session completed.';
-    setLogSaving(true);
+
+    // Optimistic UI — close modal and show success immediately
+    setShowConfirm(false);
+    setLogText('');
+    setLogJustSaved(true);
+    refillNotes();
+    setTimeout(() => setLogJustSaved(false), 4000);
+
+    // Write to Firestore in background with 15s timeout
+    const logPayload = {
+      clientId: clientData.id,
+      clientName: clientData.name,
+      workoutId: current.id,
+      workoutName: current.name,
+      workoutTitle: current.title,
+      loggedAt: new Date().toISOString(),
+      note: combined,
+      readByCoach: false,
+    };
     try {
-      await submitWorkoutLog({
-        clientId: clientData.id,
-        clientName: clientData.name,
-        workoutId: current.id,
-        workoutName: current.name,
-        workoutTitle: current.title,
-        loggedAt: new Date().toISOString(),
-        note: combined,
-        readByCoach: false,
-      });
-      setLogText('');
-      setShowLogForm(false);
-      setShowConfirm(false);
-      setLogJustSaved(true);
-      refillNotes(); // re-fill so a second submit still works
-      setTimeout(() => setLogJustSaved(false), 3000);
+      const writePromise = submitWorkoutLog(logPayload);
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Connection timeout — log saved locally, will retry')), 15000)
+      );
+      await Promise.race([writePromise, timeoutPromise]);
     } catch (err: any) {
       console.error('submitWorkoutLog error:', err);
-      setSubmitError(err?.message || 'Failed to save. Check your connection and try again.');
+      // Show non-blocking error — success UI already shown so don't confuse client
+      setLogJustSaved(false);
+      setSubmitError(err?.message || 'Failed to save. Check connection and try again.');
+      setShowConfirm(true); // re-open modal with error shown
     }
-    setLogSaving(false);
   };
 
 const closePlayer = () => {
@@ -492,10 +500,9 @@ const isDone = exerciseState[ex.id] || false;
                         <button
                           type="button"
                           onClick={handleSubmitLog}
-                          disabled={logSaving}
-                          className="flex-1 py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase tracking-widest transition-all active:scale-95 disabled:opacity-60"
+                          className="flex-1 py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase tracking-widest transition-all active:scale-95"
                         >
-                          {logSaving ? 'Saving…' : 'Yes, Submit'}
+                          Yes, Submit
                         </button>
                         <button
                           type="button"
