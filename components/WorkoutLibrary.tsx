@@ -475,7 +475,10 @@ const isDone = exerciseState[ex.id] || false;
                 {/* Confirmation modal */}
                 {showConfirm && (
                   <div className="fixed inset-0 z-[500] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm">
-                    <div className="bg-slate-900 border border-slate-700 rounded-t-3xl sm:rounded-3xl p-8 pb-10 sm:pb-8 max-w-sm w-full space-y-6 shadow-2xl animate-in slide-in-from-bottom sm:zoom-in duration-200">
+                    <div
+                      className="bg-slate-900 border border-slate-700 rounded-t-3xl sm:rounded-3xl p-8 max-w-sm w-full space-y-6 shadow-2xl animate-in slide-in-from-bottom sm:zoom-in duration-200"
+                      style={{ paddingBottom: 'max(2.5rem, calc(env(safe-area-inset-bottom, 0px) + 1.5rem))' }}
+                    >
                       <div className="space-y-2">
                         <p className="text-base font-black uppercase tracking-wide text-white">Submit this log?</p>
                         <p className="text-xs text-slate-500 font-medium">Your numbers and notes will be sent to your coach.</p>
@@ -487,15 +490,17 @@ const isDone = exerciseState[ex.id] || false;
                       )}
                       <div className="flex gap-3">
                         <button
+                          type="button"
                           onClick={handleSubmitLog}
                           disabled={logSaving}
-                          className="flex-1 py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase tracking-widest transition-all active:scale-95 disabled:opacity-60"
+                          className="flex-1 py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase tracking-widest transition-all active:scale-95 disabled:opacity-60"
                         >
                           {logSaving ? 'Saving…' : 'Yes, Submit'}
                         </button>
                         <button
+                          type="button"
                           onClick={() => { setShowConfirm(false); setSubmitError(null); }}
-                          className="flex-1 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-black text-xs uppercase tracking-widest transition-all"
+                          className="flex-1 py-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-black text-xs uppercase tracking-widest transition-all"
                         >
                           Cancel
                         </button>
