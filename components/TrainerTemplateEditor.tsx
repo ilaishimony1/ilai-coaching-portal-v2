@@ -64,6 +64,8 @@ const TrainerTemplateEditor: React.FC<Props> = ({ client, onUpdate, onAddClient,
   const [showPassword, setShowPassword] = useState(false);
   const [isCapsLock, setIsCapsLock] = useState(false);
   const [activeWorkoutId, setActiveWorkoutId] = useState<string | null>(client.workouts[0]?.id || null);
+  const [planMode, setPlanMode] = useState<'live' | 'draft'>('live');
+  const [activeDraftWorkoutId, setActiveDraftWorkoutId] = useState<string | null>(null);
   const [countrySearch, setCountrySearch] = useState(localClient.country || '');
   const [showCountrySuggestions, setShowCountrySuggestions] = useState(false);
   const [exerciseSuggestions, setExerciseSuggestions] = useState<Record<string, VideoFile[]>>({});
@@ -206,7 +208,8 @@ const TrainerTemplateEditor: React.FC<Props> = ({ client, onUpdate, onAddClient,
   const addWorkout = () => {
     const newId = generateUniqueId('w');
     setLocalClient((prev: ClientData) => {
-      const existingLetters = prev.workouts.map(w => w.name.toUpperCase());
+      const sourceWorkouts = planMode === 'draft' ? (prev.draftWorkouts || []) : prev.workouts;
+      const existingLetters = sourceWorkouts.map(w => w.name.toUpperCase());
       const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
       let nextLetter = 'A';
       for (const char of alphabet) {
@@ -215,13 +218,25 @@ const TrainerTemplateEditor: React.FC<Props> = ({ client, onUpdate, onAddClient,
           break;
         }
       }
-      return { ...prev, workouts: [...prev.workouts, { id: newId, name: nextLetter, title: '', exercises: [] }] };
+      const newWorkout = { id: newId, name: nextLetter, title: '', exercises: [] };
+      if (planMode === 'draft') {
+        return { ...prev, draftWorkouts: [...(prev.draftWorkouts || []), newWorkout] };
+      }
+      return { ...prev, workouts: [...prev.workouts, newWorkout] };
     });
-    setActiveWorkoutId(newId);
+    if (planMode === 'draft') setActiveDraftWorkoutId(newId);
+    else setActiveWorkoutId(newId);
   };
 
   const executeDeleteWorkout = (id: string) => {
     setLocalClient((prev: ClientData) => {
+      if (planMode === 'draft') {
+        const updatedDraft = (prev.draftWorkouts || []).filter(w => w.id !== id);
+        if (activeDraftWorkoutId === id) {
+          setActiveDraftWorkoutId(updatedDraft[0]?.id || null);
+        }
+        return { ...prev, draftWorkouts: updatedDraft };
+      }
       const updatedWorkouts = prev.workouts.filter(w => w.id !== id);
       if (activeWorkoutId === id) {
         setActiveWorkoutId(updatedWorkouts[0]?.id || null);
@@ -265,23 +280,21 @@ const TrainerTemplateEditor: React.FC<Props> = ({ client, onUpdate, onAddClient,
     category: 'strength'
   };
 
-  setLocalClient((prev: ClientData) => ({
-    ...prev,
-    workouts: prev.workouts.map((w: Workout) => {
-      if (w.id !== workoutId) return w;
+  const mapWorkout = (w: Workout) => {
+    if (w.id !== workoutId) return w;
+    if (!afterExerciseId) return { ...w, exercises: [...w.exercises, newExercise] };
+    const index = w.exercises.findIndex(ex => ex.id === afterExerciseId);
+    const newExercises = [...w.exercises];
+    newExercises.splice(index + 1, 0, newExercise);
+    return { ...w, exercises: newExercises };
+  };
 
-      if (!afterExerciseId) {
-        return { ...w, exercises: [...w.exercises, newExercise] };
-      }
-
-      const index = w.exercises.findIndex(ex => ex.id === afterExerciseId);
-
-      const newExercises = [...w.exercises];
-      newExercises.splice(index + 1, 0, newExercise);
-
-      return { ...w, exercises: newExercises };
-    })
-  }));
+  setLocalClient((prev: ClientData) => {
+    if (planMode === 'draft') {
+      return { ...prev, draftWorkouts: (prev.draftWorkouts || []).map(mapWorkout) };
+    }
+    return { ...prev, workouts: prev.workouts.map(mapWorkout) };
+  });
 };
 
 const addHeader = (workoutId: string, afterExerciseId?: string) => {
@@ -295,63 +308,73 @@ const addHeader = (workoutId: string, afterExerciseId?: string) => {
     category: 'header'
   };
 
-  setLocalClient((prev: ClientData) => ({
-    ...prev,
-    workouts: prev.workouts.map((w: Workout) => {
-      if (w.id !== workoutId) return w;
+  const mapWorkout = (w: Workout) => {
+    if (w.id !== workoutId) return w;
+    if (!afterExerciseId) return { ...w, exercises: [...w.exercises, newHeader] };
+    const index = w.exercises.findIndex(ex => ex.id === afterExerciseId);
+    const newExercises = [...w.exercises];
+    newExercises.splice(index + 1, 0, newHeader);
+    return { ...w, exercises: newExercises };
+  };
 
-      // 👇 add to end (existing behavior)
-      if (!afterExerciseId) {
-        return { ...w, exercises: [...w.exercises, newHeader] };
-      }
-
-      // 👇 insert between exercises
-      const index = w.exercises.findIndex(ex => ex.id === afterExerciseId);
-
-      const newExercises = [...w.exercises];
-      newExercises.splice(index + 1, 0, newHeader);
-
-      return { ...w, exercises: newExercises };
-    })
-  }));
+  setLocalClient((prev: ClientData) => {
+    if (planMode === 'draft') {
+      return { ...prev, draftWorkouts: (prev.draftWorkouts || []).map(mapWorkout) };
+    }
+    return { ...prev, workouts: prev.workouts.map(mapWorkout) };
+  });
 };
 
 const addSuperset = (workoutId: string, afterExerciseId?: string) => {
   const groupId = generateUniqueId('ss');
   const ex1: Exercise = { id: generateUniqueId('ex'), name: '', sets: '', reps: '', notes: '', restTime: '', category: 'strength', supersetGroup: groupId };
   const ex2: Exercise = { id: generateUniqueId('ex'), name: '', sets: '', reps: '', notes: '', restTime: '', category: 'strength', supersetGroup: groupId };
-  setLocalClient((prev: ClientData) => ({
-    ...prev,
-    workouts: prev.workouts.map((w: Workout) => {
-      if (w.id !== workoutId) return w;
-      if (!afterExerciseId) return { ...w, exercises: [...w.exercises, ex1, ex2] };
-      const index = w.exercises.findIndex(ex => ex.id === afterExerciseId);
-      const newExercises = [...w.exercises];
-      newExercises.splice(index + 1, 0, ex1, ex2);
-      return { ...w, exercises: newExercises };
-    })
-  }));
+  const mapWorkout = (w: Workout) => {
+    if (w.id !== workoutId) return w;
+    if (!afterExerciseId) return { ...w, exercises: [...w.exercises, ex1, ex2] };
+    const index = w.exercises.findIndex(ex => ex.id === afterExerciseId);
+    const newExercises = [...w.exercises];
+    newExercises.splice(index + 1, 0, ex1, ex2);
+    return { ...w, exercises: newExercises };
+  };
+  setLocalClient((prev: ClientData) => {
+    if (planMode === 'draft') {
+      return { ...prev, draftWorkouts: (prev.draftWorkouts || []).map(mapWorkout) };
+    }
+    return { ...prev, workouts: prev.workouts.map(mapWorkout) };
+  });
 };
 
 const addToSuperset = (workoutId: string, afterExerciseId: string, groupId: string) => {
   const newEx: Exercise = { id: generateUniqueId('ex'), name: '', sets: '', reps: '', notes: '', restTime: '', category: 'strength', supersetGroup: groupId };
-  setLocalClient((prev: ClientData) => ({
-    ...prev,
-    workouts: prev.workouts.map((w: Workout) => {
-      if (w.id !== workoutId) return w;
-      const index = w.exercises.findIndex(ex => ex.id === afterExerciseId);
-      const newExercises = [...w.exercises];
-      newExercises.splice(index + 1, 0, newEx);
-      return { ...w, exercises: newExercises };
-    })
-  }));
+  const mapWorkout = (w: Workout) => {
+    if (w.id !== workoutId) return w;
+    const index = w.exercises.findIndex(ex => ex.id === afterExerciseId);
+    const newExercises = [...w.exercises];
+    newExercises.splice(index + 1, 0, newEx);
+    return { ...w, exercises: newExercises };
+  };
+  setLocalClient((prev: ClientData) => {
+    if (planMode === 'draft') {
+      return { ...prev, draftWorkouts: (prev.draftWorkouts || []).map(mapWorkout) };
+    }
+    return { ...prev, workouts: prev.workouts.map(mapWorkout) };
+  });
 };
 
   const executeDeleteExercise = (workoutId: string, exerciseId: string) => {
-    setLocalClient((prev: ClientData) => ({
-      ...prev,
-      workouts: prev.workouts.map((w: Workout) => w.id === workoutId ? { ...w, exercises: w.exercises.filter(ex => ex.id !== exerciseId) } : w)
-    }));
+    setLocalClient((prev: ClientData) => {
+      if (planMode === 'draft') {
+        return {
+          ...prev,
+          draftWorkouts: (prev.draftWorkouts || []).map((w: Workout) => w.id === workoutId ? { ...w, exercises: w.exercises.filter(ex => ex.id !== exerciseId) } : w)
+        };
+      }
+      return {
+        ...prev,
+        workouts: prev.workouts.map((w: Workout) => w.id === workoutId ? { ...w, exercises: w.exercises.filter(ex => ex.id !== exerciseId) } : w)
+      };
+    });
     setDeletingExerciseId(null);
   };
 const updateExercise = async (
@@ -364,33 +387,28 @@ const updateExercise = async (
     s.trim().replace(/\s+/g, ' ').toUpperCase();
 
   // ✅ Update state FIRST (so input never locks)
-  setLocalClient((prev: ClientData) => ({
-    ...prev,
-    workouts: prev.workouts.map(w => {
-      if (w.id !== workoutId) return w;
+  const mapWorkoutEx = (w: Workout) => {
+    if (w.id !== workoutId) return w;
+    return {
+      ...w,
+      exercises: w.exercises.map(ex => {
+        if (ex.id !== exerciseId) return ex;
+        return {
+          ...ex,
+          [field]: value,
+          // 🔥 IMPORTANT: always remove video when editing name
+          ...(field === 'name' ? { videoId: undefined, videoUrl: undefined, videoThumbnail: undefined } : {})
+        };
+      })
+    };
+  };
 
-      return {
-        ...w,
-        exercises: w.exercises.map(ex => {
-          if (ex.id !== exerciseId) return ex;
-
-          return {
-            ...ex,
-            [field]: value,
-
-            // 🔥 IMPORTANT: always remove video when editing name
-            ...(field === 'name'
-              ? {
-                  videoId: undefined,
-                  videoUrl: undefined,
-                  videoThumbnail: undefined
-                }
-              : {})
-          };
-        })
-      };
-    })
-  }));
+  setLocalClient((prev: ClientData) => {
+    if (planMode === 'draft') {
+      return { ...prev, draftWorkouts: (prev.draftWorkouts || []).map(mapWorkoutEx) };
+    }
+    return { ...prev, workouts: prev.workouts.map(mapWorkoutEx) };
+  });
 
   // ✅ THEN handle suggestions AFTER state update
   if (field === 'name') {
@@ -429,27 +447,28 @@ const matches = [...startsWithMatches, ...includesMatches];
 
 
   const selectExerciseSuggestion = (workoutId: string, exerciseId: string, video: VideoFile) => {
-    setLocalClient((prev: ClientData) => ({
-      ...prev,
-      workouts: prev.workouts.map((w: Workout) => {
-        if (w.id !== workoutId) return w;
-        return {
-          ...w,
-          exercises: w.exercises.map((ex: Exercise) => {
-            if (ex.id !== exerciseId) return ex;
-         return {
-  ...ex,
-  name: video.name,
-  videoId: video.uid,
-  videoUrl: video.videoUrl || video.url,
-  videoThumbnail: video.thumbnail || null,
-};
-
-
-          })
-        };
-      })
-    }));
+    const mapWorkout = (w: Workout) => {
+      if (w.id !== workoutId) return w;
+      return {
+        ...w,
+        exercises: w.exercises.map((ex: Exercise) => {
+          if (ex.id !== exerciseId) return ex;
+          return {
+            ...ex,
+            name: video.name,
+            videoId: video.uid,
+            videoUrl: video.videoUrl || video.url,
+            videoThumbnail: video.thumbnail || null,
+          };
+        })
+      };
+    };
+    setLocalClient((prev: ClientData) => {
+      if (planMode === 'draft') {
+        return { ...prev, draftWorkouts: (prev.draftWorkouts || []).map(mapWorkout) };
+      }
+      return { ...prev, workouts: prev.workouts.map(mapWorkout) };
+    });
     setExerciseSuggestions(prev => {
       const newState = { ...prev };
       delete newState[exerciseId];
@@ -487,7 +506,32 @@ const matches = [...startsWithMatches, ...includesMatches];
     setDeletingMiniGoalKey(null);
   };
 
-  const activeWorkout = localClient.workouts.find(w => w.id === activeWorkoutId);
+  const publishDraft = () => {
+    if (!window.confirm(`Replace ${localClient.name}'s live plan with the draft? This cannot be undone.`)) return;
+    const firstId = (localClient.draftWorkouts || [])[0]?.id || null;
+    setLocalClient(prev => ({ ...prev, workouts: prev.draftWorkouts || [], draftWorkouts: [] }));
+    setPlanMode('live');
+    setActiveWorkoutId(firstId);
+  };
+
+  const discardDraft = () => {
+    if (!window.confirm('Discard the entire draft plan?')) return;
+    setLocalClient(prev => ({ ...prev, draftWorkouts: [] }));
+    setActiveDraftWorkoutId(null);
+    setPlanMode('live');
+  };
+
+  const switchToDraft = () => {
+    setPlanMode('draft');
+    if (!activeDraftWorkoutId) {
+      const first = (localClient.draftWorkouts || [])[0]?.id || null;
+      setActiveDraftWorkoutId(first);
+    }
+  };
+
+  const activeWorkout = planMode === 'draft'
+    ? (localClient.draftWorkouts || []).find(w => w.id === activeDraftWorkoutId)
+    : localClient.workouts.find(w => w.id === activeWorkoutId);
 
   return (
     <div className="space-y-12 animate-in fade-in duration-500 pb-20">
@@ -769,16 +813,64 @@ const matches = [...startsWithMatches, ...includesMatches];
              <Dumbbell className="text-blue-500" />
              <h3 className="text-[10px] font-black uppercase text-slate-500 tracking-[0.3em]">Training Plan</h3>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col items-end gap-2">
+            {/* LIVE / DRAFT toggle */}
+            <div className="flex items-center gap-3">
+              {planMode === 'live' && (localClient.draftWorkouts || []).length > 0 && (
+                <button
+                  type="button"
+                  onClick={switchToDraft}
+                  className="text-[9px] font-black uppercase tracking-widest text-amber-500 hover:text-amber-400 flex items-center gap-1 animate-pulse"
+                >
+                  Draft in progress →
+                </button>
+              )}
+              <div className="flex p-1 bg-slate-950 border border-slate-800 rounded-2xl">
+                <button
+                  type="button"
+                  onClick={() => setPlanMode('live')}
+                  className={`px-5 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${planMode === 'live' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-600 hover:text-slate-300'}`}
+                >
+                  Live Plan
+                </button>
+                <button
+                  type="button"
+                  onClick={switchToDraft}
+                  className={`px-5 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all relative ${planMode === 'draft' ? 'bg-amber-500 text-white shadow-lg' : 'text-slate-600 hover:text-slate-300'}`}
+                >
+                  Draft Plan
+                  {(localClient.draftWorkouts || []).length > 0 && (
+                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-400 rounded-full border border-slate-950" />
+                  )}
+                </button>
+              </div>
+            </div>
+            {planMode === 'draft' && (
+              <p className="text-[8px] font-black text-amber-500/60 uppercase tracking-widest">⚠ Client sees LIVE until published</p>
+            )}
+            {/* Workout tabs */}
             <div className="flex gap-2 p-2 bg-slate-950 border border-slate-800 rounded-2xl">
-              {localClient.workouts.map((w: Workout) => <button key={w.id} type="button" onClick={() => setActiveWorkoutId(w.id)} className={`w-10 h-10 rounded-xl font-black text-xs transition-all ${activeWorkoutId === w.id ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-600 hover:text-white'}`}>{w.name}</button>)}
+              {planMode === 'draft'
+                ? (localClient.draftWorkouts || []).map((w: Workout) => (
+                    <button key={w.id} type="button" onClick={() => setActiveDraftWorkoutId(w.id)} className={`w-10 h-10 rounded-xl font-black text-xs transition-all ${activeDraftWorkoutId === w.id ? 'bg-amber-500 text-white shadow-lg' : 'text-slate-600 hover:text-white'}`}>{w.name}</button>
+                  ))
+                : localClient.workouts.map((w: Workout) => (
+                    <button key={w.id} type="button" onClick={() => setActiveWorkoutId(w.id)} className={`w-10 h-10 rounded-xl font-black text-xs transition-all ${activeWorkoutId === w.id ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-600 hover:text-white'}`}>{w.name}</button>
+                  ))
+              }
               <button type="button" onClick={addWorkout} className="w-10 h-10 rounded-xl border border-dashed border-slate-700 text-slate-700 hover:text-blue-500 flex items-center justify-center"><Plus size={18} /></button>
             </div>
           </div>
         </div>
 
         {activeWorkout && (
-          <div key={activeWorkout.id} className="glass-card p-10 rounded-[3rem] border-slate-800 space-y-8 relative shadow-2xl">
+          <div key={activeWorkout.id} className={`glass-card p-10 rounded-[3rem] space-y-8 relative shadow-2xl ${planMode === 'draft' ? 'border border-amber-500/30' : 'border-slate-800'}`}>
+            {planMode === 'draft' && (
+              <div className="flex items-center gap-3 px-6 py-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl">
+                <Zap size={14} className="text-amber-400 shrink-0" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-amber-400">DRAFT — not visible to client yet</span>
+              </div>
+            )}
             {deletingWorkoutId === activeWorkout.id && (
               <div className="absolute inset-0 z-[100] bg-black/95 backdrop-blur-xl rounded-[3rem] flex flex-col items-center justify-start p-10 pt-16 animate-in fade-in duration-300">
                 <p className="text-white font-black brand-font uppercase text-2xl mb-10 tracking-tighter text-center">Delete entire Module {activeWorkout.name}?</p>
@@ -793,11 +885,23 @@ const matches = [...startsWithMatches, ...includesMatches];
               <div className="flex-1 flex gap-4 items-end">
                 <div className="space-y-2 shrink-0">
                   <label className="text-[9px] font-black text-slate-600 uppercase">Module ID</label>
-                  <input value={activeWorkout.name} onChange={e => setLocalClient((prev: ClientData) => ({ ...prev, workouts: prev.workouts.map((w: Workout) => w.id === activeWorkout.id ? { ...w, name: e.target.value.toUpperCase() } : w) }))} className="bg-slate-900 text-2xl font-black text-white uppercase outline-none border border-slate-800 rounded-xl w-16 h-16 text-center" maxLength={1} />
+                  <input value={activeWorkout.name} onChange={e => {
+                    const val = e.target.value.toUpperCase();
+                    setLocalClient((prev: ClientData) => {
+                      if (planMode === 'draft') return { ...prev, draftWorkouts: (prev.draftWorkouts || []).map((w: Workout) => w.id === activeWorkout.id ? { ...w, name: val } : w) };
+                      return { ...prev, workouts: prev.workouts.map((w: Workout) => w.id === activeWorkout.id ? { ...w, name: val } : w) };
+                    });
+                  }} className="bg-slate-900 text-2xl font-black text-white uppercase outline-none border border-slate-800 rounded-xl w-16 h-16 text-center" maxLength={1} />
                 </div>
                 <div className="space-y-2 flex-1">
                   <label className="text-[9px] font-black text-slate-600 uppercase">Label</label>
-                  <input value={activeWorkout.title || ''} onChange={e => setLocalClient((prev: ClientData) => ({ ...prev, workouts: prev.workouts.map((w: Workout) => w.id === activeWorkout.id ? { ...w, title: e.target.value } : w) }))} className="bg-transparent text-3xl font-black text-white uppercase outline-none border-b border-slate-800/50 w-full pb-2 brand-font" placeholder="e.g. Strength & Balance" />
+                  <input value={activeWorkout.title || ''} onChange={e => {
+                    const val = e.target.value;
+                    setLocalClient((prev: ClientData) => {
+                      if (planMode === 'draft') return { ...prev, draftWorkouts: (prev.draftWorkouts || []).map((w: Workout) => w.id === activeWorkout.id ? { ...w, title: val } : w) };
+                      return { ...prev, workouts: prev.workouts.map((w: Workout) => w.id === activeWorkout.id ? { ...w, title: val } : w) };
+                    });
+                  }} className="bg-transparent text-3xl font-black text-white uppercase outline-none border-b border-slate-800/50 w-full pb-2 brand-font" placeholder="e.g. Strength & Balance" />
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -1036,6 +1140,25 @@ const matches = [...startsWithMatches, ...includesMatches];
                 <Type size={24} /> ADD HEADER
               </button>
             </div>
+
+            {planMode === 'draft' && (
+              <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t border-amber-500/20">
+                <button
+                  type="button"
+                  onClick={publishDraft}
+                  className="flex-1 py-5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-lg"
+                >
+                  <Check size={18} /> PUBLISH DRAFT → LIVE
+                </button>
+                <button
+                  type="button"
+                  onClick={discardDraft}
+                  className="flex-1 py-5 bg-slate-900 hover:bg-red-900/40 border border-red-500/30 text-red-400 hover:text-red-300 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3"
+                >
+                  <X size={18} /> DISCARD DRAFT
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

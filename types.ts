@@ -62,6 +62,7 @@ export interface ClientData {
   schedule: TrainingDay[];
   weeklySchedule?: Record<number, string>;
   workouts: Workout[];
+  draftWorkouts?: Workout[];
   assignedVideoUids?: string[];
   unseenVideoUids?: string[];
   coachNotes?: string;
