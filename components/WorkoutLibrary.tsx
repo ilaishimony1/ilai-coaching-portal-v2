@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
+import ReactDOM from 'react-dom';
 import { PlayCircle, Dumbbell, X, Info, Check, Download, NotebookPen, ChevronDown, ChevronUp } from 'lucide-react';
 import { Workout, WorkoutLog, ClientData, Exercise } from '../types';
 import { useApp } from '../AppContext';
@@ -480,11 +481,11 @@ const isDone = exerciseState[ex.id] || false;
                   </div>
                 )}
 
-                {/* Confirmation modal */}
-                {showConfirm && (
+                {/* Confirmation modal — rendered via portal so iOS Safari touch events work */}
+                {showConfirm && ReactDOM.createPortal(
                   <div className="fixed inset-0 z-[500] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm">
                     <div
-                      className="bg-slate-900 border border-slate-700 rounded-t-3xl sm:rounded-3xl p-8 max-w-sm w-full space-y-6 shadow-2xl animate-in slide-in-from-bottom sm:zoom-in duration-200"
+                      className="bg-slate-900 border border-slate-700 rounded-t-3xl sm:rounded-3xl p-8 max-w-sm w-full space-y-6 shadow-2xl"
                       style={{ paddingBottom: 'max(2.5rem, calc(env(safe-area-inset-bottom, 0px) + 1.5rem))' }}
                     >
                       <div className="space-y-2">
@@ -513,7 +514,8 @@ const isDone = exerciseState[ex.id] || false;
                         </button>
                       </div>
                     </div>
-                  </div>
+                  </div>,
+                  document.body
                 )}
               </div>
             )}
