@@ -46,6 +46,7 @@ const WorkoutLibrary: React.FC<Props> = ({ workouts, clientData, accentColor, is
   const [exerciseState, setExerciseState] = useState<Record<string, boolean>>({});
   const [exerciseNotes, setExerciseNotes] = useState<Record<string, string>>({});
   const [showConfirm, setShowConfirm] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Pre-fill exercise notes with prescribed values when workout changes
   useEffect(() => {
@@ -148,9 +149,9 @@ useEffect(() => {
       setLogJustSaved(true);
       refillNotes(); // re-fill so a second submit still works
       setTimeout(() => setLogJustSaved(false), 3000);
-    } catch (err) {
+    } catch (err: any) {
       console.error('submitWorkoutLog error:', err);
-      alert('Failed to save. Check your connection and try again.');
+      setSubmitError(err?.message || 'Failed to save. Check your connection and try again.');
     }
     setLogSaving(false);
   };
@@ -462,7 +463,7 @@ const isDone = exerciseState[ex.id] || false;
                       className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-5 py-4 text-sm text-slate-200 placeholder-slate-700 font-medium resize-none focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-all"
                     />
                     <button
-                      onClick={() => setShowConfirm(true)}
+                      onClick={() => { setSubmitError(null); setShowConfirm(true); }}
                       className="w-full py-4 rounded-2xl font-black text-xs tracking-widest uppercase transition-all active:scale-95 bg-blue-600 hover:bg-blue-500 text-white"
                     >
                       <NotebookPen size={14} className="inline mr-2" />
@@ -473,22 +474,27 @@ const isDone = exerciseState[ex.id] || false;
 
                 {/* Confirmation modal */}
                 {showConfirm && (
-                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-6">
-                    <div className="bg-slate-900 border border-slate-700 rounded-3xl p-8 max-w-sm w-full space-y-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+                  <div className="fixed inset-0 z-[500] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm">
+                    <div className="bg-slate-900 border border-slate-700 rounded-t-3xl sm:rounded-3xl p-8 pb-10 sm:pb-8 max-w-sm w-full space-y-6 shadow-2xl animate-in slide-in-from-bottom sm:zoom-in duration-200">
                       <div className="space-y-2">
                         <p className="text-base font-black uppercase tracking-wide text-white">Submit this log?</p>
                         <p className="text-xs text-slate-500 font-medium">Your numbers and notes will be sent to your coach.</p>
                       </div>
+                      {submitError && (
+                        <div className="px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-2xl">
+                          <p className="text-xs font-bold text-red-400 leading-snug">⚠ {submitError}</p>
+                        </div>
+                      )}
                       <div className="flex gap-3">
                         <button
                           onClick={handleSubmitLog}
                           disabled={logSaving}
-                          className="flex-1 py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase tracking-widest transition-all active:scale-95"
+                          className="flex-1 py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase tracking-widest transition-all active:scale-95 disabled:opacity-60"
                         >
                           {logSaving ? 'Saving…' : 'Yes, Submit'}
                         </button>
                         <button
-                          onClick={() => setShowConfirm(false)}
+                          onClick={() => { setShowConfirm(false); setSubmitError(null); }}
                           className="flex-1 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-black text-xs uppercase tracking-widest transition-all"
                         >
                           Cancel
