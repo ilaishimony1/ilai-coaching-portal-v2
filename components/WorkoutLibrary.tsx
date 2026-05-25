@@ -5,8 +5,6 @@ import { Workout, WorkoutLog, ClientData, Exercise } from '../types';
 import { useApp } from '../AppContext';
 import ScheduleCalendar from './ScheduleCalendar';
 import { db } from '../db';
-import { doc, getDoc } from 'firebase/firestore';
-import { firestore } from '../firebase'; // use YOUR firestore export
 import { jsPDF } from 'jspdf';
 interface Props {
   workouts: Workout[];
@@ -52,12 +50,12 @@ const WorkoutLibrary: React.FC<Props> = ({ workouts, clientData, accentColor, is
   // Pre-fill exercise notes with prescribed values when workout changes
   useEffect(() => {
     if (isCoach) return;
-    const current = workouts.find(w => w.id === selectedId);
-    if (!current) return;
+    const currentW = workouts.find(w => w.id === selectedId);
+    if (!currentW) return;
     const prefilled: Record<string, string> = {};
-    current.exercises.forEach(ex => {
+    currentW.exercises.forEach(ex => {
       if (ex.category !== 'header') {
-        prefilled[ex.id] = `${ex.sets}×${ex.reps || ex.duration}`;
+        prefilled[ex.id] = `${ex.sets}×${ex.reps || ex.duration || ''}`.replace(/×$/, '');
       }
     });
     setExerciseNotes(prefilled);
@@ -112,13 +110,26 @@ useEffect(() => {
     .filter(l => l.clientId === clientData.id && l.workoutId === current?.id)
     .sort((a, b) => new Date(b.loggedAt).getTime() - new Date(a.loggedAt).getTime());
 
+  // Re-fill exercise notes with prescribed values (called on mount and after submit)
+  const refillNotes = () => {
+    if (isCoach || !current) return;
+    const prefilled: Record<string, string> = {};
+    current.exercises.forEach(ex => {
+      if (ex.category !== 'header') {
+        prefilled[ex.id] = `${ex.sets}×${ex.reps || ex.duration || ''}`.replace(/×$/, '');
+      }
+    });
+    setExerciseNotes(prefilled);
+  };
+
   const handleSubmitLog = async () => {
     if (!current || logSaving) return;
     const exLines = (current.exercises || [])
       .filter(ex => ex.category !== 'header' && exerciseNotes[ex.id]?.trim())
       .map(ex => `${ex.name}: ${exerciseNotes[ex.id].trim()}`);
-    const combined = [...exLines, ...(logText.trim() ? [logText.trim()] : [])].join('\n');
-    if (!combined) return;
+    const freeText = logText.trim();
+    // Always allow submit — fall back to "Session completed" if truly empty
+    const combined = [...exLines, ...(freeText ? [freeText] : [])].join('\n') || 'Session completed.';
     setLogSaving(true);
     try {
       await submitWorkoutLog({
@@ -132,13 +143,14 @@ useEffect(() => {
         readByCoach: false,
       });
       setLogText('');
-      setExerciseNotes({});
       setShowLogForm(false);
       setShowConfirm(false);
       setLogJustSaved(true);
+      refillNotes(); // re-fill so a second submit still works
       setTimeout(() => setLogJustSaved(false), 3000);
-    } catch {
-      alert('Failed to save. Try again.');
+    } catch (err) {
+      console.error('submitWorkoutLog error:', err);
+      alert('Failed to save. Check your connection and try again.');
     }
     setLogSaving(false);
   };
@@ -450,11 +462,7 @@ const isDone = exerciseState[ex.id] || false;
                       className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-5 py-4 text-sm text-slate-200 placeholder-slate-700 font-medium resize-none focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-all"
                     />
                     <button
-                      onClick={() => {
-                        const hasAny = logText.trim() || Object.values(exerciseNotes).some(v => v.trim());
-                        if (!hasAny) return;
-                        setShowConfirm(true);
-                      }}
+                      onClick={() => setShowConfirm(true)}
                       className="w-full py-4 rounded-2xl font-black text-xs tracking-widest uppercase transition-all active:scale-95 bg-blue-600 hover:bg-blue-500 text-white"
                     >
                       <NotebookPen size={14} className="inline mr-2" />
