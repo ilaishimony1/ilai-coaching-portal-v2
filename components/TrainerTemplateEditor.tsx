@@ -70,6 +70,12 @@ const TrainerTemplateEditor: React.FC<Props> = ({ client, onUpdate, onAddClient,
   const [showCountrySuggestions, setShowCountrySuggestions] = useState(false);
   const [exerciseSuggestions, setExerciseSuggestions] = useState<Record<string, VideoFile[]>>({});
   const [saveIndicatorId, setSaveIndicatorId] = useState<string | null>(null);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [pendingSaveWorkout, setPendingSaveWorkout] = useState<Workout | null>(null);
+  const [saveCategory, setSaveCategory] = useState('');
+  const [saveSubCategory, setSaveSubCategory] = useState('');
+  const [newCategoryInput, setNewCategoryInput] = useState('');
+  const [newSubCategoryInput, setNewSubCategoryInput] = useState('');
   const [isDeploying, setIsDeploying] = useState(false);
   const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
 
@@ -247,25 +253,39 @@ const TrainerTemplateEditor: React.FC<Props> = ({ client, onUpdate, onAddClient,
   };
 
   const saveToLibrary = (workout: Workout) => {
-    const isDuplicate = savedWorkouts.some(t => 
-      t.title.trim().toUpperCase() === workout.title.trim().toUpperCase() && 
+    const isDuplicate = savedWorkouts.some(t =>
+      t.title.trim().toUpperCase() === workout.title.trim().toUpperCase() &&
       t.originalClientName === localClient.name
     );
-
     if (isDuplicate) {
       alert("This specific workout is already stored in your Library.");
       return;
     }
+    setPendingSaveWorkout(workout);
+    setSaveCategory('');
+    setSaveSubCategory('');
+    setNewCategoryInput('');
+    setNewSubCategoryInput('');
+    setShowSaveModal(true);
+  };
 
+  const confirmSaveToLibrary = () => {
+    if (!pendingSaveWorkout) return;
+    const cat = (newCategoryInput.trim() || saveCategory).trim();
+    const sub = (newSubCategoryInput.trim() || saveSubCategory).trim();
     const template: WorkoutTemplate = {
-      ...workout,
+      ...pendingSaveWorkout,
       id: generateUniqueId('tmpl'),
       savedAt: new Date().toISOString(),
-      originalClientName: localClient.name
+      originalClientName: localClient.name,
+      ...(cat ? { category: cat } : {}),
+      ...(sub ? { subCategory: sub } : {}),
     };
     setSavedWorkouts(prev => [...prev, template]);
-    setSaveIndicatorId(workout.id);
+    setSaveIndicatorId(pendingSaveWorkout.id);
     syncService.updateDocument('master_library', template.id, template);
+    setShowSaveModal(false);
+    setPendingSaveWorkout(null);
     setTimeout(() => setSaveIndicatorId(null), 3000);
   };
 
@@ -1204,6 +1224,112 @@ const matches = [...startsWithMatches, ...includesMatches];
           </div>
         </div>
       )}
+
+      {/* ── SAVE TO LIBRARY MODAL ── */}
+      {showSaveModal && pendingSaveWorkout && (() => {
+        const existingCategories = [...new Set(savedWorkouts.map(w => w.category?.trim()).filter(Boolean))] as string[];
+        const existingSubCategories = saveCategory
+          ? [...new Set(savedWorkouts.filter(w => w.category?.trim() === saveCategory).map(w => w.subCategory?.trim()).filter(Boolean))] as string[]
+          : [];
+        const activeCategory = newCategoryInput.trim() || saveCategory;
+        const activeSubCategory = newSubCategoryInput.trim() || saveSubCategory;
+        return (
+          <div className="fixed inset-0 z-[800] flex items-center justify-center p-4 animate-in fade-in duration-200">
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowSaveModal(false)} />
+            <div className="relative w-full max-w-md bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl overflow-hidden">
+
+              {/* Header */}
+              <div className="p-6 border-b border-white/5 flex items-center justify-between">
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500 mb-1">Save to Library</p>
+                  <h3 className="text-lg font-black uppercase brand-font text-white leading-none">{pendingSaveWorkout.title || 'Untitled'}</h3>
+                </div>
+                <button onClick={() => setShowSaveModal(false)} className="p-2 text-slate-500 hover:text-white transition-colors"><X size={18} /></button>
+              </div>
+
+              <div className="p-6 space-y-6">
+
+                {/* Folder */}
+                <div className="space-y-3">
+                  <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500">Folder</p>
+                  {existingCategories.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {existingCategories.map(cat => (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => { setSaveCategory(saveCategory === cat ? '' : cat); setNewCategoryInput(''); setSaveSubCategory(''); setNewSubCategoryInput(''); }}
+                          className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${saveCategory === cat && !newCategoryInput ? 'bg-blue-600 border-blue-400 text-white' : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'}`}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <input
+                    value={newCategoryInput}
+                    onChange={e => { setNewCategoryInput(e.target.value); setSaveCategory(''); setSaveSubCategory(''); setNewSubCategoryInput(''); }}
+                    placeholder={existingCategories.length > 0 ? 'Or type a new folder name…' : 'Type a folder name…'}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white font-medium placeholder-slate-600 outline-none focus:border-blue-500/60 transition-all"
+                  />
+                </div>
+
+                {/* Subfolder — only show once a folder is chosen */}
+                {activeCategory && (
+                  <div className="space-y-3 animate-in slide-in-from-top-2 duration-200">
+                    <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500">Subfolder <span className="text-slate-700 normal-case font-medium">(optional)</span></p>
+                    {existingSubCategories.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {existingSubCategories.map(sub => (
+                          <button
+                            key={sub}
+                            type="button"
+                            onClick={() => { setSaveSubCategory(saveSubCategory === sub ? '' : sub); setNewSubCategoryInput(''); }}
+                            className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${saveSubCategory === sub && !newSubCategoryInput ? 'bg-purple-600 border-purple-400 text-white' : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'}`}
+                          >
+                            {sub}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <input
+                      value={newSubCategoryInput}
+                      onChange={e => { setNewSubCategoryInput(e.target.value); setSaveSubCategory(''); }}
+                      placeholder={existingSubCategories.length > 0 ? 'Or type a new subfolder…' : 'Type a subfolder name…'}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white font-medium placeholder-slate-600 outline-none focus:border-purple-500/60 transition-all"
+                    />
+                  </div>
+                )}
+
+                {/* Summary */}
+                {activeCategory && (
+                  <div className="px-4 py-3 bg-slate-800/50 rounded-2xl text-[9px] font-black uppercase tracking-widest text-slate-400">
+                    📁 {activeCategory}{activeSubCategory ? ` › ${activeSubCategory}` : ''}
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="p-6 border-t border-white/5 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => { setShowSaveModal(false); }}
+                  className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-2xl font-black text-[9px] uppercase tracking-widest transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmSaveToLibrary}
+                  className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-[9px] uppercase tracking-widest transition-all"
+                >
+                  {activeCategory ? `Save to ${activeCategory}` : 'Save (no folder)'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };
