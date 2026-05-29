@@ -37,9 +37,12 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
   const saveEdit = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!editingId) return;
-    setSavedWorkouts(prev => prev.map(w => w.id === editingId ? { ...w, title: tempTitle } : w));
+    const id = editingId;
+    const newTitle = tempTitle;
+    setSavedWorkouts(prev => prev.map(w => w.id === id ? { ...w, title: newTitle } : w));
     setEditingId(null);
-    await cloudSync.forceSync();
+    // Update only this document directly — avoids stale-closure bug with forceSync
+    await syncService.updateDocument('master_library', id, { title: newTitle });
   };
 
   const handleLoadIntoEditor = () => {
