@@ -13,7 +13,7 @@ import {
 import { ClientData } from '../types';
 import { uploadVideoToFirebase } from "../firebaseService";
 import { ExplanationVideo } from "../firebase/explanationVideos";
-import { getStorage, ref, listAll, getDownloadURL, uploadBytes } from "firebase/storage";
+import { getStorage, ref, listAll, getDownloadURL, uploadBytes, uploadBytesResumable } from "firebase/storage";
 import { getApp } from "firebase/app";
 
 const storage = getStorage(getApp());
@@ -54,6 +54,7 @@ const AcademyManager: React.FC<Props> = ({ accentColor, clients, onToggleAssignm
   const [videos, setVideos] = useState<VideoFile[]>([]);
   const [explanationVideos, setExplanationVideos] = useState<ExplanationVideo[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [pendingSkillVideo, setPendingSkillVideo] = useState<File | null>(null);
   const [showFramePicker, setShowFramePicker] = useState(false);
   const [search, setSearch] = useState('');
@@ -198,13 +199,30 @@ const handleSkillVideoUpload = async (thumbnailFile: File | null) => {
   if (!activeFolder || !pendingSkillVideo) return;
   setShowFramePicker(false);
   setIsUploading(true);
+  setUploadProgress(0);
   try {
     const folderVideos = videos.filter(
       v => v.category === activeFolder.cat && v.subCategory === activeFolder.sub
     );
     const maxOrder = folderVideos.length > 0 ? Math.max(...folderVideos.map(v => v.order)) : 0;
     const videoId = `v-${Date.now()}`;
-    const videoUrl = await uploadVideoToFirebase(pendingSkillVideo, videoId);
+
+    // Upload video with progress tracking
+    const videoRef = ref(storage, `academy/${videoId}.mp4`);
+    const videoUrl = await new Promise<string>((resolve, reject) => {
+      const task = uploadBytesResumable(videoRef, pendingSkillVideo);
+      task.on('state_changed',
+        (snap) => {
+          const pct = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
+          setUploadProgress(pct);
+        },
+        reject,
+        async () => {
+          const url = await getDownloadURL(task.snapshot.ref);
+          resolve(url);
+        }
+      );
+    });
 
     let thumbnailURL: string | undefined;
     if (thumbnailFile) {
@@ -227,6 +245,7 @@ const handleSkillVideoUpload = async (thumbnailFile: File | null) => {
     alert("Upload failed");
   } finally {
     setIsUploading(false);
+    setUploadProgress(0);
     setPendingSkillVideo(null);
   }
 };
@@ -493,8 +512,16 @@ const onDragStart = (id: number | string) => {
       className="hidden"
       onChange={handleFileUpload}
     />
-    <div className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-2xl font-black text-xs tracking-widest uppercase flex items-center gap-3 shadow-2xl transition-all active:scale-95">
-      <Plus size={18} /> {isUploading ? 'SYNCING...' : showFramePicker ? 'PICKING FRAME...' : 'ADD VIDEO'}
+    <div className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-2xl font-black text-xs tracking-widest uppercase flex items-center gap-3 shadow-2xl transition-all active:scale-95 relative overflow-hidden">
+      {isUploading && uploadProgress > 0 && (
+        <span className="absolute inset-0 bg-blue-400/30 origin-left transition-all duration-300" style={{ transform: `scaleX(${uploadProgress / 100})` }} />
+      )}
+      <span className="relative flex items-center gap-3">
+        <Plus size={18} />
+        {isUploading
+          ? uploadProgress > 0 ? `UPLOADING ${uploadProgress}%` : 'PREPARING...'
+          : showFramePicker ? 'PICKING FRAME...' : 'ADD VIDEO'}
+      </span>
     </div>
   </label>
 </div>
