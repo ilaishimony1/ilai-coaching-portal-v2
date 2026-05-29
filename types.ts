@@ -22,6 +22,8 @@ export interface WorkoutTemplate extends Workout {
   savedAt: string;
   originalClientName?: string;
   tags?: string[];
+  category?: string;
+  subCategory?: string;
 }
 
 export interface MiniGoal {
