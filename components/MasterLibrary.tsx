@@ -40,6 +40,26 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
     syncService.updateDocument('settings', 'library_folders', { folders: deduped });
   };
 
+  // Explicit subfolder list — keyed by parent folder, persists even when empty
+  const [explicitSubFolders, setExplicitSubFolders] = useState<Record<string, string[]>>(() => {
+    try { return JSON.parse(localStorage.getItem('ilai_library_subfolders') || '{}'); }
+    catch { return {}; }
+  });
+
+  const persistSubFolders = (parentFolder: string, subs: string[]) => {
+    const deduped = [...new Set(subs)];
+    const updated = { ...explicitSubFolders, [parentFolder]: deduped };
+    setExplicitSubFolders(updated);
+    localStorage.setItem('ilai_library_subfolders', JSON.stringify(updated));
+    syncService.updateDocument('settings', 'library_subfolders', updated);
+  };
+
+  // Subfolder UI state
+  const [creatingSubFolder, setCreatingSubFolder] = useState(false);
+  const [newSubFolderName, setNewSubFolderName] = useState('');
+  const [renamingSubFolder, setRenamingSubFolder] = useState<string | null>(null);
+  const [renameSubFolderValue, setRenameSubFolderValue] = useState('');
+
   // Navigation
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activeSubCategory, setActiveSubCategory] = useState<string | null>(null);
@@ -79,14 +99,13 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
 
   const subCategories = useMemo(() => {
     if (!activeCategory) return [];
-    const subs = [...new Set(
-      savedWorkouts
-        .filter(w => w.category?.trim() === activeCategory)
-        .map(w => w.subCategory?.trim() || '')
-        .filter(Boolean)
-    )];
-    return subs.sort();
-  }, [savedWorkouts, activeCategory]);
+    const fromWorkouts = savedWorkouts
+      .filter(w => w.category?.trim() === activeCategory)
+      .map(w => w.subCategory?.trim() || '')
+      .filter(Boolean) as string[];
+    const explicit = explicitSubFolders[activeCategory] || [];
+    return [...new Set([...explicit, ...fromWorkouts])].sort();
+  }, [savedWorkouts, activeCategory, explicitSubFolders]);
 
   const visibleWorkouts = useMemo(() => {
     if (!activeCategory) return savedWorkouts;
@@ -118,6 +137,25 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
     await syncService.updateDocument('master_library', id, { title: tempTitle });
   };
 
+  const saveRenameSubFolder = async () => {
+    if (!renamingSubFolder || !renameSubFolderValue.trim() || !activeCategory) return;
+    const oldName = renamingSubFolder;
+    const newName = renameSubFolderValue.trim();
+    // Update explicit sub list
+    const currentSubs = explicitSubFolders[activeCategory] || [];
+    persistSubFolders(activeCategory, currentSubs.map(s => s === oldName ? newName : s));
+    // Update all workouts in that subfolder
+    const affected = savedWorkouts.filter(w => w.category?.trim() === activeCategory && w.subCategory?.trim() === oldName);
+    setSavedWorkouts(prev => prev.map(w =>
+      w.category?.trim() === activeCategory && w.subCategory?.trim() === oldName ? { ...w, subCategory: newName } : w
+    ));
+    setRenamingSubFolder(null);
+    if (activeSubCategory === oldName) setActiveSubCategory(newName);
+    await Promise.all(affected.map(w =>
+      syncService.updateDocument('master_library', w.id, { subCategory: newName })
+    ));
+  };
+
   const saveRenameFolder = async () => {
     if (!renamingFolder || !renameFolderValue.trim()) return;
     const oldName = renamingFolder;
@@ -140,9 +178,13 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
     if (!movingTemplateId) return;
     const cat = (moveCategoryInput.trim() || moveCategory).trim();
     const sub = (moveSubCategoryInput.trim() || moveSubCategory).trim();
-    // Register new folder name if it doesn't exist yet
+    // Register new folder/subfolder names if they don't exist yet
     if (cat && !explicitFolders.includes(cat)) {
       persistFolders([...explicitFolders, cat]);
+    }
+    if (cat && sub) {
+      const currentSubs = explicitSubFolders[cat] || [];
+      if (!currentSubs.includes(sub)) persistSubFolders(cat, [...currentSubs, sub]);
     }
     setSavedWorkouts(prev => prev.map(w =>
       w.id === movingTemplateId ? { ...w, category: cat || undefined, subCategory: sub || undefined } : w
@@ -386,31 +428,106 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
             // Inside a folder
             <div className="space-y-6">
               {/* Breadcrumb */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <button onClick={() => { setActiveCategory(null); setActiveSubCategory(null); }} className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition-colors">
                   <ArrowLeft size={12} /> All
                 </button>
                 <ChevronRight size={10} className="text-slate-700" />
-                <span className="text-[9px] font-black uppercase tracking-widest text-white">{activeCategory}</span>
-                {subCategories.length > 0 && (
-                  <div className="flex gap-2 ml-4">
-                    <button onClick={() => setActiveSubCategory(null)}
-                      className={`px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest border transition-all ${!activeSubCategory ? 'bg-slate-700 border-slate-600 text-white' : 'bg-slate-900 border-slate-800 text-slate-500 hover:text-white'}`}>
-                      All
-                    </button>
-                    {subCategories.map(sub => (
-                      <button key={sub} onClick={() => setActiveSubCategory(activeSubCategory === sub ? null : sub)}
-                        className={`px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest border transition-all ${activeSubCategory === sub ? 'bg-purple-600 border-purple-400 text-white' : 'bg-slate-900 border-slate-800 text-slate-500 hover:text-white'}`}>
-                        {sub}
-                      </button>
-                    ))}
-                  </div>
+                {activeSubCategory ? (
+                  <button onClick={() => setActiveSubCategory(null)} className="text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-colors">{activeCategory}</button>
+                ) : (
+                  <span className="text-[9px] font-black uppercase tracking-widest text-white">{activeCategory}</span>
+                )}
+                {activeSubCategory && (
+                  <><ChevronRight size={10} className="text-slate-700" />
+                  <span className="text-[9px] font-black uppercase tracking-widest text-white">{activeSubCategory}</span></>
                 )}
               </div>
+
+              {/* Subfolders section — mirrors the top-level folders section exactly */}
+              {!activeSubCategory && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[9px] font-black uppercase tracking-[0.35em] text-slate-600">Subfolders</p>
+                    {!creatingSubFolder && (
+                      <button type="button" onClick={() => { setCreatingSubFolder(true); setNewSubFolderName(''); }}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 border border-slate-800 hover:border-purple-500/40 rounded-xl text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition-all">
+                        <FolderPlus size={12} /> New Subfolder
+                      </button>
+                    )}
+                  </div>
+
+                  {creatingSubFolder && (
+                    <div className="flex gap-2 animate-in slide-in-from-top-2 duration-200">
+                      <input autoFocus value={newSubFolderName} onChange={e => setNewSubFolderName(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' && newSubFolderName.trim()) {
+                            persistSubFolders(activeCategory, [...(explicitSubFolders[activeCategory] || []), newSubFolderName.trim()]);
+                            setActiveSubCategory(newSubFolderName.trim());
+                            setCreatingSubFolder(false);
+                          }
+                          if (e.key === 'Escape') setCreatingSubFolder(false);
+                        }}
+                        placeholder="Subfolder name, e.g. Endurance"
+                        className="flex-1 bg-slate-950 border border-purple-500/60 rounded-xl px-4 py-3 text-sm text-white font-medium placeholder-slate-600 outline-none"
+                      />
+                      <button type="button" onClick={() => {
+                        if (newSubFolderName.trim()) {
+                          persistSubFolders(activeCategory, [...(explicitSubFolders[activeCategory] || []), newSubFolderName.trim()]);
+                          setActiveSubCategory(newSubFolderName.trim());
+                        }
+                        setCreatingSubFolder(false);
+                      }} className="px-5 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-black text-[9px] uppercase tracking-widest transition-all">
+                        Create
+                      </button>
+                      <button type="button" onClick={() => setCreatingSubFolder(false)} className="p-3 text-slate-500 hover:text-white transition-colors"><X size={16} /></button>
+                    </div>
+                  )}
+
+                  {subCategories.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {subCategories.map(sub => {
+                        const count = savedWorkouts.filter(w => w.category?.trim() === activeCategory && w.subCategory?.trim() === sub).length;
+                        return (
+                          <div key={sub} className="relative group/sub">
+                            {renamingSubFolder === sub ? (
+                              <div className="flex gap-2 items-center">
+                                <input autoFocus value={renameSubFolderValue} onChange={e => setRenameSubFolderValue(e.target.value)}
+                                  onKeyDown={e => { if (e.key === 'Enter') saveRenameSubFolder(); if (e.key === 'Escape') setRenamingSubFolder(null); }}
+                                  className="w-36 bg-slate-950 border border-purple-500/60 rounded-xl px-3 py-2 text-xs text-white font-black uppercase outline-none"
+                                />
+                                <button type="button" onClick={saveRenameSubFolder} className="p-2 bg-purple-600 text-white rounded-lg"><Check size={12} /></button>
+                                <button type="button" onClick={() => setRenamingSubFolder(null)} className="p-2 text-slate-500 hover:text-white"><X size={12} /></button>
+                              </div>
+                            ) : (
+                              <button type="button" onClick={() => setActiveSubCategory(sub)}
+                                className="flex items-center gap-2 pl-3 pr-2 py-2 rounded-xl border border-purple-500/20 bg-purple-500/10 text-purple-400 font-black text-[9px] uppercase tracking-widest hover:opacity-90 transition-all">
+                                <Folder size={11} />
+                                <span>{sub}</span>
+                                <span className="text-[8px] text-slate-600">{count}</span>
+                                <span role="button" onClick={e => { e.stopPropagation(); setRenamingSubFolder(sub); setRenameSubFolderValue(sub); }}
+                                  className="ml-0.5 opacity-0 group-hover/sub:opacity-100 p-1 rounded hover:bg-white/10 transition-all">
+                                  <Edit3 size={10} />
+                                </span>
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {subCategories.length === 0 && !creatingSubFolder && (
+                    <p className="text-[9px] text-slate-700 font-medium uppercase tracking-widest py-2">No subfolders yet — create one above</p>
+                  )}
+                </div>
+              )}
+
+              {/* Workout cards */}
               {visibleWorkouts.length === 0 ? (
                 <div className="py-16 text-center border-2 border-dashed border-slate-900 rounded-[3rem]">
                   <Folder className="mx-auto text-slate-800 mb-4" size={40} />
-                  <p className="text-slate-700 font-black uppercase text-[9px] tracking-widest">This folder is empty</p>
+                  <p className="text-slate-700 font-black uppercase text-[9px] tracking-widest">{activeSubCategory ? `${activeSubCategory} is empty` : 'This folder is empty'}</p>
                   <p className="text-slate-800 text-[8px] mt-1">Use the folder tag on any workout card to move it here</p>
                 </div>
               ) : (
