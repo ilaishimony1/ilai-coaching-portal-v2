@@ -87,6 +87,8 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
   const [selectedClientId, setSelectedClientId] = useState('');
   const [targetModuleId, setTargetModuleId] = useState('');
   const [planTarget, setPlanTarget] = useState<'live' | 'draft'>('draft');
+  const [savedToast, setSavedToast] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const selectedClient = clients.find(c => c.id === selectedClientId);
 
@@ -196,19 +198,24 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
     setMovingTemplateId(null);
   };
 
-  const handleLoadIntoEditor = () => {
-    if (!assigningTemplate || !selectedClientId || !targetModuleId) return;
+  const handleLoadIntoEditor = async () => {
+    if (!assigningTemplate || !selectedClientId || !targetModuleId || saving) return;
+    setSaving(true);
     const freshWorkout: Workout = {
       id: generateUniqueId('w'),
       name: assigningTemplate.name,
       title: assigningTemplate.title,
       exercises: assigningTemplate.exercises.map(ex => ({ ...ex, id: generateUniqueId('ex') })),
     };
+    const clientName = clients.find(c => c.id === selectedClientId)?.name || '';
     onLoadIntoEditor(selectedClientId, freshWorkout, targetModuleId, planTarget);
+    setSaving(false);
     setAssigningTemplate(null);
     setSelectedClientId('');
     setTargetModuleId('');
     setPlanTarget('draft');
+    setSavedToast(`✓ Saved to ${clientName}'s ${planTarget === 'draft' ? 'draft' : 'live'} plan`);
+    setTimeout(() => setSavedToast(null), 3500);
   };
 
   // ── Move-to-folder modal ──────────────────────────────
@@ -308,6 +315,15 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
   // ── Main render ───────────────────────────────────────
   return (
     <div className="space-y-10 animate-in fade-in duration-700">
+
+      {/* Save toast */}
+      {savedToast && (
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[900] animate-in slide-in-from-bottom-4 duration-300">
+          <div className="px-6 py-4 bg-emerald-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-2xl flex items-center gap-3">
+            {savedToast}
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <header className="flex flex-col md:flex-row justify-between items-center gap-6">
@@ -734,9 +750,9 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
               )}
             </div>
             <div className="p-8 bg-slate-950 border-t border-white/5">
-              <button disabled={!selectedClientId || !targetModuleId} onClick={handleLoadIntoEditor}
+              <button disabled={!selectedClientId || !targetModuleId || saving} onClick={handleLoadIntoEditor}
                 className="w-full py-5 bg-blue-600 disabled:opacity-20 text-white rounded-2xl font-black text-xs uppercase tracking-[0.3em] shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-3">
-                Open in Editor →
+                {saving ? 'Saving…' : `Save to ${planTarget === 'draft' ? 'Draft' : 'Live'} Plan ✓`}
               </button>
             </div>
           </div>

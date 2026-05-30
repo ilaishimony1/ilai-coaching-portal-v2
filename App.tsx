@@ -357,7 +357,7 @@ const MainApp: React.FC = () => {
                 if (!client) return;
 
                 if (planTarget === 'draft') {
-                  // Work with draftWorkouts; initialize from live workouts if no draft exists yet
+                  // Initialize draftWorkouts from live if none exist yet
                   let draftWorkouts = [...(client.draftWorkouts && client.draftWorkouts.length > 0 ? client.draftWorkouts : client.workouts)];
                   if (targetModuleId === 'NEW') {
                     const usedLetters = draftWorkouts.map(w => w.name.toUpperCase());
@@ -369,9 +369,10 @@ const MainApp: React.FC = () => {
                     );
                   }
                   const updatedClient = mergeClient({ ...client, draftWorkouts });
-                  setCurrentClientData(updatedClient);
+                  setClients(prev => prev.map(c => c.id === clientId ? updatedClient : c));
+                  syncService.updateDocument('clients', clientId, { draftWorkouts });
                 } else {
-                  // Live plan
+                  // Live plan — save directly
                   let updatedWorkouts = [...client.workouts];
                   if (targetModuleId === 'NEW') {
                     const usedLetters = updatedWorkouts.map(w => w.name.toUpperCase());
@@ -383,11 +384,10 @@ const MainApp: React.FC = () => {
                     );
                   }
                   const updatedClient = mergeClient({ ...client, workouts: updatedWorkouts });
-                  setCurrentClientData(updatedClient);
+                  setClients(prev => prev.map(c => c.id === clientId ? updatedClient : c));
+                  syncService.updateDocument('clients', clientId, { workouts: updatedWorkouts });
                 }
-
-                setPendingEditorPlanMode(planTarget);
-                setViewMode('TRAINER');
+                // Stay on library page — no navigation
               }}
             />
           )}
