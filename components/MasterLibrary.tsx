@@ -1,4 +1,3 @@
-import VideoUploader from './VideoUploader/VideoUploader';
 import React, { useState, useMemo } from 'react';
 import { Library, Trash2, Edit3, Zap, X, Check, Eye, User, Info, UserPlus, PlusCircle, Type, Folder, FolderOpen, ChevronRight, ArrowLeft, Tag, FolderPlus, Move } from 'lucide-react';
 import { useApp } from '../AppContext';
@@ -323,8 +322,6 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
           <span className="text-xs font-black uppercase text-white">{savedWorkouts.length} Templates</span>
         </div>
       </header>
-
-      <VideoUploader clientId="master" />
 
       {savedWorkouts.length === 0 ? (
         <div className="py-32 text-center border-2 border-dashed border-slate-900 rounded-[4rem] bg-slate-950/20">
