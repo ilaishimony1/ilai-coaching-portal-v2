@@ -27,6 +27,19 @@ interface Props {
 const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
   const { savedWorkouts, setSavedWorkouts, clients, syncService } = useApp();
 
+  // Explicit folder list — persists even when empty
+  const [explicitFolders, setExplicitFolders] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('ilai_library_folders') || '[]'); }
+    catch { return []; }
+  });
+
+  const persistFolders = (folders: string[]) => {
+    const deduped = [...new Set(folders)];
+    setExplicitFolders(deduped);
+    localStorage.setItem('ilai_library_folders', JSON.stringify(deduped));
+    syncService.updateDocument('settings', 'library_folders', { folders: deduped });
+  };
+
   // Navigation
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activeSubCategory, setActiveSubCategory] = useState<string | null>(null);
@@ -59,9 +72,10 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
 
   // ── Derived data ─────────────────────────────────────
   const categories = useMemo(() => {
-    const cats = [...new Set(savedWorkouts.map(w => w.category?.trim()).filter(Boolean))] as string[];
-    return cats.sort((a, b) => a.localeCompare(b));
-  }, [savedWorkouts]);
+    const fromWorkouts = savedWorkouts.map(w => w.category?.trim()).filter(Boolean) as string[];
+    const all = [...new Set([...explicitFolders, ...fromWorkouts])];
+    return all.sort((a, b) => a.localeCompare(b));
+  }, [savedWorkouts, explicitFolders]);
 
   const subCategories = useMemo(() => {
     if (!activeCategory) return [];
@@ -108,6 +122,8 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
     if (!renamingFolder || !renameFolderValue.trim()) return;
     const oldName = renamingFolder;
     const newName = renameFolderValue.trim();
+    // Update explicit folder list
+    persistFolders(explicitFolders.map(f => f === oldName ? newName : f));
     // Update all workouts in that folder
     const affected = savedWorkouts.filter(w => w.category?.trim() === oldName);
     setSavedWorkouts(prev => prev.map(w =>
@@ -124,6 +140,10 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
     if (!movingTemplateId) return;
     const cat = (moveCategoryInput.trim() || moveCategory).trim();
     const sub = (moveSubCategoryInput.trim() || moveSubCategory).trim();
+    // Register new folder name if it doesn't exist yet
+    if (cat && !explicitFolders.includes(cat)) {
+      persistFolders([...explicitFolders, cat]);
+    }
     setSavedWorkouts(prev => prev.map(w =>
       w.id === movingTemplateId ? { ...w, category: cat || undefined, subCategory: sub || undefined } : w
     ));
@@ -293,7 +313,7 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
                   value={newFolderName}
                   onChange={e => setNewFolderName(e.target.value)}
                   onKeyDown={e => {
-                    if (e.key === 'Enter' && newFolderName.trim()) { setActiveCategory(newFolderName.trim()); setCreatingFolder(false); }
+                    if (e.key === 'Enter' && newFolderName.trim()) { persistFolders([...explicitFolders, newFolderName.trim()]); setActiveCategory(newFolderName.trim()); setCreatingFolder(false); }
                     if (e.key === 'Escape') setCreatingFolder(false);
                   }}
                   placeholder="Folder name, e.g. Beginner"
@@ -301,7 +321,7 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
                 />
                 <button
                   type="button"
-                  onClick={() => { if (newFolderName.trim()) { setActiveCategory(newFolderName.trim()); } setCreatingFolder(false); }}
+                  onClick={() => { if (newFolderName.trim()) { persistFolders([...explicitFolders, newFolderName.trim()]); setActiveCategory(newFolderName.trim()); } setCreatingFolder(false); }}
                   className="px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black text-[9px] uppercase tracking-widest transition-all"
                 >
                   Create
