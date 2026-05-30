@@ -1244,7 +1244,6 @@ const matches = [...startsWithMatches, ...includesMatches];
         const existingSubCategories = [...new Set([...explicitSubs, ...fromWorkoutsSubs])].sort();
 
         const activeSubCategory = newSubCategoryInput.trim() || saveSubCategory;
-        const activeCategory = newCategoryInput.trim() || saveCategory;
         return (
           <div className="fixed inset-0 z-[800] flex items-center justify-center p-4 animate-in fade-in duration-200">
             <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowSaveModal(false)} />
