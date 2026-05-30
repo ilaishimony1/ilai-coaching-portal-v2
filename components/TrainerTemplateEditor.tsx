@@ -13,6 +13,7 @@ interface Props {
   onAddClient: (data: ClientData) => void;
   onArchive?: (client: ClientData) => void;
   isEditing: boolean;
+  initialPlanMode?: 'live' | 'draft';
 }
 
 const DAYS_OF_WEEK = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -58,13 +59,13 @@ const COUNTRY_DATA = [
 
 const generateUniqueId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-const TrainerTemplateEditor: React.FC<Props> = ({ client, onUpdate, onAddClient, onArchive, isEditing }) => {
+const TrainerTemplateEditor: React.FC<Props> = ({ client, onUpdate, onAddClient, onArchive, isEditing, initialPlanMode }) => {
   const { savedWorkouts, setSavedWorkouts, cloudSync, syncService } = useApp();
   const [localClient, setLocalClient] = useState<ClientData>(client);
   const [showPassword, setShowPassword] = useState(false);
   const [isCapsLock, setIsCapsLock] = useState(false);
   const [activeWorkoutId, setActiveWorkoutId] = useState<string | null>(client.workouts[0]?.id || null);
-  const [planMode, setPlanMode] = useState<'live' | 'draft'>('live');
+  const [planMode, setPlanMode] = useState<'live' | 'draft'>(initialPlanMode || 'live');
   const [activeDraftWorkoutId, setActiveDraftWorkoutId] = useState<string | null>(null);
   const [countrySearch, setCountrySearch] = useState(localClient.country || '');
   const [showCountrySuggestions, setShowCountrySuggestions] = useState(false);
@@ -543,9 +544,18 @@ const matches = [...startsWithMatches, ...includesMatches];
 
   const switchToDraft = () => {
     setPlanMode('draft');
-    if (!activeDraftWorkoutId) {
-      const first = (localClient.draftWorkouts || [])[0]?.id || null;
-      setActiveDraftWorkoutId(first);
+    if (!localClient.draftWorkouts || localClient.draftWorkouts.length === 0) {
+      // No draft yet — seed it from the live plan so coach has a starting point
+      const seededDraft = localClient.workouts.map(w => ({
+        ...w,
+        id: generateUniqueId('dw'),
+        exercises: w.exercises.map(ex => ({ ...ex, id: generateUniqueId('ex') })),
+      }));
+      setLocalClient(prev => ({ ...prev, draftWorkouts: seededDraft }));
+      setActiveDraftWorkoutId(seededDraft[0]?.id || null);
+    } else {
+      const first = localClient.draftWorkouts[0]?.id || null;
+      if (!activeDraftWorkoutId) setActiveDraftWorkoutId(first);
     }
   };
 
