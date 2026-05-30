@@ -1227,12 +1227,24 @@ const matches = [...startsWithMatches, ...includesMatches];
 
       {/* ── SAVE TO LIBRARY MODAL ── */}
       {showSaveModal && pendingSaveWorkout && (() => {
-        const existingCategories = [...new Set(savedWorkouts.map(w => w.category?.trim()).filter(Boolean))] as string[];
-        const existingSubCategories = saveCategory
-          ? [...new Set(savedWorkouts.filter(w => w.category?.trim() === saveCategory).map(w => w.subCategory?.trim()).filter(Boolean))] as string[]
-          : [];
+        // Read explicit folders/subfolders from localStorage (same source as MasterLibrary)
+        let storedFolders: string[] = [];
+        let storedSubFolders: Record<string, string[]> = {};
+        try { storedFolders = JSON.parse(localStorage.getItem('ilai_library_folders') || '[]'); } catch {}
+        try { storedSubFolders = JSON.parse(localStorage.getItem('ilai_library_subfolders') || '{}'); } catch {}
+
+        const fromWorkoutsCats = savedWorkouts.map(w => w.category?.trim()).filter(Boolean) as string[];
+        const existingCategories = [...new Set([...storedFolders, ...fromWorkoutsCats])].sort();
+
         const activeCategory = newCategoryInput.trim() || saveCategory;
+        const fromWorkoutsSubs = activeCategory
+          ? savedWorkouts.filter(w => w.category?.trim() === activeCategory).map(w => w.subCategory?.trim()).filter(Boolean) as string[]
+          : [];
+        const explicitSubs = activeCategory ? (storedSubFolders[activeCategory] || []) : [];
+        const existingSubCategories = [...new Set([...explicitSubs, ...fromWorkoutsSubs])].sort();
+
         const activeSubCategory = newSubCategoryInput.trim() || saveSubCategory;
+        const activeCategory = newCategoryInput.trim() || saveCategory;
         return (
           <div className="fixed inset-0 z-[800] flex items-center justify-center p-4 animate-in fade-in duration-200">
             <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowSaveModal(false)} />
