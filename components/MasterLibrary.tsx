@@ -1,20 +1,19 @@
 import VideoUploader from './VideoUploader/VideoUploader';
 import React, { useState, useMemo } from 'react';
-import { Library, Trash2, Edit3, Zap, X, Check, Eye, User, Info, UserPlus, PlusCircle, Type, Folder, FolderOpen, ChevronRight, ArrowLeft, Tag } from 'lucide-react';
+import { Library, Trash2, Edit3, Zap, X, Check, Eye, User, Info, UserPlus, PlusCircle, Type, Folder, FolderOpen, ChevronRight, ArrowLeft, Tag, FolderPlus, Move } from 'lucide-react';
 import { useApp } from '../AppContext';
 import { WorkoutTemplate, Workout } from '../types';
 
 const generateUniqueId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
 const FOLDER_COLORS = [
-  { bg: 'bg-blue-500/10', border: 'border-blue-500/20', text: 'text-blue-400', icon: 'text-blue-500' },
-  { bg: 'bg-purple-500/10', border: 'border-purple-500/20', text: 'text-purple-400', icon: 'text-purple-500' },
-  { bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', text: 'text-emerald-400', icon: 'text-emerald-500' },
-  { bg: 'bg-amber-500/10', border: 'border-amber-500/20', text: 'text-amber-400', icon: 'text-amber-500' },
-  { bg: 'bg-rose-500/10', border: 'border-rose-500/20', text: 'text-rose-400', icon: 'text-rose-500' },
-  { bg: 'bg-cyan-500/10', border: 'border-cyan-500/20', text: 'text-cyan-400', icon: 'text-cyan-500' },
+  { bg: 'bg-blue-500/10', border: 'border-blue-500/20', text: 'text-blue-400', icon: 'text-blue-500', active: 'bg-blue-600 border-blue-400' },
+  { bg: 'bg-purple-500/10', border: 'border-purple-500/20', text: 'text-purple-400', icon: 'text-purple-500', active: 'bg-purple-600 border-purple-400' },
+  { bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', text: 'text-emerald-400', icon: 'text-emerald-500', active: 'bg-emerald-600 border-emerald-400' },
+  { bg: 'bg-amber-500/10', border: 'border-amber-500/20', text: 'text-amber-400', icon: 'text-amber-500', active: 'bg-amber-600 border-amber-400' },
+  { bg: 'bg-rose-500/10', border: 'border-rose-500/20', text: 'text-rose-400', icon: 'text-rose-500', active: 'bg-rose-600 border-rose-400' },
+  { bg: 'bg-cyan-500/10', border: 'border-cyan-500/20', text: 'text-cyan-400', icon: 'text-cyan-500', active: 'bg-cyan-600 border-cyan-400' },
 ];
-
 const getFolderColor = (name: string) => {
   let hash = 0;
   for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -32,12 +31,23 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activeSubCategory, setActiveSubCategory] = useState<string | null>(null);
 
+  // Folder management
+  const [creatingFolder, setCreatingFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [renamingFolder, setRenamingFolder] = useState<string | null>(null);
+  const [renameFolderValue, setRenameFolderValue] = useState('');
+
+  // Move to folder
+  const [movingTemplateId, setMovingTemplateId] = useState<string | null>(null);
+  const [moveCategory, setMoveCategory] = useState('');
+  const [moveSubCategory, setMoveSubCategory] = useState('');
+  const [moveCategoryInput, setMoveCategoryInput] = useState('');
+  const [moveSubCategoryInput, setMoveSubCategoryInput] = useState('');
+
   // Template actions
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [tempTitle, setTempTitle] = useState('');
-  const [tempCategory, setTempCategory] = useState('');
-  const [tempSubCategory, setTempSubCategory] = useState('');
 
   // Modals
   const [previewTemplate, setPreviewTemplate] = useState<WorkoutTemplate | null>(null);
@@ -47,17 +57,17 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
 
   const selectedClient = clients.find(c => c.id === selectedClientId);
 
-  // ── Derived folder data ──────────────────────────────
+  // ── Derived data ─────────────────────────────────────
   const categories = useMemo(() => {
-    const cats = [...new Set(savedWorkouts.map(w => w.category?.trim() || 'Uncategorized'))];
-    return cats.sort((a, b) => a === 'Uncategorized' ? 1 : b === 'Uncategorized' ? -1 : a.localeCompare(b));
+    const cats = [...new Set(savedWorkouts.map(w => w.category?.trim()).filter(Boolean))] as string[];
+    return cats.sort((a, b) => a.localeCompare(b));
   }, [savedWorkouts]);
 
   const subCategories = useMemo(() => {
     if (!activeCategory) return [];
     const subs = [...new Set(
       savedWorkouts
-        .filter(w => (w.category?.trim() || 'Uncategorized') === activeCategory)
+        .filter(w => w.category?.trim() === activeCategory)
         .map(w => w.subCategory?.trim() || '')
         .filter(Boolean)
     )];
@@ -67,11 +77,16 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
   const visibleWorkouts = useMemo(() => {
     if (!activeCategory) return savedWorkouts;
     return savedWorkouts.filter(w => {
-      if ((w.category?.trim() || 'Uncategorized') !== activeCategory) return false;
+      if (w.category?.trim() !== activeCategory) return false;
       if (activeSubCategory) return (w.subCategory?.trim() || '') === activeSubCategory;
       return true;
     });
   }, [savedWorkouts, activeCategory, activeSubCategory]);
+
+  const unfiledWorkouts = useMemo(() =>
+    savedWorkouts.filter(w => !w.category?.trim()),
+    [savedWorkouts]
+  );
 
   // ── Actions ──────────────────────────────────────────
   const executeDelete = async (id: string) => {
@@ -80,26 +95,43 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
     await syncService.deleteDocument('master_library', id);
   };
 
-  const startEdit = (e: React.MouseEvent, template: WorkoutTemplate) => {
-    e.stopPropagation();
-    setEditingId(template.id);
-    setTempTitle(template.title);
-    setTempCategory(template.category || '');
-    setTempSubCategory(template.subCategory || '');
-  };
-
-  const saveEdit = async (e: React.MouseEvent) => {
+  const saveRenameTitle = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!editingId) return;
     const id = editingId;
-    const updates = {
-      title: tempTitle,
-      category: tempCategory.trim() || undefined,
-      subCategory: tempSubCategory.trim() || undefined,
-    };
-    setSavedWorkouts(prev => prev.map(w => w.id === id ? { ...w, ...updates } : w));
+    setSavedWorkouts(prev => prev.map(w => w.id === id ? { ...w, title: tempTitle } : w));
     setEditingId(null);
-    await syncService.updateDocument('master_library', id, updates);
+    await syncService.updateDocument('master_library', id, { title: tempTitle });
+  };
+
+  const saveRenameFolder = async () => {
+    if (!renamingFolder || !renameFolderValue.trim()) return;
+    const oldName = renamingFolder;
+    const newName = renameFolderValue.trim();
+    // Update all workouts in that folder
+    const affected = savedWorkouts.filter(w => w.category?.trim() === oldName);
+    setSavedWorkouts(prev => prev.map(w =>
+      w.category?.trim() === oldName ? { ...w, category: newName } : w
+    ));
+    setRenamingFolder(null);
+    if (activeCategory === oldName) setActiveCategory(newName);
+    await Promise.all(affected.map(w =>
+      syncService.updateDocument('master_library', w.id, { category: newName })
+    ));
+  };
+
+  const confirmMoveToFolder = async () => {
+    if (!movingTemplateId) return;
+    const cat = (moveCategoryInput.trim() || moveCategory).trim();
+    const sub = (moveSubCategoryInput.trim() || moveSubCategory).trim();
+    setSavedWorkouts(prev => prev.map(w =>
+      w.id === movingTemplateId ? { ...w, category: cat || undefined, subCategory: sub || undefined } : w
+    ));
+    await syncService.updateDocument('master_library', movingTemplateId, {
+      category: cat || null,
+      subCategory: sub || null,
+    });
+    setMovingTemplateId(null);
   };
 
   const handleLoadIntoEditor = () => {
@@ -116,14 +148,103 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
     setTargetModuleId('');
   };
 
-  const navigateBack = () => {
-    if (activeSubCategory) { setActiveSubCategory(null); return; }
-    if (activeCategory) { setActiveCategory(null); return; }
+  // ── Move-to-folder modal ──────────────────────────────
+  const openMoveModal = (template: WorkoutTemplate, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setMovingTemplateId(template.id);
+    setMoveCategory(template.category || '');
+    setMoveSubCategory(template.subCategory || '');
+    setMoveCategoryInput('');
+    setMoveSubCategoryInput('');
   };
 
-  // ── Render ────────────────────────────────────────────
+  // ── Template card ─────────────────────────────────────
+  const renderCard = (template: WorkoutTemplate) => {
+    const color = getFolderColor(template.category || '_');
+    return (
+      <div key={template.id} className="glass-card p-6 rounded-[2rem] border-slate-800 hover:border-blue-500/20 transition-all duration-300 relative overflow-hidden flex flex-col text-left">
+
+        {/* Delete confirm overlay */}
+        {deletingId === template.id && (
+          <div className="absolute inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-6 animate-in fade-in duration-300">
+            <p className="text-white font-black brand-font uppercase text-xs mb-6 tracking-widest text-center">Delete Template?</p>
+            <div className="flex gap-3 w-full">
+              <button onClick={() => setDeletingId(null)} className="flex-1 py-3 bg-slate-800 text-white rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-slate-700 transition-all">Cancel</button>
+              <button onClick={() => executeDelete(template.id)} className="flex-1 py-3 bg-red-600 text-white rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-red-500 transition-all">Delete</button>
+            </div>
+          </div>
+        )}
+
+        {/* Top row */}
+        <div className="flex justify-between items-start mb-4">
+          <div className="w-10 h-10 rounded-xl bg-blue-600/10 border border-blue-500/20 flex items-center justify-center text-blue-500 font-black brand-font text-lg">
+            {template.name}
+          </div>
+          <div className="flex gap-1">
+            <button type="button" onClick={(e) => { e.stopPropagation(); setEditingId(template.id); setTempTitle(template.title); }} className="p-2 text-slate-700 hover:text-blue-400 transition-colors"><Edit3 size={13} /></button>
+            <button type="button" onClick={(e) => { e.stopPropagation(); setDeletingId(template.id); }} className="p-2 text-slate-700 hover:text-red-500 transition-colors"><Trash2 size={13} /></button>
+          </div>
+        </div>
+
+        {/* Title / edit */}
+        {editingId === template.id ? (
+          <div className="flex gap-2 mb-3">
+            <input value={tempTitle} onChange={e => setTempTitle(e.target.value)}
+              className="flex-1 bg-slate-950 border border-blue-500 p-2 rounded-lg text-[10px] font-black uppercase text-white outline-none" autoFocus />
+            <button type="button" onClick={saveRenameTitle} className="p-2 bg-blue-600 text-white rounded-lg"><Check size={14} /></button>
+          </div>
+        ) : (
+          <h4 className="text-lg font-black text-white uppercase brand-font tracking-tight leading-none mb-2">{template.title || 'UNTITLED'}</h4>
+        )}
+
+        {/* Folder tag */}
+        <div className="mb-4">
+          <button
+            type="button"
+            onClick={(e) => openMoveModal(template, e)}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[8px] font-black uppercase tracking-widest transition-all hover:opacity-80 ${
+              template.category
+                ? `${color.bg} ${color.border} ${color.text}`
+                : 'bg-slate-800/50 border-slate-700 text-slate-600 hover:text-slate-400'
+            }`}
+          >
+            <Folder size={9} />
+            {template.category
+              ? `${template.category}${template.subCategory ? ` / ${template.subCategory}` : ''}`
+              : '+ Add to folder'}
+          </button>
+        </div>
+
+        {/* Meta */}
+        <div className="flex flex-col gap-1 mb-5">
+          <div className="flex items-center gap-2 text-slate-500">
+            <User size={10} className="shrink-0" />
+            <span className="text-[8px] font-black uppercase tracking-widest truncate">{template.originalClientName || 'MASTER SECTOR'}</span>
+          </div>
+          <div className="flex items-center gap-2 text-slate-600">
+            <Zap size={10} className="shrink-0" />
+            <span className="text-[8px] font-black uppercase tracking-widest">{template.exercises.length} Movements</span>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="grid grid-cols-2 gap-2 mt-auto">
+          <button onClick={() => setPreviewTemplate(template)}
+            className="py-3 bg-slate-900 border border-slate-800 rounded-xl text-[8px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-all flex items-center justify-center gap-2">
+            <Eye size={12} /> Preview
+          </button>
+          <button onClick={() => { setAssigningTemplate(template); setSelectedClientId(''); setTargetModuleId(''); }}
+            className="py-3 bg-blue-600 text-white rounded-xl text-[8px] font-black uppercase tracking-widest hover:bg-blue-500 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20">
+            <UserPlus size={12} /> Use
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  // ── Main render ───────────────────────────────────────
   return (
-    <div className="space-y-12 animate-in fade-in duration-700">
+    <div className="space-y-10 animate-in fade-in duration-700">
 
       {/* Header */}
       <header className="flex flex-col md:flex-row justify-between items-center gap-6">
@@ -135,32 +256,11 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
         </div>
         <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex items-center gap-3">
           <Library className="text-blue-500" size={18} />
-          <span className="text-xs font-black uppercase text-white">{savedWorkouts.length} Templates Stored</span>
+          <span className="text-xs font-black uppercase text-white">{savedWorkouts.length} Templates</span>
         </div>
       </header>
 
       <VideoUploader clientId="master" />
-
-      {/* Breadcrumb */}
-      {activeCategory && (
-        <div className="flex items-center gap-2">
-          <button onClick={navigateBack} className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition-colors">
-            <ArrowLeft size={14} /> Back
-          </button>
-          <span className="text-slate-700">/</span>
-          <button onClick={() => { setActiveCategory(null); setActiveSubCategory(null); }} className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition-colors">Library</button>
-          <ChevronRight size={12} className="text-slate-700" />
-          <button onClick={() => setActiveSubCategory(null)} className={`text-[10px] font-black uppercase tracking-widest transition-colors ${activeSubCategory ? 'text-slate-500 hover:text-white' : 'text-white'}`}>
-            {activeCategory}
-          </button>
-          {activeSubCategory && (
-            <>
-              <ChevronRight size={12} className="text-slate-700" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-white">{activeSubCategory}</span>
-            </>
-          )}
-        </div>
-      )}
 
       {savedWorkouts.length === 0 ? (
         <div className="py-32 text-center border-2 border-dashed border-slate-900 rounded-[4rem] bg-slate-950/20">
@@ -168,96 +268,254 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
           <h4 className="text-xl font-black text-slate-700 uppercase brand-font">Library Empty</h4>
           <p className="text-slate-800 font-bold uppercase text-[9px] tracking-widest mt-2">Save workouts from a client's training plan to start building your library.</p>
         </div>
-      ) : !activeCategory ? (
-        // ── FOLDER VIEW ──────────────────────────────────
-        <div className="space-y-8">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {categories.map(cat => {
-              const count = savedWorkouts.filter(w => (w.category?.trim() || 'Uncategorized') === cat).length;
-              const color = getFolderColor(cat);
-              const subs = [...new Set(
-                savedWorkouts
-                  .filter(w => (w.category?.trim() || 'Uncategorized') === cat)
-                  .map(w => w.subCategory?.trim() || '')
-                  .filter(Boolean)
-              )];
-              return (
-                <button
-                  key={cat}
-                  onClick={() => { setActiveCategory(cat); setActiveSubCategory(null); }}
-                  className={`glass-card p-6 rounded-[2rem] border ${color.border} ${color.bg} hover:scale-[1.02] transition-all duration-200 text-left group`}
-                >
-                  <div className={`mb-4 ${color.icon}`}>
-                    <FolderOpen size={32} />
-                  </div>
-                  <h4 className={`text-sm font-black uppercase brand-font tracking-tight leading-none mb-2 ${color.text}`}>{cat}</h4>
-                  <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest">{count} workout{count !== 1 ? 's' : ''}</p>
-                  {subs.length > 0 && (
-                    <p className="text-[7px] font-medium text-slate-700 mt-1 truncate">{subs.slice(0, 2).join(' · ')}{subs.length > 2 ? ` +${subs.length - 2}` : ''}</p>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Also show all workouts flat below folders */}
-          <div className="pt-6 border-t border-white/5">
-            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-600 mb-6">All Workouts</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {savedWorkouts.map(template => renderCard(template))}
-            </div>
-          </div>
-        </div>
       ) : (
-        // ── INSIDE A FOLDER ──────────────────────────────
-        <div className="space-y-8">
-          {/* Subfolder tiles (only if there are subfolders and no active subfolder) */}
-          {!activeSubCategory && subCategories.length > 0 && (
-            <div className="space-y-4">
-              <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-600">Subfolders</p>
+        <>
+          {/* ── FOLDERS SECTION ── */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-[9px] font-black uppercase tracking-[0.35em] text-slate-500">Folders</p>
+              {!creatingFolder && (
+                <button
+                  type="button"
+                  onClick={() => { setCreatingFolder(true); setNewFolderName(''); }}
+                  className="flex items-center gap-2 px-4 py-2 bg-slate-900 border border-slate-800 hover:border-blue-500/40 rounded-xl text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-all"
+                >
+                  <FolderPlus size={13} /> New Folder
+                </button>
+              )}
+            </div>
+
+            {/* Create folder input */}
+            {creatingFolder && (
+              <div className="flex gap-2 animate-in slide-in-from-top-2 duration-200">
+                <input
+                  autoFocus
+                  value={newFolderName}
+                  onChange={e => setNewFolderName(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && newFolderName.trim()) { setActiveCategory(newFolderName.trim()); setCreatingFolder(false); }
+                    if (e.key === 'Escape') setCreatingFolder(false);
+                  }}
+                  placeholder="Folder name, e.g. Beginner"
+                  className="flex-1 bg-slate-950 border border-blue-500/60 rounded-xl px-4 py-3 text-sm text-white font-medium placeholder-slate-600 outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => { if (newFolderName.trim()) { setActiveCategory(newFolderName.trim()); } setCreatingFolder(false); }}
+                  className="px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black text-[9px] uppercase tracking-widest transition-all"
+                >
+                  Create
+                </button>
+                <button type="button" onClick={() => setCreatingFolder(false)} className="p-3 text-slate-500 hover:text-white transition-colors"><X size={16} /></button>
+              </div>
+            )}
+
+            {/* Folder tiles */}
+            {categories.length === 0 && !creatingFolder ? (
+              <p className="text-[9px] text-slate-700 font-medium uppercase tracking-widest py-4">No folders yet — create one above or add a workout to a folder using the folder tag on each card.</p>
+            ) : (
               <div className="flex flex-wrap gap-3">
-                {subCategories.map(sub => {
-                  const count = savedWorkouts.filter(w =>
-                    (w.category?.trim() || 'Uncategorized') === activeCategory &&
-                    (w.subCategory?.trim() || '') === sub
-                  ).length;
-                  const color = getFolderColor(sub);
+                {categories.map(cat => {
+                  const count = savedWorkouts.filter(w => w.category?.trim() === cat).length;
+                  const color = getFolderColor(cat);
+                  const isActive = activeCategory === cat;
                   return (
-                    <button
-                      key={sub}
-                      onClick={() => setActiveSubCategory(sub)}
-                      className={`flex items-center gap-3 px-5 py-3 rounded-2xl border ${color.border} ${color.bg} hover:scale-[1.02] transition-all`}
-                    >
-                      <Folder size={14} className={color.icon} />
-                      <span className={`text-xs font-black uppercase tracking-widest ${color.text}`}>{sub}</span>
-                      <span className="text-[8px] font-black text-slate-600 uppercase">{count}</span>
-                    </button>
+                    <div key={cat} className="relative group/folder">
+                      {renamingFolder === cat ? (
+                        <div className="flex gap-2 items-center">
+                          <input
+                            autoFocus
+                            value={renameFolderValue}
+                            onChange={e => setRenameFolderValue(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') saveRenameFolder(); if (e.key === 'Escape') setRenamingFolder(null); }}
+                            className="w-40 bg-slate-950 border border-blue-500/60 rounded-xl px-3 py-2 text-xs text-white font-black uppercase outline-none"
+                          />
+                          <button type="button" onClick={saveRenameFolder} className="p-2 bg-blue-600 text-white rounded-lg"><Check size={12} /></button>
+                          <button type="button" onClick={() => setRenamingFolder(null)} className="p-2 text-slate-500 hover:text-white"><X size={12} /></button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => { setActiveCategory(isActive ? null : cat); setActiveSubCategory(null); }}
+                          className={`flex items-center gap-2.5 pl-4 pr-3 py-3 rounded-2xl border font-black text-[9px] uppercase tracking-widest transition-all ${
+                            isActive ? `${color.active} text-white shadow-lg` : `${color.bg} ${color.border} ${color.text} hover:opacity-90`
+                          }`}
+                        >
+                          <FolderOpen size={14} />
+                          <span>{cat}</span>
+                          <span className={`text-[8px] ${isActive ? 'text-white/70' : 'text-slate-600'}`}>{count}</span>
+                          {/* Rename button */}
+                          <span
+                            role="button"
+                            onClick={e => { e.stopPropagation(); setRenamingFolder(cat); setRenameFolderValue(cat); }}
+                            className="ml-1 opacity-0 group-hover/folder:opacity-100 p-1 rounded hover:bg-white/10 transition-all"
+                          >
+                            <Edit3 size={10} />
+                          </span>
+                        </button>
+                      )}
+                    </div>
                   );
                 })}
               </div>
-            </div>
-          )}
-
-          {/* Workout cards */}
-          <div className="space-y-4">
-            {!activeSubCategory && subCategories.length > 0 && (
-              <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-600">
-                {activeSubCategory ? activeSubCategory : `All in ${activeCategory}`}
-              </p>
-            )}
-            {visibleWorkouts.length === 0 ? (
-              <div className="py-16 text-center border-2 border-dashed border-slate-900 rounded-[3rem]">
-                <Folder className="mx-auto text-slate-800 mb-4" size={40} />
-                <p className="text-slate-700 font-black uppercase text-[9px] tracking-widest">No workouts in this folder yet</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {visibleWorkouts.map(template => renderCard(template))}
-              </div>
             )}
           </div>
-        </div>
+
+          {/* ── WORKOUT CARDS ── */}
+          {activeCategory ? (
+            // Inside a folder
+            <div className="space-y-6">
+              {/* Breadcrumb */}
+              <div className="flex items-center gap-2">
+                <button onClick={() => { setActiveCategory(null); setActiveSubCategory(null); }} className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition-colors">
+                  <ArrowLeft size={12} /> All
+                </button>
+                <ChevronRight size={10} className="text-slate-700" />
+                <span className="text-[9px] font-black uppercase tracking-widest text-white">{activeCategory}</span>
+                {subCategories.length > 0 && (
+                  <div className="flex gap-2 ml-4">
+                    <button onClick={() => setActiveSubCategory(null)}
+                      className={`px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest border transition-all ${!activeSubCategory ? 'bg-slate-700 border-slate-600 text-white' : 'bg-slate-900 border-slate-800 text-slate-500 hover:text-white'}`}>
+                      All
+                    </button>
+                    {subCategories.map(sub => (
+                      <button key={sub} onClick={() => setActiveSubCategory(activeSubCategory === sub ? null : sub)}
+                        className={`px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest border transition-all ${activeSubCategory === sub ? 'bg-purple-600 border-purple-400 text-white' : 'bg-slate-900 border-slate-800 text-slate-500 hover:text-white'}`}>
+                        {sub}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {visibleWorkouts.length === 0 ? (
+                <div className="py-16 text-center border-2 border-dashed border-slate-900 rounded-[3rem]">
+                  <Folder className="mx-auto text-slate-800 mb-4" size={40} />
+                  <p className="text-slate-700 font-black uppercase text-[9px] tracking-widest">This folder is empty</p>
+                  <p className="text-slate-800 text-[8px] mt-1">Use the folder tag on any workout card to move it here</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {visibleWorkouts.map(t => renderCard(t))}
+                </div>
+              )}
+            </div>
+          ) : (
+            // All workouts flat view
+            <div className="space-y-8">
+              {unfiledWorkouts.length > 0 && (
+                <div className="space-y-4">
+                  <p className="text-[9px] font-black uppercase tracking-[0.35em] text-slate-600">Unfiled</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {unfiledWorkouts.map(t => renderCard(t))}
+                  </div>
+                </div>
+              )}
+              {categories.map(cat => (
+                <div key={cat} className="space-y-4">
+                  <p className="text-[9px] font-black uppercase tracking-[0.35em] text-slate-500 flex items-center gap-2">
+                    <Folder size={11} className={getFolderColor(cat).icon} /> {cat}
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {savedWorkouts.filter(w => w.category?.trim() === cat).map(t => renderCard(t))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
+
+      {/* ── MOVE TO FOLDER MODAL ── */}
+      {movingTemplateId && (() => {
+        const template = savedWorkouts.find(w => w.id === movingTemplateId);
+        if (!template) return null;
+        const activeCat = moveCategoryInput.trim() || moveCategory;
+        const activeSub = moveSubCategoryInput.trim() || moveSubCategory;
+        const existingSubs = activeCat
+          ? [...new Set(savedWorkouts.filter(w => w.category?.trim() === activeCat).map(w => w.subCategory?.trim()).filter(Boolean))] as string[]
+          : [];
+        return (
+          <div className="fixed inset-0 z-[800] flex items-center justify-center p-4 animate-in fade-in duration-200">
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setMovingTemplateId(null)} />
+            <div className="relative w-full max-w-md bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl overflow-hidden">
+              <div className="p-6 border-b border-white/5 flex items-center justify-between">
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500 mb-1">Move to Folder</p>
+                  <h3 className="text-base font-black uppercase brand-font text-white leading-none">{template.title}</h3>
+                </div>
+                <button onClick={() => setMovingTemplateId(null)} className="p-2 text-slate-500 hover:text-white"><X size={18} /></button>
+              </div>
+
+              <div className="p-6 space-y-5">
+                {/* Folder picker */}
+                <div className="space-y-3">
+                  <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500">Folder</p>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={() => { setMoveCategory(''); setMoveCategoryInput(''); setMoveSubCategory(''); setMoveSubCategoryInput(''); }}
+                      className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${!moveCategory && !moveCategoryInput ? 'bg-slate-700 border-slate-600 text-white' : 'bg-slate-800 border-slate-700 text-slate-500 hover:text-white'}`}>
+                      None
+                    </button>
+                    {categories.map(cat => (
+                      <button key={cat} type="button"
+                        onClick={() => { setMoveCategory(cat); setMoveCategoryInput(''); setMoveSubCategory(''); setMoveSubCategoryInput(''); }}
+                        className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${moveCategory === cat && !moveCategoryInput ? `${getFolderColor(cat).active} text-white` : `${getFolderColor(cat).bg} ${getFolderColor(cat).border} ${getFolderColor(cat).text}`}`}>
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                  <input
+                    value={moveCategoryInput}
+                    onChange={e => { setMoveCategoryInput(e.target.value); setMoveCategory(''); setMoveSubCategory(''); setMoveSubCategoryInput(''); }}
+                    placeholder="Or type a new folder name…"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 outline-none focus:border-blue-500/60 transition-all"
+                  />
+                </div>
+
+                {/* Subfolder picker */}
+                {activeCat && (
+                  <div className="space-y-3 animate-in slide-in-from-top-2 duration-200">
+                    <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500">Subfolder <span className="text-slate-700 normal-case font-normal">(optional)</span></p>
+                    {existingSubs.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {existingSubs.map(sub => (
+                          <button key={sub} type="button"
+                            onClick={() => { setMoveSubCategory(sub); setMoveSubCategoryInput(''); }}
+                            className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${moveSubCategory === sub && !moveSubCategoryInput ? 'bg-purple-600 border-purple-400 text-white' : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'}`}>
+                            {sub}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <input
+                      value={moveSubCategoryInput}
+                      onChange={e => { setMoveSubCategoryInput(e.target.value); setMoveSubCategory(''); }}
+                      placeholder={existingSubs.length > 0 ? 'Or type a new subfolder…' : 'Type a subfolder name… (optional)'}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 outline-none focus:border-purple-500/60 transition-all"
+                    />
+                  </div>
+                )}
+
+                {activeCat && (
+                  <div className="px-4 py-3 bg-slate-800/50 rounded-2xl text-[9px] font-black uppercase tracking-widest text-slate-400">
+                    📁 {activeCat}{activeSub ? ` › ${activeSub}` : ''}
+                  </div>
+                )}
+              </div>
+
+              <div className="p-6 border-t border-white/5 flex gap-3">
+                <button type="button" onClick={() => setMovingTemplateId(null)}
+                  className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-2xl font-black text-[9px] uppercase tracking-widest transition-all">
+                  Cancel
+                </button>
+                <button type="button" onClick={confirmMoveToFolder}
+                  className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-[9px] uppercase tracking-widest transition-all">
+                  {activeCat ? `Move to ${activeCat}` : 'Remove from folder'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── USE TEMPLATE MODAL ── */}
       {assigningTemplate && (
@@ -301,8 +559,9 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
                     <div className="w-px h-10 bg-white/5 mx-1 self-center" />
                     {selectedClient.workouts.map(w => (
                       <button key={w.id} onClick={() => setTargetModuleId(w.id)}
-                        className={`w-14 h-14 rounded-2xl border font-black brand-font text-xl transition-all flex items-center justify-center ${targetModuleId === w.id ? 'bg-amber-500 border-amber-400 text-white shadow-xl' : 'bg-slate-900 border-slate-800 text-slate-600 hover:text-white'}`}
-                        title={`Replace module ${w.name}`}>{w.name}</button>
+                        className={`w-14 h-14 rounded-2xl border font-black brand-font text-xl transition-all flex items-center justify-center ${targetModuleId === w.id ? 'bg-amber-500 border-amber-400 text-white shadow-xl' : 'bg-slate-900 border-slate-800 text-slate-600 hover:text-white'}`}>
+                        {w.name}
+                      </button>
                     ))}
                   </div>
                   <p className="text-[8px] font-medium text-slate-500 uppercase tracking-widest pl-1">
@@ -343,8 +602,6 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
                         </span>
                       </>
                     )}
-                    <span className="w-1 h-1 rounded-full bg-slate-800" />
-                    <span className="text-[9px] font-black text-blue-500 uppercase tracking-[0.2em]">{previewTemplate.exercises.length} Exercises</span>
                   </div>
                 </div>
               </div>
@@ -387,96 +644,6 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
       )}
     </div>
   );
-
-  // ── Template card renderer ─────────────────────────────
-  function renderCard(template: WorkoutTemplate) {
-    const color = getFolderColor(template.category || 'Uncategorized');
-    return (
-      <div key={template.id} className="glass-card p-6 rounded-[2rem] border-slate-800 hover:border-blue-500/30 transition-all duration-300 group relative overflow-hidden flex flex-col text-left">
-
-        {deletingId === template.id && (
-          <div className="absolute inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-6 animate-in fade-in duration-300">
-            <p className="text-white font-black brand-font uppercase text-xs mb-6 tracking-widest text-center">Delete Template?</p>
-            <div className="flex gap-3 w-full">
-              <button onClick={() => setDeletingId(null)} className="flex-1 py-3 bg-slate-800 text-white rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-slate-700 transition-all">Cancel</button>
-              <button onClick={() => executeDelete(template.id)} className="flex-1 py-3 bg-red-600 text-white rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-red-500 transition-all">Delete</button>
-            </div>
-          </div>
-        )}
-
-        <div className="flex justify-between items-start mb-4">
-          <div className="w-10 h-10 rounded-xl bg-blue-600/10 border border-blue-500/20 flex items-center justify-center text-blue-500 font-black brand-font text-lg">
-            {template.name}
-          </div>
-          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button type="button" onClick={(e) => startEdit(e, template)} className="p-2 text-slate-600 hover:text-blue-400 transition-colors"><Edit3 size={14} /></button>
-            <button type="button" onClick={(e) => { e.stopPropagation(); setDeletingId(template.id); }} className="p-2 text-slate-600 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
-          </div>
-        </div>
-
-        {editingId === template.id ? (
-          <div className="space-y-2 mb-3">
-            <input
-              value={tempTitle}
-              onChange={e => setTempTitle(e.target.value)}
-              placeholder="Workout name"
-              className="w-full bg-slate-950 border border-blue-500 p-2 rounded-lg text-[10px] font-black uppercase text-white outline-none"
-              autoFocus
-            />
-            <input
-              value={tempCategory}
-              onChange={e => setTempCategory(e.target.value)}
-              placeholder="Folder  (e.g. Beginner)"
-              className="w-full bg-slate-950 border border-slate-700 p-2 rounded-lg text-[10px] font-medium text-slate-300 outline-none focus:border-blue-500/60"
-            />
-            <input
-              value={tempSubCategory}
-              onChange={e => setTempSubCategory(e.target.value)}
-              placeholder="Subfolder  (e.g. Endurance)"
-              className="w-full bg-slate-950 border border-slate-700 p-2 rounded-lg text-[10px] font-medium text-slate-300 outline-none focus:border-blue-500/60"
-            />
-            <button type="button" onClick={saveEdit} className="w-full py-2 bg-blue-600 text-white rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2">
-              <Check size={12} /> Save
-            </button>
-          </div>
-        ) : (
-          <>
-            <h4 className="text-lg font-black text-white uppercase brand-font tracking-tight leading-none mb-1">{template.title || 'UNTITLED'}</h4>
-            {(template.category || template.subCategory) && (
-              <div className={`flex items-center gap-1.5 mb-1 ${color.text}`}>
-                <Tag size={9} />
-                <span className="text-[8px] font-black uppercase tracking-widest">
-                  {template.category}{template.subCategory ? ` / ${template.subCategory}` : ''}
-                </span>
-              </div>
-            )}
-          </>
-        )}
-
-        <div className="flex flex-col gap-1 mb-6 mt-1">
-          <div className="flex items-center gap-2 text-slate-500">
-            <User size={10} className="shrink-0" />
-            <span className="text-[8px] font-black uppercase tracking-widest truncate">{template.originalClientName || 'MASTER SECTOR'}</span>
-          </div>
-          <div className="flex items-center gap-2 text-slate-600">
-            <Zap size={10} className="shrink-0" />
-            <span className="text-[8px] font-black uppercase tracking-widest">{template.exercises.length} Movements</span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2 mt-auto">
-          <button onClick={() => setPreviewTemplate(template)}
-            className="py-3 bg-slate-900 border border-slate-800 rounded-xl text-[8px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-all flex items-center justify-center gap-2">
-            <Eye size={12} /> Preview
-          </button>
-          <button onClick={() => { setAssigningTemplate(template); setSelectedClientId(''); setTargetModuleId(''); }}
-            className="py-3 bg-blue-600 text-white rounded-xl text-[8px] font-black uppercase tracking-widest hover:bg-blue-500 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20">
-            <UserPlus size={12} /> Use
-          </button>
-        </div>
-      </div>
-    );
-  }
 };
 
 export default MasterLibrary;
