@@ -21,7 +21,7 @@ const getFolderColor = (name: string) => {
 };
 
 interface Props {
-  onLoadIntoEditor: (clientId: string, templateWorkout: Workout, targetModuleId: 'NEW' | string) => void;
+  onLoadIntoEditor: (clientId: string, templateWorkout: Workout, targetModuleId: 'NEW' | string, planTarget: 'live' | 'draft') => void;
 }
 
 const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
@@ -87,6 +87,7 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
   const [assigningTemplate, setAssigningTemplate] = useState<WorkoutTemplate | null>(null);
   const [selectedClientId, setSelectedClientId] = useState('');
   const [targetModuleId, setTargetModuleId] = useState('');
+  const [planTarget, setPlanTarget] = useState<'live' | 'draft'>('draft');
 
   const selectedClient = clients.find(c => c.id === selectedClientId);
 
@@ -204,10 +205,11 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
       title: assigningTemplate.title,
       exercises: assigningTemplate.exercises.map(ex => ({ ...ex, id: generateUniqueId('ex') })),
     };
-    onLoadIntoEditor(selectedClientId, freshWorkout, targetModuleId);
+    onLoadIntoEditor(selectedClientId, freshWorkout, targetModuleId, planTarget);
     setAssigningTemplate(null);
     setSelectedClientId('');
     setTargetModuleId('');
+    setPlanTarget('draft');
   };
 
   // ── Move-to-folder modal ──────────────────────────────
@@ -687,14 +689,39 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
               </div>
               {selectedClient && (
                 <div className="space-y-3 animate-in slide-in-from-top-4 duration-300">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">2. Add as new module or replace existing?</label>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">2. Add to which plan?</label>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => { setPlanTarget('draft'); setTargetModuleId(''); }}
+                      className={`flex-1 py-3 rounded-2xl border font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${planTarget === 'draft' ? 'bg-amber-500/20 border-amber-400 text-amber-300 shadow-lg' : 'bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-700'}`}
+                    >
+                      Draft Plan
+                    </button>
+                    <button
+                      onClick={() => { setPlanTarget('live'); setTargetModuleId(''); }}
+                      className={`flex-1 py-3 rounded-2xl border font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${planTarget === 'live' ? 'bg-blue-600/20 border-blue-400 text-blue-300 shadow-lg' : 'bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-700'}`}
+                    >
+                      Live Plan
+                    </button>
+                  </div>
+                  <p className="text-[8px] font-medium text-slate-600 uppercase tracking-widest pl-1">
+                    {planTarget === 'draft' ? 'Added to the draft — client won\'t see it until you publish.' : 'Added directly to the live plan the client sees.'}
+                  </p>
+                </div>
+              )}
+              {selectedClient && planTarget && (
+                <div className="space-y-3 animate-in slide-in-from-top-4 duration-300">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">3. Add as new module or replace existing?</label>
                   <div className="flex flex-wrap gap-3">
                     <button onClick={() => setTargetModuleId('NEW')}
                       className={`px-4 h-14 rounded-2xl border font-black text-[10px] uppercase tracking-widest transition-all flex flex-col items-center justify-center gap-1 ${targetModuleId === 'NEW' ? 'bg-blue-600 border-blue-400 text-white shadow-xl' : 'bg-slate-950 border-blue-500/20 text-blue-500 hover:bg-blue-600/10'}`}>
                       <PlusCircle size={14} /><span>New Slot</span>
                     </button>
                     <div className="w-px h-10 bg-white/5 mx-1 self-center" />
-                    {selectedClient.workouts.map(w => (
+                    {(planTarget === 'draft'
+                      ? (selectedClient.draftWorkouts && selectedClient.draftWorkouts.length > 0 ? selectedClient.draftWorkouts : selectedClient.workouts)
+                      : selectedClient.workouts
+                    ).map(w => (
                       <button key={w.id} onClick={() => setTargetModuleId(w.id)}
                         className={`w-14 h-14 rounded-2xl border font-black brand-font text-xl transition-all flex items-center justify-center ${targetModuleId === w.id ? 'bg-amber-500 border-amber-400 text-white shadow-xl' : 'bg-slate-900 border-slate-800 text-slate-600 hover:text-white'}`}>
                         {w.name}

@@ -61,6 +61,7 @@ const MainApp: React.FC = () => {
 
   const { permission: notifPermission, requestPermission: requestNotifPermission } = useCoachNotifications(authStatus.type === 'COACH');
   const [mobilePreview, setMobilePreview] = useState(false);
+  const [pendingEditorPlanMode, setPendingEditorPlanMode] = useState<'live' | 'draft'>('live');
 
   const NavButtons = (
     <>
@@ -335,11 +336,12 @@ const MainApp: React.FC = () => {
               clients={clients}
               fullClients={clients}
               onOpenPortal={(id) => { setCurrentClientData(mergeClient(clients.find(c => c.id === id)!)); setViewMode('CLIENT'); }}
-              onEditPortal={(id) => { setCurrentClientData(mergeClient(clients.find(c => c.id === id)!)); setViewMode('TRAINER'); }}
+              onEditPortal={(id) => { setCurrentClientData(mergeClient(clients.find(c => c.id === id)!)); setPendingEditorPlanMode('live'); setViewMode('TRAINER'); }}
               onArchiveClient={handleArchiveClient}
               onAddClient={() => {
                 const newId = `client-${Date.now()}`;
                 setCurrentClientData({ ...EMPTY_CLIENT, id: newId });
+                setPendingEditorPlanMode('live');
                 setViewMode('TRAINER');
               }}
               onOpenBranding={() => setViewMode('LANDING_EDITOR')}
@@ -350,22 +352,41 @@ const MainApp: React.FC = () => {
 
           {viewMode === 'SAVED_PROGRAMS' && (
             <MasterLibrary
-              onLoadIntoEditor={(clientId, templateWorkout, targetModuleId) => {
+              onLoadIntoEditor={(clientId, templateWorkout, targetModuleId, planTarget) => {
                 const client = clients.find(c => c.id === clientId);
                 if (!client) return;
-                // Inject the template into the client's workouts
-                let updatedWorkouts = [...client.workouts];
-                if (targetModuleId === 'NEW') {
-                  const usedLetters = updatedWorkouts.map(w => w.name.toUpperCase());
-                  const nextLetter = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').find(l => !usedLetters.includes(l)) || 'X';
-                  updatedWorkouts.push({ ...templateWorkout, name: nextLetter });
+
+                if (planTarget === 'draft') {
+                  // Work with draftWorkouts; initialize from live workouts if no draft exists yet
+                  let draftWorkouts = [...(client.draftWorkouts && client.draftWorkouts.length > 0 ? client.draftWorkouts : client.workouts)];
+                  if (targetModuleId === 'NEW') {
+                    const usedLetters = draftWorkouts.map(w => w.name.toUpperCase());
+                    const nextLetter = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').find(l => !usedLetters.includes(l)) || 'X';
+                    draftWorkouts.push({ ...templateWorkout, name: nextLetter });
+                  } else {
+                    draftWorkouts = draftWorkouts.map(w =>
+                      w.id === targetModuleId ? { ...templateWorkout, name: w.name } : w
+                    );
+                  }
+                  const updatedClient = mergeClient({ ...client, draftWorkouts });
+                  setCurrentClientData(updatedClient);
                 } else {
-                  updatedWorkouts = updatedWorkouts.map(w =>
-                    w.id === targetModuleId ? { ...templateWorkout, name: w.name } : w
-                  );
+                  // Live plan
+                  let updatedWorkouts = [...client.workouts];
+                  if (targetModuleId === 'NEW') {
+                    const usedLetters = updatedWorkouts.map(w => w.name.toUpperCase());
+                    const nextLetter = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').find(l => !usedLetters.includes(l)) || 'X';
+                    updatedWorkouts.push({ ...templateWorkout, name: nextLetter });
+                  } else {
+                    updatedWorkouts = updatedWorkouts.map(w =>
+                      w.id === targetModuleId ? { ...templateWorkout, name: w.name } : w
+                    );
+                  }
+                  const updatedClient = mergeClient({ ...client, workouts: updatedWorkouts });
+                  setCurrentClientData(updatedClient);
                 }
-                const updatedClient = mergeClient({ ...client, workouts: updatedWorkouts });
-                setCurrentClientData(updatedClient);
+
+                setPendingEditorPlanMode(planTarget);
                 setViewMode('TRAINER');
               }}
             />
@@ -387,6 +408,7 @@ const MainApp: React.FC = () => {
               onUpdate={setCurrentClientData}
               onAddClient={handleAddOrUpdateClient}
               onArchive={handleArchiveClient}
+              initialPlanMode={pendingEditorPlanMode}
             />
           )}
 
