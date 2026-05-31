@@ -109,7 +109,8 @@ export async function uploadExplanationVideo(
   videoFile: File,
   thumbnailFile: File | null,
   name: string,
-  subCategory: string
+  subCategory: string,
+  onProgress?: (pct: number) => void
 ) {
   const db = syncService.getDb();
   const uid = `v-${Date.now()}`;
@@ -126,9 +127,11 @@ await new Promise<void>((resolve, reject) => {
   uploadTask.on(
     "state_changed",
     (snapshot) => {
-      const progress =
-        (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-      console.log(`📤 Upload ${progress.toFixed(1)}%`);
+      const pct = snapshot.totalBytes > 0
+        ? Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100)
+        : 0;
+      console.log(`📤 Upload ${pct}%`);
+      onProgress?.(pct);
     },
     (error) => reject(error),
     () => resolve()

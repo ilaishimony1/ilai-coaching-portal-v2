@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Library, Trash2, Edit3, Zap, X, Check, Eye, User, Info, UserPlus, PlusCircle, Type, Folder, FolderOpen, ChevronRight, ArrowLeft, Tag, FolderPlus, Move } from 'lucide-react';
+import { Library, Trash2, Edit3, Zap, X, Check, Eye, User, Info, UserPlus, PlusCircle, Type, Folder, FolderOpen, ChevronRight, ArrowLeft, Tag, FolderPlus, Move, AlertTriangle } from 'lucide-react';
 import { useApp } from '../AppContext';
 import { WorkoutTemplate, Workout } from '../types';
 
@@ -68,6 +68,8 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
   const [newFolderName, setNewFolderName] = useState('');
   const [renamingFolder, setRenamingFolder] = useState<string | null>(null);
   const [renameFolderValue, setRenameFolderValue] = useState('');
+  const [deletingFolder, setDeletingFolder] = useState<string | null>(null);
+  const [deletingSubFolder, setDeletingSubFolder] = useState<string | null>(null);
 
   // Move to folder
   const [movingTemplateId, setMovingTemplateId] = useState<string | null>(null);
@@ -174,6 +176,35 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
     await Promise.all(affected.map(w =>
       syncService.updateDocument('master_library', w.id, { category: newName })
     ));
+  };
+
+  const executeDeleteFolder = async (folderName: string) => {
+    // Remove from explicit list
+    persistFolders(explicitFolders.filter(f => f !== folderName));
+    // Also remove explicit subfolders for this folder
+    const updatedSubs = { ...explicitSubFolders };
+    delete updatedSubs[folderName];
+    setExplicitSubFolders(updatedSubs);
+    localStorage.setItem('ilai_library_subfolders', JSON.stringify(updatedSubs));
+    syncService.updateDocument('settings', 'library_subfolders', updatedSubs);
+    // Move all workouts in that folder to unfiled
+    const affected = savedWorkouts.filter(w => w.category?.trim() === folderName);
+    setSavedWorkouts(prev => prev.map(w => w.category?.trim() === folderName ? { ...w, category: undefined, subCategory: undefined } : w));
+    setDeletingFolder(null);
+    if (activeCategory === folderName) { setActiveCategory(null); setActiveSubCategory(null); }
+    await Promise.all(affected.map(w => syncService.updateDocument('master_library', w.id, { category: null, subCategory: null })));
+  };
+
+  const executeDeleteSubFolder = async (subName: string) => {
+    if (!activeCategory) return;
+    const currentSubs = explicitSubFolders[activeCategory] || [];
+    persistSubFolders(activeCategory, currentSubs.filter(s => s !== subName));
+    // Move workouts in that subfolder to parent folder (unfiled within folder)
+    const affected = savedWorkouts.filter(w => w.category?.trim() === activeCategory && w.subCategory?.trim() === subName);
+    setSavedWorkouts(prev => prev.map(w => w.category?.trim() === activeCategory && w.subCategory?.trim() === subName ? { ...w, subCategory: undefined } : w));
+    setDeletingSubFolder(null);
+    if (activeSubCategory === subName) setActiveSubCategory(null);
+    await Promise.all(affected.map(w => syncService.updateDocument('master_library', w.id, { subCategory: null })));
   };
 
   const confirmMoveToFolder = async () => {
@@ -398,7 +429,15 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
                   const isActive = activeCategory === cat;
                   return (
                     <div key={cat} className="relative group/folder">
-                      {renamingFolder === cat ? (
+                      {deletingFolder === cat ? (
+                        <div className="flex items-center gap-2 animate-in fade-in duration-150">
+                          <div className="flex items-center gap-2 px-3 py-2 bg-red-950 border border-red-700 rounded-xl text-[9px] font-black uppercase tracking-widest text-red-300">
+                            <AlertTriangle size={11} /> Delete "{cat}"?
+                          </div>
+                          <button type="button" onClick={() => executeDeleteFolder(cat)} className="px-3 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl font-black text-[9px] uppercase tracking-widest transition-all">Yes</button>
+                          <button type="button" onClick={() => setDeletingFolder(null)} className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all">Cancel</button>
+                        </div>
+                      ) : renamingFolder === cat ? (
                         <div className="flex gap-2 items-center">
                           <input
                             autoFocus
@@ -408,7 +447,7 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
                             className="w-40 bg-slate-950 border border-blue-500/60 rounded-xl px-3 py-2 text-xs text-white font-black uppercase outline-none"
                           />
                           <button type="button" onClick={saveRenameFolder} className="p-2 bg-blue-600 text-white rounded-lg"><Check size={12} /></button>
-                          <button type="button" onClick={() => setRenamingFolder(null)} className="p-2 text-slate-500 hover:text-white"><X size={12} /></button>
+                          <button type="button" onClick={() => setRenamingFolder(null)} className="p-2 text-slate-500 hover:text-white" title="Cancel rename"><X size={12} /></button>
                         </div>
                       ) : (
                         <button
@@ -421,13 +460,23 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
                           <FolderOpen size={14} />
                           <span>{cat}</span>
                           <span className={`text-[8px] ${isActive ? 'text-white/70' : 'text-slate-600'}`}>{count}</span>
-                          {/* Rename button */}
+                          {/* Rename */}
                           <span
                             role="button"
                             onClick={e => { e.stopPropagation(); setRenamingFolder(cat); setRenameFolderValue(cat); }}
                             className="ml-1 opacity-0 group-hover/folder:opacity-100 p-1 rounded hover:bg-white/10 transition-all"
+                            title="Rename"
                           >
                             <Edit3 size={10} />
+                          </span>
+                          {/* Delete */}
+                          <span
+                            role="button"
+                            onClick={e => { e.stopPropagation(); setDeletingFolder(cat); }}
+                            className="opacity-0 group-hover/folder:opacity-100 p-1 rounded hover:bg-red-500/20 text-slate-500 hover:text-red-400 transition-all"
+                            title="Delete folder"
+                          >
+                            <Trash2 size={10} />
                           </span>
                         </button>
                       )}
@@ -505,14 +554,22 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
                         const count = savedWorkouts.filter(w => w.category?.trim() === activeCategory && w.subCategory?.trim() === sub).length;
                         return (
                           <div key={sub} className="relative group/sub">
-                            {renamingSubFolder === sub ? (
+                            {deletingSubFolder === sub ? (
+                              <div className="flex items-center gap-2 animate-in fade-in duration-150">
+                                <div className="flex items-center gap-2 px-3 py-2 bg-red-950 border border-red-700 rounded-xl text-[9px] font-black uppercase tracking-widest text-red-300">
+                                  <AlertTriangle size={11} /> Delete "{sub}"?
+                                </div>
+                                <button type="button" onClick={() => executeDeleteSubFolder(sub)} className="px-3 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl font-black text-[9px] uppercase tracking-widest transition-all">Yes</button>
+                                <button type="button" onClick={() => setDeletingSubFolder(null)} className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all">Cancel</button>
+                              </div>
+                            ) : renamingSubFolder === sub ? (
                               <div className="flex gap-2 items-center">
                                 <input autoFocus value={renameSubFolderValue} onChange={e => setRenameSubFolderValue(e.target.value)}
                                   onKeyDown={e => { if (e.key === 'Enter') saveRenameSubFolder(); if (e.key === 'Escape') setRenamingSubFolder(null); }}
                                   className="w-36 bg-slate-950 border border-purple-500/60 rounded-xl px-3 py-2 text-xs text-white font-black uppercase outline-none"
                                 />
                                 <button type="button" onClick={saveRenameSubFolder} className="p-2 bg-purple-600 text-white rounded-lg"><Check size={12} /></button>
-                                <button type="button" onClick={() => setRenamingSubFolder(null)} className="p-2 text-slate-500 hover:text-white"><X size={12} /></button>
+                                <button type="button" onClick={() => setRenamingSubFolder(null)} className="p-2 text-slate-500 hover:text-white" title="Cancel rename"><X size={12} /></button>
                               </div>
                             ) : (
                               <button type="button" onClick={() => setActiveSubCategory(sub)}
@@ -521,8 +578,12 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
                                 <span>{sub}</span>
                                 <span className="text-[8px] text-slate-600">{count}</span>
                                 <span role="button" onClick={e => { e.stopPropagation(); setRenamingSubFolder(sub); setRenameSubFolderValue(sub); }}
-                                  className="ml-0.5 opacity-0 group-hover/sub:opacity-100 p-1 rounded hover:bg-white/10 transition-all">
+                                  className="ml-0.5 opacity-0 group-hover/sub:opacity-100 p-1 rounded hover:bg-white/10 transition-all" title="Rename">
                                   <Edit3 size={10} />
+                                </span>
+                                <span role="button" onClick={e => { e.stopPropagation(); setDeletingSubFolder(sub); }}
+                                  className="opacity-0 group-hover/sub:opacity-100 p-1 rounded hover:bg-red-500/20 text-slate-500 hover:text-red-400 transition-all" title="Delete subfolder">
+                                  <Trash2 size={10} />
                                 </span>
                               </button>
                             )}

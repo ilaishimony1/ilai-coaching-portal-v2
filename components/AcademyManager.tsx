@@ -173,7 +173,8 @@ if (activeFolder.cat === "explanation") {
     file,
     null,  // thumbnail added later via card button
     file.name.split(".")[0].toUpperCase(),
-    activeFolder.sub
+    activeFolder.sub,
+    (pct) => setUploadProgress(pct)
   );
 
   await loadExplanationVideos();
@@ -213,7 +214,7 @@ const handleSkillVideoUpload = async (thumbnailFile: File | null) => {
       const task = uploadBytesResumable(videoRef, pendingSkillVideo);
       task.on('state_changed',
         (snap) => {
-          const pct = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
+          const pct = snap.totalBytes > 0 ? Math.round((snap.bytesTransferred / snap.totalBytes) * 100) : 0;
           setUploadProgress(pct);
         },
         reject,
@@ -513,8 +514,8 @@ const onDragStart = (id: number | string) => {
       onChange={handleFileUpload}
     />
     <div className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-2xl font-black text-xs tracking-widest uppercase flex items-center gap-3 shadow-2xl transition-all active:scale-95 relative overflow-hidden">
-      {isUploading && uploadProgress > 0 && (
-        <span className="absolute inset-0 bg-blue-400/30 origin-left transition-all duration-300" style={{ transform: `scaleX(${uploadProgress / 100})` }} />
+      {isUploading && (
+        <span className="absolute inset-0 bg-blue-400/30 origin-left transition-all duration-500" style={{ transform: `scaleX(${uploadProgress > 0 ? uploadProgress / 100 : 0.05})` }} />
       )}
       <span className="relative flex items-center gap-3">
         <Plus size={18} />
