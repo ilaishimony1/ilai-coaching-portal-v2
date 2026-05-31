@@ -211,10 +211,7 @@ const MainApp: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
-  const resolvedClientAvatar =
-    currentClientData?.avatar?.length
-      ? currentClientData.avatar
-      : "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&h=400&fit=crop";
+  const resolvedClientAvatar = currentClientData?.avatar?.length ? currentClientData.avatar : null;
 
   useEffect(() => {
     const auth = getAuth();
@@ -429,15 +426,28 @@ const MainApp: React.FC = () => {
           {viewMode === 'CLIENT' && currentClientData && (
             <div className="space-y-12 animate-in fade-in duration-1000">
               <header className="flex flex-col md:flex-row justify-between items-center gap-6">
-                <div className="relative group text-center md:text-left flex items-center gap-6">
-                  <div onClick={() => avatarInputRef.current?.click()} className="w-20 h-20 md:w-24 md:h-24 rounded-3xl ...">
-                    <img
-                      src={resolvedClientAvatar}
-                      className="w-full h-full object-cover transition-transform group-hover/avatar:scale-110"
-                    />
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center transition-opacity">
-                      <Camera size={24} className="text-white" />
-                    </div>
+                <div className="relative group/avatar text-center md:text-left flex items-center gap-6">
+                  <div
+                    onClick={() => avatarInputRef.current?.click()}
+                    className="relative w-20 h-20 md:w-24 md:h-24 rounded-3xl overflow-hidden cursor-pointer shrink-0 border-2 border-dashed border-slate-700 hover:border-blue-500/60 transition-all"
+                  >
+                    {resolvedClientAvatar ? (
+                      <>
+                        <img
+                          src={resolvedClientAvatar}
+                          className="w-full h-full object-cover transition-transform group-hover/avatar:scale-110"
+                          alt="avatar"
+                        />
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center transition-opacity">
+                          <Camera size={20} className="text-white" />
+                        </div>
+                      </>
+                    ) : (
+                      <div className="w-full h-full bg-black flex flex-col items-center justify-center gap-1 p-2 group-hover/avatar:bg-slate-950 transition-colors">
+                        <Camera size={18} className="text-slate-500 group-hover/avatar:text-blue-400 transition-colors" />
+                        <span className="text-[7px] font-black uppercase tracking-wider text-slate-600 group-hover/avatar:text-blue-400 text-center leading-tight transition-colors">Upload<br/>Photo</span>
+                      </div>
+                    )}
                     <input type="file" ref={avatarInputRef} className="hidden" accept="image/*" onChange={handleAvatarUpload} />
                   </div>
                   <div>
