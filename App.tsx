@@ -296,36 +296,41 @@ const MainApp: React.FC = () => {
         </button>
       </nav>
 
-      {/* 📱 Mobile Top Navigation */}
-      <nav className="md:hidden sticky top-0 z-50 bg-[#010409]/90 backdrop-blur-xl border-b border-slate-900">
-        <div className="flex items-center justify-between px-4 py-3">
+      {/* 📱 Mobile Top Bar — logo + logout only */}
+      <div className="md:hidden sticky top-0 z-50 bg-[#010409]/90 backdrop-blur-xl border-b border-slate-900/60">
+        <div className="flex items-center justify-between px-5 py-3">
           <button
             onClick={() => setViewMode(authStatus.type === 'COACH' ? 'ADMIN' : 'CLIENT')}
-            className="w-10 h-10 rounded-xl overflow-hidden bg-slate-800"
+            className="w-9 h-9 rounded-xl overflow-hidden bg-slate-800 border border-white/5"
           >
             {landingConfig.coachAvatar ? (
               <img src={landingConfig.coachAvatar} className="w-full h-full object-cover" />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-xs font-bold">IS</div>
+              <div className="w-full h-full flex items-center justify-center text-xs font-bold text-white">IS</div>
             )}
           </button>
-          <div className="flex gap-2 overflow-x-auto overflow-y-visible no-scrollbar py-1">
-            {NavButtons}
-          </div>
           <div className="flex items-center gap-1">
             {authStatus.type === 'COACH' && notifPermission !== 'granted' && (
-              <button onClick={requestNotifPermission} title="Enable notifications" className="p-2 text-slate-600 hover:text-yellow-400 transition-colors">
+              <button onClick={requestNotifPermission} className="p-2 text-slate-600 hover:text-yellow-400 transition-colors">
                 <BellOff size={18} />
               </button>
             )}
-            <button onClick={() => setAuthStatus({ type: 'NONE' })} className="text-slate-500 p-2">
-              <LogOut size={20} />
+            <button onClick={() => setAuthStatus({ type: 'NONE' })} className="p-2 text-slate-600 hover:text-red-500 transition-colors">
+              <LogOut size={18} />
             </button>
           </div>
         </div>
+      </div>
+
+      {/* 📱 Mobile Bottom Tab Bar */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#010409]/95 backdrop-blur-xl border-t border-slate-900/80"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        <div className="flex items-center justify-around px-2 py-2">
+          {NavButtons}
+        </div>
       </nav>
 
-      <main className="flex-1 overflow-y-auto p-4 md:p-12 pb-24 md:pb-12 no-scrollbar">
+      <main className="flex-1 overflow-y-auto p-4 md:p-12 pb-28 md:pb-12 no-scrollbar">
         <div className={`mx-auto transition-all duration-300 ${mobilePreview && authStatus.type === 'COACH' ? 'max-w-[390px]' : 'max-w-6xl'}`}>
 
           {viewMode === 'ADMIN' && (
@@ -557,6 +562,7 @@ const MainApp: React.FC = () => {
 
 const NavBtn = ({ active, icon, onClick, color, badge }: any) => (
   <div className="relative">
+    {/* Desktop sidebar style */}
     <button
       onClick={onClick}
       className={`p-3 md:p-4 rounded-2xl transition-all duration-300 ${active ? 'text-white shadow-lg' : 'text-slate-700 hover:text-white'}`}
