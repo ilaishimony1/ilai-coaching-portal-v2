@@ -819,21 +819,43 @@ const matches = [...startsWithMatches, ...includesMatches];
 
       {/* Frequency Editor */}
       <div className="glass-card p-8 rounded-[3rem] border-slate-800 shadow-2xl space-y-8">
-        <div className="flex items-center gap-4 border-b border-white/5 pb-4">
-          <Clock className="text-blue-500" size={20} />
-          <h3 className="text-xl font-black brand-font text-white uppercase tracking-tight">Weekly Frequency</h3>
+        <div className="flex items-center justify-between border-b border-white/5 pb-4">
+          <div className="flex items-center gap-4">
+            <Clock className="text-blue-500" size={20} />
+            <h3 className="text-xl font-black brand-font text-white uppercase tracking-tight">Weekly Frequency</h3>
+          </div>
+          {/* On/Off toggle */}
+          <button
+            type="button"
+            onClick={() => setLocalClient((prev: ClientData) => ({ ...prev, weeklyScheduleEnabled: !prev.weeklyScheduleEnabled }))}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl border font-black text-[9px] uppercase tracking-widest transition-all ${
+              localClient.weeklyScheduleEnabled
+                ? 'bg-blue-600/20 border-blue-500/40 text-blue-400'
+                : 'bg-slate-900 border-slate-700 text-slate-500'
+            }`}
+          >
+            <span className={`w-7 h-4 rounded-full relative transition-colors ${localClient.weeklyScheduleEnabled ? 'bg-blue-500' : 'bg-slate-700'}`}>
+              <span className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-all ${localClient.weeklyScheduleEnabled ? 'left-3.5' : 'left-0.5'}`} />
+            </span>
+            {localClient.weeklyScheduleEnabled ? 'Visible to client' : 'Hidden'}
+          </button>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-          {DAYS_OF_WEEK.map((day, idx) => (
-            <div key={day} className="">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest text-center block w-full">{day}</label>
-              <select value={localClient.weeklySchedule?.[idx] || ''} onChange={e => setLocalClient((prev: ClientData) => ({ ...prev, weeklySchedule: { ...(prev.weeklySchedule || {}), [idx]: e.target.value } }))} className="w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl text-[10px] font-black uppercase text-white outline-none cursor-pointer">
-                <option value="">Rest Day</option>
-                {localClient.workouts.map((w: Workout) => <option key={w.id} value={w.id}>{w.name}</option>)}
-              </select>
-            </div>
-          ))}
-        </div>
+        {localClient.weeklyScheduleEnabled && (
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+            {DAYS_OF_WEEK.map((day, idx) => (
+              <div key={day} className="">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest text-center block w-full">{day}</label>
+                <select value={localClient.weeklySchedule?.[idx] || ''} onChange={e => setLocalClient((prev: ClientData) => ({ ...prev, weeklySchedule: { ...(prev.weeklySchedule || {}), [idx]: e.target.value } }))} className="w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl text-[10px] font-black uppercase text-white outline-none cursor-pointer">
+                  <option value="">Rest Day</option>
+                  {localClient.workouts.map((w: Workout) => <option key={w.id} value={w.id}>{w.name}</option>)}
+                </select>
+              </div>
+            ))}
+          </div>
+        )}
+        {!localClient.weeklyScheduleEnabled && (
+          <p className="text-[9px] font-black uppercase tracking-widest text-slate-700">Schedule is hidden — toggle on to show it to the client.</p>
+        )}
       </div>
 
       {/* Protocol Modules Editor */}

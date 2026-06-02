@@ -373,7 +373,7 @@ const isDone = exerciseState[ex.id] || false;
       </div>
 
       <div className="flex flex-col md:flex-row justify-center items-center gap-6">
-        <ScheduleCalendar client={clientData} accentColor={accentColor} />
+        {clientData.weeklyScheduleEnabled && <ScheduleCalendar client={clientData} accentColor={accentColor} />}
         <div className="flex gap-2 md:gap-3">
           {workouts.map(w => (
             <button key={w.id} onClick={() => { setSelectedId(w.id); setExerciseState({}); setShowLogForm(false); setLogText(''); setLogJustSaved(false); }} className={`w-10 h-10 md:w-12 md:h-12 rounded-xl font-black text-base md:text-lg flex items-center justify-center border transition-all duration-300 ${selectedId === w.id ? 'text-white border-transparent shadow-lg shadow-blue-900/10' : 'bg-slate-900 border-slate-800 text-slate-500 hover:text-white'}`} style={selectedId === w.id ? {backgroundColor: accentColor} : {}}>{w.name}</button>

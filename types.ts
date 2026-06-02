@@ -69,6 +69,7 @@ export interface ClientData {
   unseenVideoUids?: string[];
   coachNotes?: string;
   weeklyCheckInEnabled?: boolean;
+  weeklyScheduleEnabled?: boolean;
   lastSync?: any;
 }
 
