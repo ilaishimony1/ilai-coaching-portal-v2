@@ -527,19 +527,22 @@ const matches = [...startsWithMatches, ...includesMatches];
     setDeletingMiniGoalKey(null);
   };
 
+  const [confirmPublish, setConfirmPublish] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+
   const publishDraft = () => {
-    if (!window.confirm(`Replace ${localClient.name}'s live plan with the draft? This cannot be undone.`)) return;
     const firstId = (localClient.draftWorkouts || [])[0]?.id || null;
     setLocalClient(prev => ({ ...prev, workouts: prev.draftWorkouts || [], draftWorkouts: [] }));
     setPlanMode('live');
     setActiveWorkoutId(firstId);
+    setConfirmPublish(false);
   };
 
   const discardDraft = () => {
-    if (!window.confirm('Discard the entire draft plan?')) return;
     setLocalClient(prev => ({ ...prev, draftWorkouts: [] }));
     setActiveDraftWorkoutId(null);
     setPlanMode('live');
+    setConfirmDiscard(false);
   };
 
   const switchToDraft = () => {
@@ -1195,20 +1198,55 @@ const matches = [...startsWithMatches, ...includesMatches];
 
             {planMode === 'draft' && (
               <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t border-amber-500/20">
-                <button
-                  type="button"
-                  onClick={publishDraft}
-                  className="flex-1 py-5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-lg"
-                >
-                  <Check size={18} /> PUBLISH DRAFT → LIVE
-                </button>
-                <button
-                  type="button"
-                  onClick={discardDraft}
-                  className="flex-1 py-5 bg-slate-900 hover:bg-red-900/40 border border-red-500/30 text-red-400 hover:text-red-300 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3"
-                >
-                  <X size={18} /> DISCARD DRAFT
-                </button>
+                {/* Publish */}
+                {confirmPublish ? (
+                  <div className="flex-1 flex flex-col gap-3 p-5 bg-emerald-950/40 border border-emerald-500/30 rounded-2xl animate-in fade-in duration-200">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-emerald-300 text-center">
+                      Replace {localClient.name}'s live plan with this draft?<br/>
+                      <span className="text-emerald-600 font-medium normal-case tracking-normal">This cannot be undone.</span>
+                    </p>
+                    <div className="flex gap-3">
+                      <button type="button" onClick={() => setConfirmPublish(false)}
+                        className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all">
+                        Cancel
+                      </button>
+                      <button type="button" onClick={publishDraft}
+                        className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black text-[9px] uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+                        <Check size={14} /> Yes, Publish
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => setConfirmPublish(true)}
+                    className="flex-1 py-5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-lg">
+                    <Check size={18} /> PUBLISH DRAFT → LIVE
+                  </button>
+                )}
+
+                {/* Discard */}
+                {confirmDiscard ? (
+                  <div className="flex-1 flex flex-col gap-3 p-5 bg-red-950/40 border border-red-500/30 rounded-2xl animate-in fade-in duration-200">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-red-300 text-center">
+                      Discard the entire draft?<br/>
+                      <span className="text-red-600 font-medium normal-case tracking-normal">All draft changes will be lost.</span>
+                    </p>
+                    <div className="flex gap-3">
+                      <button type="button" onClick={() => setConfirmDiscard(false)}
+                        className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all">
+                        Cancel
+                      </button>
+                      <button type="button" onClick={discardDraft}
+                        className="flex-1 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl font-black text-[9px] uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+                        <X size={14} /> Yes, Discard
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => setConfirmDiscard(true)}
+                    className="flex-1 py-5 bg-slate-900 hover:bg-red-900/40 border border-red-500/30 text-red-400 hover:text-red-300 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3">
+                    <X size={18} /> DISCARD DRAFT
+                  </button>
+                )}
               </div>
             )}
           </div>
