@@ -26,7 +26,7 @@ import { ClientData, LandingPageConfig, WorkoutTemplate, WeeklyCheckIn, WorkoutL
 // ===============================
 // Firebase Config
 // ===============================
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: "AIzaSyCK3MMANVameEK39oKGONkgjpqHyTIC0OM",
   authDomain: "ilai-portal.firebaseapp.com",
   projectId: "ilai-portal",

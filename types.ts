@@ -70,6 +70,7 @@ export interface ClientData {
   coachNotes?: string;
   weeklyCheckInEnabled?: boolean;
   weeklyScheduleEnabled?: boolean;
+  authUid?: string;
   lastSync?: any;
 }
 

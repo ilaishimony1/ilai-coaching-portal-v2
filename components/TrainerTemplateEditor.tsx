@@ -583,6 +583,12 @@ const matches = [...startsWithMatches, ...includesMatches];
               <Archive size={16} /> Archive Protocol
             </button>
           )}
+          {localClient.authUid && (
+            <div className="flex items-center gap-2 bg-blue-600/10 border border-blue-500/20 px-4 py-2 rounded-2xl" title={`Auth UID: ${localClient.authUid}`}>
+              <ShieldCheck size={14} className="text-blue-400" />
+              <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest">Auth ✓</span>
+            </div>
+          )}
           {localClient.username && localClient.password && (
             <div className="flex items-center gap-3 bg-emerald-600/10 border border-emerald-500/20 px-6 py-2.5 rounded-2xl animate-in zoom-in-95">
                <ShieldCheck size={18} className="text-emerald-500" />

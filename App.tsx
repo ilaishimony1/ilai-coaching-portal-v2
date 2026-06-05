@@ -1,12 +1,15 @@
-import { 
-  getAuth, 
-  signInWithEmailAndPassword, 
+import {
+  getAuth,
+  signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
   setPersistence,
   browserLocalPersistence,
-  inMemoryPersistence
+  inMemoryPersistence,
+  createUserWithEmailAndPassword
 } from "firebase/auth";
+import { initializeApp, getApps } from "firebase/app";
+import { firebaseConfig } from "./firebaseService";
 import React, { useState, useRef, useEffect } from 'react';
 import { Home, LogOut, Palette, User, ChevronLeft, Archive, BookOpen, Video, Camera, Library, ClipboardList, Bell, BellOff, Smartphone, Monitor } from 'lucide-react';
 import { ViewMode, AuthStatus, ClientData } from './types';
@@ -51,6 +54,22 @@ const mergeClient = (client: ClientData): ClientData => ({
   ...client,
   avatar: client.avatar ?? '',
 });
+
+// ── Secondary Firebase app for creating client auth accounts ──
+// Uses a separate app instance so it never signs out the coach session
+const getSecondaryAuth = () => {
+  const SECONDARY = 'client-creator';
+  const existing = getApps().find(a => a.name === SECONDARY);
+  const app = existing || initializeApp(firebaseConfig, SECONDARY);
+  return getAuth(app);
+};
+
+const createClientAuthAccount = async (email: string, password: string): Promise<string> => {
+  const auth = getSecondaryAuth();
+  const { user } = await createUserWithEmailAndPassword(auth, email, password);
+  await auth.signOut(); // immediately sign out of secondary instance
+  return user.uid;
+};
 
 const MainApp: React.FC = () => {
   const { clients, setClients, archivedClients, setArchivedClients, landingConfig, setLandingConfig, cloudSync, syncService, unreadCheckInsCount, unreadWorkoutLogsCount, checkIns } = useApp();
@@ -134,13 +153,33 @@ const MainApp: React.FC = () => {
 
   const handleAddOrUpdateClient = async (data: ClientData) => {
     if (!data.id) return;
+
+    let clientData = { ...data };
+
+    // Auto-create Firebase Auth account for new clients that have email + password but no authUid yet
+    if (!clientData.authUid && clientData.email && clientData.password) {
+      try {
+        const uid = await createClientAuthAccount(clientData.email, clientData.password);
+        clientData = { ...clientData, authUid: uid };
+        console.log('✅ Auth account created for', clientData.email, '— UID:', uid);
+      } catch (err: any) {
+        if (err.code === 'auth/email-already-in-use') {
+          // Account exists — fine, just save without UID (coach created it manually before)
+          console.warn('Auth account already exists for', clientData.email);
+        } else {
+          alert(`❌ Failed to create login account: ${err.message || 'Unknown error'}`);
+          return;
+        }
+      }
+    }
+
     setClients(prev => {
-      const exists = prev.find(c => c.id === data.id);
-      if (exists) return prev.map(c => c.id === data.id ? data : c);
-      return [...prev, data];
+      const exists = prev.find(c => c.id === clientData.id);
+      if (exists) return prev.map(c => c.id === clientData.id ? clientData : c);
+      return [...prev, clientData];
     });
     try {
-      await syncService.updateDocument('clients', data.id, data);
+      await syncService.updateDocument('clients', clientData.id, clientData);
       setViewMode('ADMIN');
     } catch (e: any) {
       console.error("Cloud Save Error:", e);
