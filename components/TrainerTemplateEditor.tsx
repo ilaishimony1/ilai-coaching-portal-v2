@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 // Added RefreshCw to imports from lucide-react
-import { Save, Plus, X, Dumbbell, Info, Eye, EyeOff, Target, User, Phone, Mail, Globe, Calendar, Zap, Check, Clock, Ruler as RulerIcon, Weight, Activity, Search, BarChart, Move, Shapes, Library, Download, Type, ShieldCheck, CheckCircle2, RefreshCw, Archive, PlayCircle } from 'lucide-react';
+import { Save, Plus, X, Dumbbell, Info, Eye, EyeOff, Target, User, Phone, Mail, Globe, Calendar, Zap, Check, Clock, Ruler as RulerIcon, Weight, Activity, Search, BarChart, Move, Shapes, Library, Download, Type, ShieldCheck, CheckCircle2, RefreshCw, Archive, PlayCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ClientData, Workout, Exercise, Goal, MiniGoal, WorkoutTemplate } from '../types';
 import { db, VideoFile } from '../db';
 import { useApp } from '../AppContext';
@@ -212,27 +212,45 @@ const TrainerTemplateEditor: React.FC<Props> = ({ client, onUpdate, onAddClient,
     }, 1500);
   };
 
+  const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+  const reLetterWorkouts = (workouts: Workout[]): Workout[] =>
+    workouts.map((w, i) => ({ ...w, name: ALPHABET[i] ?? String(i + 1) }));
+
   const addWorkout = () => {
     const newId = generateUniqueId('w');
     setLocalClient((prev: ClientData) => {
       const sourceWorkouts = planMode === 'draft' ? (prev.draftWorkouts || []) : prev.workouts;
-      const existingLetters = sourceWorkouts.map(w => w.name.toUpperCase());
-      const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-      let nextLetter = 'A';
-      for (const char of alphabet) {
-        if (!existingLetters.includes(char)) {
-          nextLetter = char;
-          break;
-        }
-      }
-      const newWorkout = { id: newId, name: nextLetter, title: '', exercises: [] };
-      if (planMode === 'draft') {
-        return { ...prev, draftWorkouts: [...(prev.draftWorkouts || []), newWorkout] };
-      }
-      return { ...prev, workouts: [...prev.workouts, newWorkout] };
+      const activeId = planMode === 'draft' ? activeDraftWorkoutId : activeWorkoutId;
+      const activeIdx = sourceWorkouts.findIndex(w => w.id === activeId);
+      const insertAt = activeIdx >= 0 ? activeIdx + 1 : sourceWorkouts.length;
+      const inserted = [
+        ...sourceWorkouts.slice(0, insertAt),
+        { id: newId, name: '_', title: '', exercises: [] },
+        ...sourceWorkouts.slice(insertAt),
+      ];
+      const reLettered = reLetterWorkouts(inserted);
+      if (planMode === 'draft') return { ...prev, draftWorkouts: reLettered };
+      return { ...prev, workouts: reLettered };
     });
     if (planMode === 'draft') setActiveDraftWorkoutId(newId);
     else setActiveWorkoutId(newId);
+  };
+
+  const moveWorkout = (direction: 'left' | 'right') => {
+    setLocalClient((prev: ClientData) => {
+      const sourceWorkouts = planMode === 'draft' ? (prev.draftWorkouts || []) : prev.workouts;
+      const activeId = planMode === 'draft' ? activeDraftWorkoutId : activeWorkoutId;
+      const idx = sourceWorkouts.findIndex(w => w.id === activeId);
+      if (idx < 0) return prev;
+      const newIdx = direction === 'left' ? idx - 1 : idx + 1;
+      if (newIdx < 0 || newIdx >= sourceWorkouts.length) return prev;
+      const reordered = [...sourceWorkouts];
+      [reordered[idx], reordered[newIdx]] = [reordered[newIdx], reordered[idx]];
+      const reLettered = reLetterWorkouts(reordered);
+      if (planMode === 'draft') return { ...prev, draftWorkouts: reLettered };
+      return { ...prev, workouts: reLettered };
+    });
   };
 
   const executeDeleteWorkout = (id: string) => {
@@ -910,17 +928,45 @@ const matches = [...startsWithMatches, ...includesMatches];
               <p className="text-[8px] font-black text-amber-500/60 uppercase tracking-widest">⚠ Client sees LIVE until published</p>
             )}
             {/* Workout tabs */}
-            <div className="flex gap-2 p-2 bg-slate-950 border border-slate-800 rounded-2xl">
-              {planMode === 'draft'
-                ? (localClient.draftWorkouts || []).map((w: Workout) => (
-                    <button key={w.id} type="button" onClick={() => setActiveDraftWorkoutId(w.id)} className={`w-10 h-10 rounded-xl font-black text-xs transition-all ${activeDraftWorkoutId === w.id ? 'bg-amber-500 text-white shadow-lg' : 'text-slate-600 hover:text-white'}`}>{w.name}</button>
-                  ))
-                : localClient.workouts.map((w: Workout) => (
-                    <button key={w.id} type="button" onClick={() => setActiveWorkoutId(w.id)} className={`w-10 h-10 rounded-xl font-black text-xs transition-all ${activeWorkoutId === w.id ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-600 hover:text-white'}`}>{w.name}</button>
-                  ))
-              }
-              <button type="button" onClick={addWorkout} className="w-10 h-10 rounded-xl border border-dashed border-slate-700 text-slate-700 hover:text-blue-500 flex items-center justify-center"><Plus size={18} /></button>
-            </div>
+            {(() => {
+              const tabWorkouts = planMode === 'draft' ? (localClient.draftWorkouts || []) : localClient.workouts;
+              const activeId = planMode === 'draft' ? activeDraftWorkoutId : activeWorkoutId;
+              const activeIdx = tabWorkouts.findIndex(w => w.id === activeId);
+              return (
+                <div className="flex items-center gap-1.5 p-2 bg-slate-950 border border-slate-800 rounded-2xl flex-wrap">
+                  {tabWorkouts.map((w: Workout) => (
+                    <button key={w.id} type="button"
+                      onClick={() => planMode === 'draft' ? setActiveDraftWorkoutId(w.id) : setActiveWorkoutId(w.id)}
+                      className={`w-10 h-10 rounded-xl font-black text-xs transition-all ${
+                        (planMode === 'draft' ? activeDraftWorkoutId : activeWorkoutId) === w.id
+                          ? planMode === 'draft' ? 'bg-amber-500 text-white shadow-lg' : 'bg-blue-600 text-white shadow-lg'
+                          : 'text-slate-600 hover:text-white'
+                      }`}
+                    >{w.name}</button>
+                  ))}
+                  {/* Divider */}
+                  {tabWorkouts.length > 0 && <div className="w-px h-6 bg-slate-800 mx-1" />}
+                  {/* Move left */}
+                  <button type="button" onClick={() => moveWorkout('left')} disabled={activeIdx <= 0}
+                    title="Move module left"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-700 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-all">
+                    <ChevronLeft size={16} />
+                  </button>
+                  {/* Move right */}
+                  <button type="button" onClick={() => moveWorkout('right')} disabled={activeIdx < 0 || activeIdx >= tabWorkouts.length - 1}
+                    title="Move module right"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-700 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-all">
+                    <ChevronRight size={16} />
+                  </button>
+                  {/* Insert after active */}
+                  <button type="button" onClick={addWorkout}
+                    title={activeIdx >= 0 ? `Insert new module after ${tabWorkouts[activeIdx]?.name}` : 'Add module'}
+                    className="w-10 h-10 rounded-xl border border-dashed border-slate-700 text-slate-700 hover:text-blue-500 hover:border-blue-500/40 flex items-center justify-center transition-all">
+                    <Plus size={18} />
+                  </button>
+                </div>
+              );
+            })()}
           </div>
         </div>
 
