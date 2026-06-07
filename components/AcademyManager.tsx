@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { Upload, X, Video, Search, Plus, Info, Zap, ChevronRight, Folder, ArrowLeft, Edit3, Image as ImageIcon, Play, Pause, GripVertical, Layers, Check, Users, UserCheck, Smartphone, Link2Off } from 'lucide-react';
 import {
   getSkillVideos,
@@ -626,8 +627,23 @@ const FramePickerModal: React.FC<{
   const [duration, setDuration] = useState(0);
   const [captureDataUrl, setCaptureDataUrl] = useState<string | null>(null);
   const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
+  const [fetchedBlobUrl, setFetchedBlobUrl] = useState<string | null>(null);
+  const [fetching, setFetching] = useState(false);
   const objUrl = React.useMemo(() => file ? URL.createObjectURL(file) : null, [file]);
-  const srcUrl = objUrl ?? videoUrl ?? '';
+
+  // For existing video URLs: fetch as blob so canvas capture works without CORS taint
+  useEffect(() => {
+    if (!videoUrl || file) return;
+    setFetching(true);
+    fetch(videoUrl)
+      .then(r => r.blob())
+      .then(b => setFetchedBlobUrl(URL.createObjectURL(b)))
+      .catch(() => setFetchedBlobUrl(videoUrl)) // fallback to direct URL
+      .finally(() => setFetching(false));
+    return () => { if (fetchedBlobUrl) URL.revokeObjectURL(fetchedBlobUrl); };
+  }, [videoUrl]);
+
+  const srcUrl = objUrl ?? fetchedBlobUrl ?? '';
 
   useEffect(() => () => { if (objUrl) URL.revokeObjectURL(objUrl); }, [objUrl]);
 
@@ -664,11 +680,15 @@ const FramePickerModal: React.FC<{
         </div>
 
         <div className="bg-black rounded-2xl overflow-hidden aspect-video">
-          <video
+          {fetching && (
+            <div className="w-full h-full flex items-center justify-center bg-slate-950">
+              <p className="text-slate-500 font-black text-[10px] uppercase tracking-widest animate-pulse">Loading video…</p>
+            </div>
+          )}
+          {!fetching && <video
             ref={videoRef}
             src={srcUrl}
             className="w-full h-full object-contain"
-            crossOrigin="anonymous"
             onLoadedMetadata={() => {
               const d = videoRef.current?.duration || 0;
               setDuration(d);
@@ -677,7 +697,7 @@ const FramePickerModal: React.FC<{
             onTimeUpdate={() => setCurrentTime(videoRef.current?.currentTime || 0)}
             onPlay={() => setIsPlaying(true)}
             onPause={() => setIsPlaying(false)}
-          />
+          />}
         </div>
 
         <div className="space-y-2">
@@ -952,8 +972,8 @@ const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => 
       
       <input type="file" ref={thumbnailInputRef} onChange={handleThumbnailUpload} accept="image/*" className="hidden" />
 
-      {/* Frame picker for existing skill videos */}
-      {showFramePicker && video.category === 'skill' && video.url && (
+      {/* Frame picker for existing skill videos — portal so it renders fullscreen */}
+      {showFramePicker && video.category === 'skill' && video.url && ReactDOM.createPortal(
         <FramePickerModal
           videoUrl={video.url}
           onUse={async (thumbFile) => {
@@ -972,7 +992,8 @@ const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => 
             }
           }}
           onCancel={() => setShowFramePicker(false)}
-        />
+        />,
+        document.body
       )}
       {settingThumbnail && (
         <div className="absolute inset-0 bg-black/70 rounded-[2.5rem] flex items-center justify-center z-50">
