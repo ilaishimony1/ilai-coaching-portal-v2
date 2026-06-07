@@ -613,11 +613,12 @@ const onDragStart = (id: number | string) => {
 };
 
 const FramePickerModal: React.FC<{
-  file: File;
+  file?: File;
+  videoUrl?: string;
   onUse: (thumb: File) => void;
-  onSkip: () => void;
+  onSkip?: () => void;
   onCancel: () => void;
-}> = ({ file, onUse, onSkip, onCancel }) => {
+}> = ({ file, videoUrl, onUse, onSkip, onCancel }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -625,9 +626,10 @@ const FramePickerModal: React.FC<{
   const [duration, setDuration] = useState(0);
   const [captureDataUrl, setCaptureDataUrl] = useState<string | null>(null);
   const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
-  const objUrl = React.useMemo(() => URL.createObjectURL(file), [file]);
+  const objUrl = React.useMemo(() => file ? URL.createObjectURL(file) : null, [file]);
+  const srcUrl = objUrl ?? videoUrl ?? '';
 
-  useEffect(() => () => URL.revokeObjectURL(objUrl), [objUrl]);
+  useEffect(() => () => { if (objUrl) URL.revokeObjectURL(objUrl); }, [objUrl]);
 
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60);
@@ -664,8 +666,9 @@ const FramePickerModal: React.FC<{
         <div className="bg-black rounded-2xl overflow-hidden aspect-video">
           <video
             ref={videoRef}
-            src={objUrl}
+            src={srcUrl}
             className="w-full h-full object-contain"
+            crossOrigin="anonymous"
             onLoadedMetadata={() => {
               const d = videoRef.current?.duration || 0;
               setDuration(d);
@@ -725,8 +728,13 @@ const FramePickerModal: React.FC<{
         <canvas ref={canvasRef} className="hidden" />
 
         <div className="flex gap-3 pt-1">
-          <button onClick={onSkip} className="flex-1 py-4 bg-slate-800 text-slate-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-700 transition-all">
-            Upload Without Thumbnail
+          {onSkip && (
+            <button onClick={onSkip} className="flex-1 py-4 bg-slate-800 text-slate-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-700 transition-all">
+              Skip Thumbnail
+            </button>
+          )}
+          <button onClick={onCancel} className={`${onSkip ? '' : 'flex-1'} py-4 px-6 bg-slate-800 text-slate-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-700 transition-all`}>
+            Cancel
           </button>
           {captureDataUrl && (
             <button onClick={handleUse} className="flex-1 py-4 bg-emerald-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-500 transition-all">
@@ -757,6 +765,8 @@ const VideoManagementCard: React.FC<{
   const [isDeleting, setIsDeleting] = useState(false);
   const [tempName, setTempName] = useState("");
   const [isPlaying, setIsPlaying] = useState(false);
+  const [showFramePicker, setShowFramePicker] = useState(false);
+  const [settingThumbnail, setSettingThumbnail] = useState(false);
   const thumbnailInputRef = useRef<HTMLInputElement>(null);
 
   const handleNameSave = () => {
@@ -833,7 +843,17 @@ const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => 
                 <button onClick={() => setIsPlaying(true)} className="p-4 bg-blue-600 text-white rounded-full hover:scale-110 transition-transform shadow-2xl">
                   <Play size={24} fill="currentColor" />
                 </button>
-                <button onClick={() => thumbnailInputRef.current?.click()} className="p-4 bg-white/10 text-white rounded-full hover:bg-white/20 transition-all backdrop-blur-md">
+                <button
+                  onClick={() => {
+                    if (video.category === 'skill') {
+                      setShowFramePicker(true);
+                    } else {
+                      thumbnailInputRef.current?.click();
+                    }
+                  }}
+                  title="Set thumbnail"
+                  className="p-4 bg-white/10 text-white rounded-full hover:bg-white/20 transition-all backdrop-blur-md"
+                >
                   <ImageIcon size={20} />
                 </button>
               </div>
@@ -931,6 +951,34 @@ const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => 
       </div>
       
       <input type="file" ref={thumbnailInputRef} onChange={handleThumbnailUpload} accept="image/*" className="hidden" />
+
+      {/* Frame picker for existing skill videos */}
+      {showFramePicker && video.category === 'skill' && video.url && (
+        <FramePickerModal
+          videoUrl={video.url}
+          onUse={async (thumbFile) => {
+            setShowFramePicker(false);
+            setSettingThumbnail(true);
+            try {
+              if (video.id) {
+                const newURL = await uploadSkillThumbnail(String(video.id), thumbFile);
+                onUpdate({ thumbnail: newURL });
+              }
+            } catch (err) {
+              console.error(err);
+              alert('Failed to save thumbnail.');
+            } finally {
+              setSettingThumbnail(false);
+            }
+          }}
+          onCancel={() => setShowFramePicker(false)}
+        />
+      )}
+      {settingThumbnail && (
+        <div className="absolute inset-0 bg-black/70 rounded-[2.5rem] flex items-center justify-center z-50">
+          <p className="text-white font-black text-[10px] uppercase tracking-widest animate-pulse">Saving thumbnail…</p>
+        </div>
+      )}
     </div>
   );
 };
