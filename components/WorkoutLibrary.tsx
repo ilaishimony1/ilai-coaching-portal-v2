@@ -6,6 +6,7 @@ import { Workout, WorkoutLog, ClientData, Exercise } from '../types';
 import { useApp } from '../AppContext';
 import ScheduleCalendar from './ScheduleCalendar';
 import { db } from '../db';
+import { getSkillVideos } from '../firebase/skillVideos';
 import { jsPDF } from 'jspdf';
 interface Props {
   workouts: Workout[];
@@ -30,7 +31,8 @@ const getEmbedUrl = (url: string) => {
     const id = url.split('vimeo.com/')[1]?.split('?')[0];
     return `https://player.vimeo.com/video/${id}`;
   }
-  return url;
+  // Firebase Storage or direct video URLs — use <video> tag, not iframe
+  return null;
 };
 
 const formatLogDate = (iso: string) =>
@@ -102,6 +104,15 @@ useEffect(() => {
 
   const [activeVideoName, setActiveVideoName] = useState<string | null>(null);
   const [academyBlobUrl, setAcademyBlobUrl] = useState<string | null>(null);
+  // Thumbnail lookup: videoId → thumbnailURL (covers exercises assigned before thumbnails were stored)
+  const [skillThumbnails, setSkillThumbnails] = useState<Record<string, string>>({});
+  useEffect(() => {
+    getSkillVideos().then(videos => {
+      const map: Record<string, string> = {};
+      videos.forEach(v => { if (v.uid && v.thumbnailURL) map[v.uid] = v.thumbnailURL; });
+      setSkillThumbnails(map);
+    }).catch(() => {});
+  }, []);
   
 
   
@@ -287,7 +298,29 @@ const isDone = exerciseState[ex.id] || false;
               })()}
 
             <div className="flex items-center gap-2 flex-shrink-0">
-              {ex.videoUrl && <button onClick={() => { setActiveVideoUrl(ex.videoUrl!); setActiveVideoName(ex.name); }} className="w-10 h-10 md:w-9 md:h-9 flex items-center justify-center bg-blue-600/10 text-blue-500 rounded-xl md:rounded-lg"><PlayCircle size={20} /></button>}
+              {ex.videoUrl && (() => {
+                const thumb = ex.videoThumbnail || (ex.videoId ? skillThumbnails[ex.videoId] : null);
+                return (
+                  <button
+                    onClick={() => { setActiveVideoUrl(ex.videoUrl!); setActiveVideoName(ex.name); }}
+                    className="relative overflow-hidden rounded-xl shrink-0 group/vbtn"
+                    style={{ width: thumb ? 64 : 36, height: 36 }}
+                  >
+                    {thumb ? (
+                      <>
+                        <img src={thumb} className="w-full h-full object-cover" alt="" />
+                        <div className="absolute inset-0 bg-black/40 group-hover/vbtn:bg-black/20 transition-all flex items-center justify-center">
+                          <PlayCircle size={18} className="text-white drop-shadow" />
+                        </div>
+                      </>
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-blue-600/10 text-blue-500 hover:bg-blue-600/20 transition-all">
+                        <PlayCircle size={20} />
+                      </div>
+                    )}
+                  </button>
+                );
+              })()}
             </div>
           </div>
           </div>
@@ -308,11 +341,29 @@ const isDone = exerciseState[ex.id] || false;
                   {ex.category === 'mobility' && <span className="text-[7px] font-black text-emerald-500 uppercase tracking-widest mt-0.5">Mobility</span>}
                 </div>
               </div>
-              {ex.videoUrl && (
-                <button onClick={() => { setActiveVideoUrl(ex.videoUrl!); setActiveVideoName(ex.name); }} className="w-9 h-9 flex items-center justify-center bg-blue-600/10 text-blue-500 rounded-xl shrink-0">
-                  <PlayCircle size={18} />
-                </button>
-              )}
+              {ex.videoUrl && (() => {
+                const thumb = ex.videoThumbnail || (ex.videoId ? skillThumbnails[ex.videoId] : null);
+                return (
+                  <button
+                    onClick={() => { setActiveVideoUrl(ex.videoUrl!); setActiveVideoName(ex.name); }}
+                    className="relative overflow-hidden rounded-xl shrink-0 group/vbtn"
+                    style={{ width: thumb ? 72 : 36, height: 40 }}
+                  >
+                    {thumb ? (
+                      <>
+                        <img src={thumb} className="w-full h-full object-cover" alt="" />
+                        <div className="absolute inset-0 bg-black/40 group-hover/vbtn:bg-black/20 transition-all flex items-center justify-center">
+                          <PlayCircle size={18} className="text-white drop-shadow" />
+                        </div>
+                      </>
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-blue-600/10 text-blue-500">
+                        <PlayCircle size={18} />
+                      </div>
+                    )}
+                  </button>
+                );
+              })()}
             </div>
 
             {/* Row 2: Sets / Target / Rest */}

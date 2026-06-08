@@ -6,6 +6,8 @@ export interface Exercise {
   duration?: string;
   notes: string;
   videoId?: string;
+  videoUrl?: string;
+  videoThumbnail?: string;
   restTime?: string;
   category?: 'strength' | 'mobility' | 'header';
   supersetGroup?: string;
