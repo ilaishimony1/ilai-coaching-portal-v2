@@ -135,7 +135,7 @@ const MainApp: React.FC = () => {
         return true;
       }
 
-      const client = clients.find(c => c.email === cred.user.email);
+      const client = clients.find(c => c.email?.toLowerCase() === cred.user.email?.toLowerCase());
       if (client) {
         localStorage.setItem("loginTime", Date.now().toString());
         setAuthStatus({ type: "CLIENT", clientId: client.id });
