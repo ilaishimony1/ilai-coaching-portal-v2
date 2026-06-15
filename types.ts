@@ -48,6 +48,8 @@ export interface TrainingDay {
 export interface ClientData {
   id: string;
   name: string;
+  firstName?: string;
+  lastName?: string;
   avatar: string;
   username?: string;
   password?: string;

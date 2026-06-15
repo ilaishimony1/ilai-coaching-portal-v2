@@ -667,7 +667,14 @@ const matches = [...startsWithMatches, ...includesMatches];
           <div className="glass-card p-8 rounded-[3rem] border-slate-800 space-y-8 shadow-2xl h-full">
             <h3 className="text-[10px] font-black uppercase text-slate-500 tracking-widest flex items-center gap-2 border-b border-white/5 pb-4"><User size={12}/> Personal Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              <InfoFieldIcon label="Full Name" icon={<User size={14}/>} value={localClient.name} onChange={(v: string) => setLocalClient({...localClient, name: v})} placeholder="John Doe" />
+              <InfoFieldIcon label="First Name" icon={<User size={14}/>} value={localClient.firstName ?? (localClient.name?.split(' ')[0] ?? '')} onChange={(v: string) => {
+                const last = localClient.lastName ?? (localClient.name?.split(' ').slice(1).join(' ') ?? '');
+                setLocalClient({...localClient, firstName: v, name: [v, last].filter(Boolean).join(' ')});
+              }} placeholder="John" />
+              <InfoFieldIcon label="Last Name" icon={<User size={14}/>} value={localClient.lastName ?? (localClient.name?.split(' ').slice(1).join(' ') ?? '')} onChange={(v: string) => {
+                const first = localClient.firstName ?? (localClient.name?.split(' ')[0] ?? '');
+                setLocalClient({...localClient, lastName: v, name: [first, v].filter(Boolean).join(' ')});
+              }} placeholder="Doe" />
               <InfoFieldIcon label="Email Address" icon={<Mail size={14}/>} value={localClient.email} onChange={(v: string) => setLocalClient({...localClient, email: v})} placeholder="athlete@mail.com" />
               
               <div className="space-y-2 relative" ref={countryRef}>
