@@ -63,6 +63,10 @@ export interface ClientData {
   programStartDate?: string;
   programEndDate?: string;
   programLength?: string;
+  // 'fixed' = set-length program with an end date. 'monthly' = recurring membership, no end date.
+  billingType?: 'fixed' | 'monthly';
+  // For monthly members: the payment date. Renews the same day every month.
+  billingAnchorDate?: string;
   generalNotes?: string;
   goals: Goal[];
   schedule: TrainingDay[];
@@ -86,6 +90,8 @@ export interface ClientSummary {
   programLength?: string;
   programStartDate?: string;
   programEndDate?: string;
+  billingType?: 'fixed' | 'monthly';
+  billingAnchorDate?: string;
 }
 
 export type ViewMode = 'ADMIN' | 'TRAINER' | 'CLIENT' | 'LANDING_EDITOR' | 'ARCHIVE' | 'ACADEMY' | 'CHAT' | 'SAVED_PROGRAMS' | 'WEEKLY_CHECKIN';

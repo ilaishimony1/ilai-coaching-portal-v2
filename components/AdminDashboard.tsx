@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { Users, UserPlus, Palette, Settings2, RefreshCw, ChevronRight, Inbox, AlertCircle, Database, Cpu, Shield, Clock, GripVertical, ClipboardList, Dumbbell, Archive, Library, AlertTriangle, CheckCircle2, StickyNote, X } from 'lucide-react';
 import { ClientSummary, ClientData } from '../types';
+import { getBillingCycle, formatBillingDate, getMonthsActive, BillingCycle } from '../billing';
 import { useApp } from '../AppContext';
 
 interface Props {
@@ -16,6 +17,12 @@ interface Props {
 }
 
 // Returns progress 0–1, and a status string
+// Monthly members never expire — they just approach their next payment.
+const getMonthlyStatus = (cycle: BillingCycle | null) => {
+  if (!cycle) return { progress: 0, status: 'none' as const };
+  return { progress: cycle.progress, status: cycle.daysUntil <= 3 ? 'warning' as const : 'good' as const };
+};
+
 const getProgramStatus = (startDate?: string, endDate?: string) => {
   if (!startDate || !endDate) return { progress: 0, status: 'none' as const };
   const start = new Date(startDate).getTime();
@@ -55,6 +62,7 @@ const AdminDashboard: React.FC<Props> = ({
     const now = Date.now();
     return clients
       .filter(c => {
+        if (c.billingType === 'monthly') return false;
         if (!c.programEndDate) return false;
         const daysLeft = Math.ceil((new Date(c.programEndDate).getTime() - now) / (1000 * 60 * 60 * 24));
         return daysLeft >= 0 && daysLeft <= 14;
@@ -231,11 +239,16 @@ const AdminDashboard: React.FC<Props> = ({
           ) : (
             orderedClients.map(clientSummary => {
               const fullClient = fullClients.find(f => f.id === clientSummary.id);
-              const { progress, status } = getProgramStatus(
-                fullClient?.programStartDate ?? clientSummary.programStartDate,
-                clientSummary.programEndDate
-              );
+              const isMonthly = (fullClient?.billingType ?? clientSummary.billingType) === 'monthly';
+              const startDate = fullClient?.programStartDate ?? clientSummary.programStartDate;
+              const cycle = isMonthly
+                ? getBillingCycle(fullClient?.billingAnchorDate ?? clientSummary.billingAnchorDate)
+                : null;
+              const { progress, status } = isMonthly
+                ? getMonthlyStatus(cycle)
+                : getProgramStatus(startDate, clientSummary.programEndDate);
               const styles = statusStyles[status];
+              const monthsActive = isMonthly ? getMonthsActive(startDate) : null;
               const daysLeft = clientSummary.programEndDate
                 ? Math.ceil((new Date(clientSummary.programEndDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
                 : null;
@@ -274,15 +287,26 @@ const AdminDashboard: React.FC<Props> = ({
                       <div className="flex items-center gap-2 md:gap-4 mt-1 md:mt-2 flex-wrap">
                         <div className={`border px-2 py-0.5 md:px-3 md:py-1 rounded-lg ${styles.badge}`}>
                           <span className="text-[8px] md:text-[9px] uppercase font-black tracking-[0.1em]">
-                            {clientSummary.programLength || '3'}M
+                            {isMonthly ? 'Monthly' : `${clientSummary.programLength || '3'}M`}
                           </span>
                         </div>
                         <p className={`text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] ${styles.text}`}>
-                          {daysLeft === null
+                          {isMonthly
+                            ? !cycle
+                              ? 'No payment date'
+                              : cycle.daysUntil <= 0
+                              ? 'Renews today'
+                              : cycle.daysUntil === 1
+                              ? 'Renews tomorrow'
+                              : `Renews ${formatBillingDate(cycle.next)}`
+                            : daysLeft === null
                             ? 'No end date'
                             : daysLeft <= 0
                             ? 'Expired'
                             : `${daysLeft}d left`}
+                          {isMonthly && monthsActive !== null && monthsActive > 0 && (
+                            <span className="text-slate-600"> · {monthsActive}mo in</span>
+                          )}
                         </p>
                       </div>
 

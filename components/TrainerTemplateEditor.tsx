@@ -5,6 +5,7 @@ import { ClientData, Workout, Exercise, Goal, MiniGoal, WorkoutTemplate } from '
 import { db, VideoFile } from '../db';
 import { useApp } from '../AppContext';
 import { getSkillVideos } from '../firebase/skillVideos';
+import { getBillingCycle, formatBillingDate, getMonthsActive } from '../billing';
 
 
 interface Props {
@@ -171,6 +172,14 @@ const TrainerTemplateEditor: React.FC<Props> = ({ client, onUpdate, onAddClient,
 
   const handleStartDateChange = (val: string) => {
     setLocalClient((prev: ClientData) => {
+      // Monthly members have no end date — seed the payment date from the start instead.
+      if (prev.billingType === 'monthly') {
+        return {
+          ...prev,
+          programStartDate: val,
+          billingAnchorDate: prev.billingAnchorDate || val
+        };
+      }
       const calculatedEnd = calculateEndDate(val, prev.programLength || '0');
       return { 
         ...prev, 
@@ -182,9 +191,18 @@ const TrainerTemplateEditor: React.FC<Props> = ({ client, onUpdate, onAddClient,
 
   const handleProgramLengthChange = (val: string) => {
     setLocalClient((prev: ClientData) => {
+      if (val === 'monthly') {
+        return {
+          ...prev,
+          billingType: 'monthly',
+          programEndDate: '',
+          billingAnchorDate: prev.billingAnchorDate || prev.programStartDate || ''
+        };
+      }
       const calculatedEnd = calculateEndDate(prev.programStartDate || '', val);
       return { 
         ...prev, 
+        billingType: 'fixed',
         programLength: val, 
         programEndDate: calculatedEnd || prev.programEndDate 
       };
@@ -752,10 +770,11 @@ const matches = [...startsWithMatches, ...includesMatches];
               </div>
 
               <div className="space-y-2">
-                <label className="text-[9px] font-black text-slate-600 uppercase flex items-center gap-1"><Zap size={14}/> Program Duration</label>
-                <select value={localClient.programLength || ''} onChange={e => handleProgramLengthChange(e.target.value)} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-white font-bold text-xs outline-none focus:ring-1 ring-blue-600 cursor-pointer">
-                  <option value="" disabled>Select Duration</option>
-                  {[1, 3, 6, 12].map(m => <option key={m} value={m}>{m} Month{m > 1 ? 's' : ''}</option>)}
+                <label className="text-[9px] font-black text-slate-600 uppercase flex items-center gap-1"><Zap size={14}/> Membership</label>
+                <select value={localClient.billingType === 'monthly' ? 'monthly' : (localClient.programLength || '')} onChange={e => handleProgramLengthChange(e.target.value)} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-white font-bold text-xs outline-none focus:ring-1 ring-blue-600 cursor-pointer">
+                  <option value="" disabled>Select Membership</option>
+                  <option value="monthly">Monthly — Recurring</option>
+                  {[1, 3, 6, 12].map(m => <option key={m} value={m}>{m} Month{m > 1 ? 's' : ''} — Fixed</option>)}
                 </select>
               </div>
 
@@ -772,10 +791,28 @@ const matches = [...startsWithMatches, ...includesMatches];
                 <input type="date" value={localClient.programStartDate || ''} onChange={e => handleStartDateChange(e.target.value)} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-white font-bold text-xs outline-none focus:ring-1 ring-blue-600" />
               </div>
 
-              <div className="space-y-2">
-                <label className="text-[9px] font-black text-slate-600 uppercase flex items-center gap-1"><Calendar size={14}/> End Date</label>
-                <input type="date" value={localClient.programEndDate || ''} onChange={e => setLocalClient({...localClient, programEndDate: e.target.value})} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-white font-bold text-xs outline-none focus:ring-1 ring-blue-600" />
-              </div>
+              {localClient.billingType === 'monthly' ? (
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black text-slate-600 uppercase flex items-center gap-1"><RefreshCw size={14}/> Payment Date</label>
+                  <input type="date" value={localClient.billingAnchorDate || ''} onChange={e => setLocalClient({...localClient, billingAnchorDate: e.target.value})} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-white font-bold text-xs outline-none focus:ring-1 ring-blue-600" />
+                  {(() => {
+                    const cycle = getBillingCycle(localClient.billingAnchorDate);
+                    if (!cycle) return <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Pick the day they pay</p>;
+                    const months = getMonthsActive(localClient.programStartDate);
+                    return (
+                      <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">
+                        Renews {formatBillingDate(cycle.next)} · every month
+                        {months !== null && months > 0 && <span className="text-slate-600"> · {months}mo in</span>}
+                      </p>
+                    );
+                  })()}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black text-slate-600 uppercase flex items-center gap-1"><Calendar size={14}/> End Date</label>
+                  <input type="date" value={localClient.programEndDate || ''} onChange={e => setLocalClient({...localClient, programEndDate: e.target.value})} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-white font-bold text-xs outline-none focus:ring-1 ring-blue-600" />
+                </div>
+              )}
             </div>
           </div>
         </div>
