@@ -1,0 +1,48 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isCoach() {
+      return request.auth != null
+        && request.auth.token.email == 'ilaishimony1@gmail.com';
+    }
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // The login screen needs the branding before anyone has signed in.
+    match /settings/{document=**} {
+      allow read: if true;
+      allow write: if isCoach();
+    }
+
+    // An athlete can only reach their own record. The coach reaches everyone.
+    match /clients/{clientId} {
+      allow read, update: if isCoach()
+        || (signedIn() && resource.data.authUid == request.auth.uid)
+        || (signedIn() && resource.data.email == request.auth.token.email);
+      allow create, delete: if isCoach();
+    }
+
+    // The video library is the same for every athlete.
+    match /explanation_videos/{id}      { allow read: if signedIn(); allow write: if isCoach(); }
+    match /skill_videos/{id}            { allow read: if signedIn(); allow write: if isCoach(); }
+    match /explanation_assignments/{id} { allow read: if signedIn(); allow write: if isCoach(); }
+
+    // Athletes send these in; only the coach reads the full lists.
+    match /workout_logs/{id} {
+      allow create: if signedIn();
+      allow read, update, delete: if isCoach();
+    }
+    match /check_ins/{id} {
+      allow create: if signedIn();
+      allow read, update, delete: if isCoach();
+    }
+
+    // Everything else is the coach's.
+    match /{document=**} {
+      allow read, write: if isCoach();
+    }
+  }
+}

@@ -1,0 +1,37 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Only the coach may add, replace or delete files.
+    function isCoach() {
+      return request.auth != null
+        && request.auth.token.email == 'ilaishimony1@gmail.com';
+    }
+
+    // Videos and thumbnails stay readable so clients can watch them.
+    match /academy/{allPaths=**} {
+      allow read: if true;
+      allow write: if isCoach();
+    }
+
+    match /videos/{allPaths=**} {
+      allow read: if true;
+      allow write: if isCoach();
+    }
+
+    match /branding/{allPaths=**} {
+      allow read: if true;
+      allow write: if isCoach();
+    }
+
+    match /explanation_thumbnails/{allPaths=**} {
+      allow read: if true;
+      allow write: if isCoach();
+    }
+
+    match /skill_thumbnails/{allPaths=**} {
+      allow read: if true;
+      allow write: if isCoach();
+    }
+  }
+}
