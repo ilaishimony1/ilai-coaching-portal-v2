@@ -646,7 +646,7 @@ const matches = [...startsWithMatches, ...includesMatches];
               <div className="space-y-2">
                 <label className="text-[9px] font-black text-slate-600 uppercase">Encryption (Password)</label>
                 <div className="relative">
-                  <input type={showPassword ? "text" : "password"} value={localClient.password || ''} onChange={e => setLocalClient({...localClient, password: e.target.value})} onKeyDown={checkCapsLock} onKeyUp={checkCapsLock} className="w-full bg-slate-950 border border-slate-800 p-4 pr-20 rounded-xl text-white font-bold outline-none focus:ring-1 ring-blue-600" placeholder={localClient.authUid ? "Login already created" : "••••••••"} />
+                  <input type={showPassword ? "text" : "password"} value={localClient.password || ''} onChange={e => setLocalClient({...localClient, password: e.target.value})} onKeyDown={checkCapsLock} onKeyUp={checkCapsLock} className="w-full bg-slate-950 border border-slate-800 p-4 pr-20 rounded-xl text-white font-bold outline-none focus:ring-1 ring-blue-600" placeholder={localClient.authUid ? "Type a new one to change it" : "••••••••"} />
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
                     {isCapsLock && <span className="text-[9px] font-black text-amber-500 animate-pulse">CAPS</span>}
                     <button type="button" onClick={() => setShowPassword(!showPassword)} className="text-slate-600 hover:text-blue-400">{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>

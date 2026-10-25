@@ -70,3 +70,5 @@ build/
 *.njsproj
 *.sln
 *.sw?
+.vercel
+.env*

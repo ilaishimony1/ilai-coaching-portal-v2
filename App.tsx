@@ -200,8 +200,39 @@ const MainApp: React.FC = () => {
       }
     }
 
-    // The password is only needed to create the login account. It is never
-    // saved to the database — a stored password is readable client data.
+    // Changing an existing athlete's password. The browser can only change the
+    // password of whoever is signed in, so this goes through the server.
+    if (clientData.authUid && clientData.password) {
+      const ok = window.confirm(
+        `Change ${clientData.name || 'this athlete'}'s password? They will need the new one to log in.`
+      );
+      if (!ok) return;
+
+      try {
+        const token = await getAuth().currentUser?.getIdToken();
+        const res = await fetch('/api/set-client-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            authUid: clientData.authUid,
+            email: clientData.email,
+            password: clientData.password,
+          }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          alert(body.error || "Couldn't change their password. Try again.");
+          return;
+        }
+      } catch (err) {
+        console.error('Password change failed:', err);
+        alert("Couldn't reach the server to change their password. Check your internet.");
+        return;
+      }
+    }
+
+    // The password is only needed to create or change the login account. It is
+    // never saved to the database — a stored password is readable client data.
     const hadPassword = !!clientData.password;
     const { password, ...clientWithoutPassword } = clientData;
     clientData = clientWithoutPassword as ClientData;
