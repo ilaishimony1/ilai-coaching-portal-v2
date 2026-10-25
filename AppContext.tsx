@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { ClientData, LandingPageConfig, WorkoutTemplate, WeeklyCheckIn, WorkoutLog } from './types';
-import { TEST_CLIENT, INITIAL_CONFIG } from './constants';
+import { TEST_CLIENT, INITIAL_CONFIG, COACH_EMAIL } from './constants';
 import { FirebaseSyncService } from './firebaseService';
 
 interface AppContextType {
@@ -160,16 +160,53 @@ const [clients, setClients] = useState<ClientData[] | null>(null);
   useEffect(() => {
     const auth = getAuth();
     let unsubStore: (() => void) | null = null;
+    // Which account the current listeners belong to. If a different person
+    // signs in on the same device, the old listeners have to go.
+    let subscribedUid: string | null = null;
     // onAuthStateChanged fires asynchronously, so it can still deliver after
     // this effect has been torn down. Without this guard that late call would
     // subscribe listeners nothing ever unsubscribes.
     let cancelled = false;
 
-    const unsubAuth = onAuthStateChanged(auth, (user) => {
+    const unsubAuth = onAuthStateChanged(auth, async (user) => {
       if (cancelled) return;
+
       if (user) {
-        if (!unsubStore) {
+        if (subscribedUid === user.uid) return;
+
+        if (unsubStore) {
+          unsubStore();
+          unsubStore = null;
+        }
+        subscribedUid = user.uid;
+
+        // The coach loads everyone. An athlete loads their own record and
+        // nothing else, so one athlete can never pull up another's details.
+        if (user.email === COACH_EMAIL) {
           unsubStore = syncService.listenToStore(applyUpdate, handleSyncError);
+          return;
+        }
+
+        try {
+          const own = await syncService.findClientForUser(user.uid, user.email || "");
+          if (cancelled) return;
+          if (!own?.id) {
+            setClients([]);
+            return;
+          }
+          const unsubOwn = syncService.listenToClient(
+            own.id,
+            client => applyUpdate({ type: 'clients', payload: [client] }),
+            handleSyncError
+          );
+          if (cancelled) {
+            unsubOwn();
+            return;
+          }
+          unsubStore = unsubOwn;
+          applyUpdate({ type: 'clients', payload: [own] });
+        } catch (err) {
+          if (!cancelled) handleSyncError(err);
         }
         return;
       }
@@ -178,6 +215,7 @@ const [clients, setClients] = useState<ClientData[] | null>(null);
         unsubStore();
         unsubStore = null;
       }
+      subscribedUid = null;
       setClients(null);
       setArchivedClients([]);
       setSavedWorkouts([]);

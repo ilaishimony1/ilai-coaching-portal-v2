@@ -13,6 +13,7 @@ import { firebaseConfig } from "./firebaseService";
 import React, { useState, useRef, useEffect } from 'react';
 import { Home, LogOut, Palette, User, ChevronLeft, Archive, BookOpen, Video, Camera, Library, ClipboardList, Bell, BellOff, Smartphone, Monitor } from 'lucide-react';
 import { ViewMode, AuthStatus, ClientData } from './types';
+import { COACH_EMAIL } from './constants';
 import LoginPage from './components/LoginPage'; 
 import GoalTracker from './components/GoalTracker';
 import CoachDirectives from './components/CoachDirectives';
@@ -48,6 +49,33 @@ const EMPTY_CLIENT: ClientData = {
     },
   ],
 };
+
+/**
+ * Scales a picked image down to fit inside maxSize and returns it as a small
+ * JPEG data URL. Phone photos are several MB; a record in Firestore cannot
+ * exceed 1 MB, so saving one raw always failed.
+ */
+const shrinkImage = (file: File, maxSize: number): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return reject(new Error('Could not process the image'));
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Could not read that image'));
+    };
+    img.src = url;
+  });
 
 const mergeClient = (client: ClientData): ClientData => ({
   ...EMPTY_CLIENT,
@@ -102,10 +130,23 @@ const MainApp: React.FC = () => {
     </>
   );
 
+  // Signing out has to clear the Firebase session too. It used to only hide
+  // the screen, so a reload put the person straight back in.
+  const handleLogout = async () => {
+    localStorage.removeItem("loginTime");
+    setAuthStatus({ type: 'NONE' });
+    setCurrentClientData(null);
+    try {
+      await signOut(getAuth());
+    } catch (err) {
+      console.error("Sign-out failed:", err);
+    }
+  };
+
   const handleLogin = async (email: string, password: string): Promise<boolean> => {
     const auth = getAuth();
     try {
-      if (email === "ilaishimony1@gmail.com") {
+      if (email === COACH_EMAIL) {
         await setPersistence(auth, inMemoryPersistence);
       } else {
         await setPersistence(auth, browserLocalPersistence);
@@ -113,7 +154,7 @@ const MainApp: React.FC = () => {
 
       const cred = await signInWithEmailAndPassword(auth, email, password);
 
-      if (cred.user.email === "ilaishimony1@gmail.com") {
+      if (cred.user.email === COACH_EMAIL) {
         setAuthStatus({ type: "COACH" });
         setViewMode("ADMIN");
         return true;
@@ -121,7 +162,7 @@ const MainApp: React.FC = () => {
 
       // Looked up straight from Firestore: the live client list only starts
       // loading once this sign-in completes, so it is not populated yet.
-      const client = await syncService.findClientByEmail(cred.user.email || "");
+      const client = await syncService.findClientForUser(cred.user.uid, cred.user.email || "");
       if (client) {
         localStorage.setItem("loginTime", Date.now().toString());
         setAuthStatus({ type: "CLIENT", clientId: client.id });
@@ -153,7 +194,7 @@ const MainApp: React.FC = () => {
           // Account exists — fine, just save without UID (coach created it manually before)
           console.warn('Auth account already exists for', clientData.email);
         } else {
-          alert(`❌ Failed to create login account: ${err.message || 'Unknown error'}`);
+          alert("Couldn't create their login. Check the email address and try again.");
           return;
         }
       }
@@ -166,9 +207,10 @@ const MainApp: React.FC = () => {
     clientData = clientWithoutPassword as ClientData;
 
     setClients(prev => {
-      const exists = prev.find(c => c.id === clientData.id);
-      if (exists) return prev.map(c => c.id === clientData.id ? clientData : c);
-      return [...prev, clientData];
+      const list = prev ?? [];
+      const exists = list.find(c => c.id === clientData.id);
+      if (exists) return list.map(c => c.id === clientData.id ? clientData : c);
+      return [...list, clientData];
     });
     try {
       await syncService.updateDocument('clients', clientData.id, clientData);
@@ -176,7 +218,7 @@ const MainApp: React.FC = () => {
       setViewMode('ADMIN');
     } catch (e: any) {
       console.error("Cloud Save Error:", e);
-      alert(`❌ CLOUD SYNC FAILED: ${e.message || "Unknown Error"}.`);
+      alert("Couldn't save that. Check your internet and try again — nothing was lost.");
     }
   };
 
@@ -189,7 +231,7 @@ const MainApp: React.FC = () => {
         await syncService.archiveClient(target);
         setViewMode('ADMIN');
       } catch (e) {
-        alert("Sync error during archiving.");
+        alert("Couldn't move them to the vault. Check your internet and try again.");
       }
     }
   };
@@ -200,7 +242,7 @@ const MainApp: React.FC = () => {
       try {
         await syncService.restoreClient(client);
       } catch (e) {
-        alert("Cloud Restore Error");
+        alert("Couldn't bring them back from the vault. Check your internet and try again.");
       }
     }
   };
@@ -210,7 +252,7 @@ const MainApp: React.FC = () => {
       try {
         await syncService.deletePermanent(id, true);
       } catch (e) {
-        alert("Cloud Delete Error");
+        alert("Couldn't delete that. Check your internet and try again.");
       }
     }
   };
@@ -224,23 +266,34 @@ const MainApp: React.FC = () => {
       newMini[miniIdx] = { ...newMini[miniIdx], completed: !newMini[miniIdx].completed };
       return { ...g, miniGoals: newMini };
     });
-    setClients(prev => prev.map(c => c.id === clientId ? { ...c, goals: updatedGoals } : c));
+    setClients(prev => (prev ?? []).map(c => c.id === clientId ? { ...c, goals: updatedGoals } : c));
     syncService.updateDocument('clients', clientId, { goals: updatedGoals });
   };
 
-  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !currentClientData) return;
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const base64 = reader.result as string;
-      const clientId = currentClientData.id;
-      setClients(prev => prev.map(c => c.id === clientId ? { ...c, avatar: base64 } : c));
-      setCurrentClientData(prev => prev ? { ...prev, avatar: base64 } : prev);
-      await syncService.updateDocument("clients", clientId, { avatar: base64 });
+
+    if (!file.type.startsWith('image/')) {
+      alert('That file is not a picture. Pick a photo and try again.');
       e.target.value = "";
-    };
-    reader.readAsDataURL(file);
+      return;
+    }
+
+    try {
+      // Photos are stored inside the athlete's record, which Firestore caps at
+      // 1 MB. A straight phone photo blows past that, so shrink it first.
+      const avatar = await shrinkImage(file, 400);
+      const clientId = currentClientData.id;
+      setClients(prev => (prev ?? []).map(c => c.id === clientId ? { ...c, avatar } : c));
+      setCurrentClientData(prev => prev ? { ...prev, avatar } : prev);
+      await syncService.updateDocument("clients", clientId, { avatar });
+    } catch (err: any) {
+      console.error('Avatar upload failed:', err);
+      alert("That photo couldn't be saved. Try a different one.");
+    } finally {
+      e.target.value = "";
+    }
   };
 
   const resolvedClientAvatar = currentClientData?.avatar?.length ? currentClientData.avatar : null;
@@ -252,12 +305,12 @@ const MainApp: React.FC = () => {
         setAuthStatus({ type: "NONE" });
         return;
       }
-      if (user.email === "ilaishimony1@gmail.com") {
+      if (user.email === COACH_EMAIL) {
         setAuthStatus({ type: "COACH" });
         setViewMode("ADMIN");
         return;
       }
-      const client = await syncService.findClientByEmail(user.email || "");
+      const client = await syncService.findClientForUser(user.uid, user.email || "");
       if (client) {
         setAuthStatus({ type: "CLIENT", clientId: client.id });
         setCurrentClientData(mergeClient(client));
@@ -277,19 +330,22 @@ const MainApp: React.FC = () => {
 
   useEffect(() => {
     const auth = getAuth();
+    if (authStatus.type !== "CLIENT") return;
+
+    // Athletes used to be signed out after an hour, which meant logging in
+    // again mid-session. They stay signed in for a month now, and the clock
+    // restarts every time they come back.
+    const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
     const loginTime = localStorage.getItem("loginTime");
-    if (authStatus.type === "CLIENT") {
-      if (!loginTime) {
-        setAuthStatus({ type: "NONE" });
-        return;
-      }
-      const oneHour = 60 * 60 * 1000;
-      if (Date.now() - parseInt(loginTime) > oneHour) {
-        localStorage.removeItem("loginTime");
-        signOut(auth);
-        setAuthStatus({ type: "NONE" });
-      }
+
+    if (loginTime && Date.now() - parseInt(loginTime) > THIRTY_DAYS) {
+      localStorage.removeItem("loginTime");
+      signOut(auth);
+      setAuthStatus({ type: "NONE" });
+      return;
     }
+
+    localStorage.setItem("loginTime", Date.now().toString());
   }, [authStatus]);
 
   // Athlete data is only fetched once someone is signed in, so every screen
@@ -341,7 +397,7 @@ const MainApp: React.FC = () => {
             {mobilePreview ? <Monitor size={20} /> : <Smartphone size={20} />}
           </button>
         )}
-        <button onClick={() => setAuthStatus({ type: 'NONE' })} className="mt-auto p-4 text-slate-700 hover:text-red-500 transition-colors">
+        <button onClick={handleLogout} className="mt-auto p-4 text-slate-700 hover:text-red-500 transition-colors">
           <LogOut size={24} />
         </button>
       </nav>
@@ -365,7 +421,7 @@ const MainApp: React.FC = () => {
                 <BellOff size={18} />
               </button>
             )}
-            <button onClick={() => setAuthStatus({ type: 'NONE' })} className="p-2 text-slate-600 hover:text-red-500 transition-colors">
+            <button onClick={handleLogout} className="p-2 text-slate-600 hover:text-red-500 transition-colors">
               <LogOut size={18} />
             </button>
           </div>
@@ -421,7 +477,7 @@ const MainApp: React.FC = () => {
                     );
                   }
                   const updatedClient = mergeClient({ ...client, draftWorkouts });
-                  setClients(prev => prev.map(c => c.id === clientId ? updatedClient : c));
+                  setClients(prev => (prev ?? []).map(c => c.id === clientId ? updatedClient : c));
                   syncService.updateDocument('clients', clientId, { draftWorkouts });
                 } else {
                   // Live plan — save directly
@@ -436,7 +492,7 @@ const MainApp: React.FC = () => {
                     );
                   }
                   const updatedClient = mergeClient({ ...client, workouts: updatedWorkouts });
-                  setClients(prev => prev.map(c => c.id === clientId ? updatedClient : c));
+                  setClients(prev => (prev ?? []).map(c => c.id === clientId ? updatedClient : c));
                   syncService.updateDocument('clients', clientId, { workouts: updatedWorkouts });
                 }
                 // Stay on library page — no navigation

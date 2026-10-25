@@ -108,3 +108,7 @@ export const INITIAL_CONFIG = {
   coachAvatar: 'https://firebasestorage.googleapis.com/v0/b/ilai-portal.firebasestorage.app/o/branding%2Favatar.jpeg?alt=media&token=acf8bc87-55ff-4de5-aaee-2fa25c374d37',
   lastSyncDate: new Date().toISOString()
 };
+
+// The one account that manages everyone. Checked in the app and mirrored in
+// the Firestore rules — change it in both places.
+export const COACH_EMAIL = "ilaishimony1@gmail.com";

@@ -191,7 +191,7 @@ if (activeFolder.cat === "explanation") {
 
   } catch (err) {
     console.error("UPLOAD ERROR:", err);
-    alert("Upload failed");
+    alert("The video didn't upload. Check your internet and try again.");
   } finally {
     setIsUploading(false);
   }
@@ -244,7 +244,7 @@ const handleSkillVideoUpload = async (thumbnailFile: File | null) => {
     await loadVideos();
   } catch (err) {
     console.error("UPLOAD ERROR:", err);
-    alert("Upload failed");
+    alert("The video didn't upload. Check your internet and try again.");
   } finally {
     setIsUploading(false);
     setUploadProgress(0);
@@ -263,7 +263,7 @@ const handleSkillVideoUpload = async (thumbnailFile: File | null) => {
         setVideos(prev => prev.filter(v => v.uid !== video.uid));
       }
     } catch (e) {
-      alert('Failed to delete video. Please try again.');
+      alert("Couldn't delete that video. Check your internet and try again.");
     }
   };
 
@@ -296,7 +296,7 @@ const handleSkillVideoUpload = async (thumbnailFile: File | null) => {
         ));
       }
     } catch (e) {
-      alert('Failed to save. Please try again.');
+      alert("Couldn't save that. Check your internet and try again.");
     }
   };
 
@@ -808,7 +808,7 @@ const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => 
       onUpdate({ thumbnail: newURL });
     } catch (err) {
       console.error(err);
-      alert("Failed to upload thumbnail.");
+      alert("The cover image didn't save. Try picking it again.");
     }
     return;
   }
@@ -820,7 +820,7 @@ const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => 
       onUpdate({ thumbnail: newURL });
     } catch (err) {
       console.error(err);
-      alert("Failed to upload thumbnail.");
+      alert("The cover image didn't save. Try picking it again.");
     }
     return;
   }
@@ -986,7 +986,7 @@ const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => 
               }
             } catch (err) {
               console.error(err);
-              alert('Failed to save thumbnail.');
+              alert("The cover image didn't save. Try picking it again.");
             } finally {
               setSettingThumbnail(false);
             }

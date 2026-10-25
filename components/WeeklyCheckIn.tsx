@@ -250,7 +250,7 @@ const WeeklyCheckInComponent: React.FC<Props> = ({ client, accentColor }) => {
       setJustSubmitted(true);
       setForm(EMPTY_FORM(client));
     } catch (e) {
-      alert('Failed to submit. Please try again.');
+      alert("Couldn't send your check-in. Check your internet and try again.");
     }
     setSubmitting(false);
   };

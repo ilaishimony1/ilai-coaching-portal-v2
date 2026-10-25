@@ -19,7 +19,8 @@ import {
   getDoc,
   addDoc,
   updateDoc,
-  deleteField
+  deleteField,
+  where
 } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
@@ -179,15 +180,43 @@ export class FirebaseSyncService {
     await updateDoc(doc(this.db, "clients", clientId), { password: deleteField() });
   }
 
-  // Looks a client up straight from Firestore. Used right after sign-in,
-  // when the live client list has not arrived yet.
-  async findClientByEmail(email: string): Promise<ClientData | null> {
-    const target = email.trim().toLowerCase();
-    const snap = await getDocs(collection(this.db, "clients"));
-    const match = snap.docs.find(
-      d => (d.data() as ClientData).email?.trim().toLowerCase() === target
+  // Finds the signed-in athlete's own record, right after sign-in and before
+  // the live listener has delivered anything. Both lookups are narrowed to
+  // this user so an athlete never reads anybody else's record.
+  async findClientForUser(uid: string, email: string): Promise<ClientData | null> {
+    const byUid = await getDocs(
+      query(collection(this.db, "clients"), where("authUid", "==", uid))
     );
-    return match ? { ...(match.data() as ClientData), id: match.id } : null;
+    if (!byUid.empty) {
+      const d = byUid.docs[0];
+      return { ...(d.data() as ClientData), id: d.id };
+    }
+
+    // Older records created before logins were generated have no authUid.
+    const byEmail = await getDocs(
+      query(collection(this.db, "clients"), where("email", "==", email))
+    );
+    if (!byEmail.empty) {
+      const d = byEmail.docs[0];
+      return { ...(d.data() as ClientData), id: d.id };
+    }
+
+    return null;
+  }
+
+  // Live updates for a single athlete's own record.
+  listenToClient(
+    clientId: string,
+    onUpdate: (client: ClientData) => void,
+    onError: (err: any) => void
+  ) {
+    return onSnapshot(
+      doc(this.db, "clients", clientId),
+      snap => {
+        if (snap.exists()) onUpdate({ ...(snap.data() as ClientData), id: snap.id });
+      },
+      onError
+    );
   }
 
   async deleteDocument(collectionName: string, id: string) {
