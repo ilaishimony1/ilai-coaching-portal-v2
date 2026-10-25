@@ -72,7 +72,7 @@ const createClientAuthAccount = async (email: string, password: string): Promise
 };
 
 const MainApp: React.FC = () => {
-  const { clients, setClients, archivedClients, setArchivedClients, landingConfig, setLandingConfig, cloudSync, syncService, unreadCheckInsCount, unreadWorkoutLogsCount, checkIns } = useApp();
+  const { clients, setClients, archivedClients, setArchivedClients, landingConfig, setLandingConfig, cloudSync, cloudError, syncService, unreadCheckInsCount, unreadWorkoutLogsCount, checkIns } = useApp();
   const [authStatus, setAuthStatus] = useState<AuthStatus>({ type: 'NONE' });
   const [viewMode, setViewMode] = useState<ViewMode>('ADMIN');
   const [currentClientData, setCurrentClientData] = useState<ClientData | null>(null);
@@ -101,22 +101,6 @@ const MainApp: React.FC = () => {
       )}
     </>
   );
-
-  if (cloudSync === 'loading') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#020617] text-slate-400">
-        Connecting to cloud…
-      </div>
-    );
-  }
-
-  if (cloudSync === 'error') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#020617] text-red-400">
-        Firebase connection failed
-      </div>
-    );
-  }
 
   const handleLogin = async (email: string, password: string): Promise<boolean> => {
     const auth = getAuth();
@@ -307,6 +291,24 @@ const MainApp: React.FC = () => {
       }
     }
   }, [authStatus]);
+
+  // Athlete data is only fetched once someone is signed in, so every screen
+  // past the login page has to wait for it rather than assume it is there.
+  if (authStatus.type !== 'NONE' && !clients) {
+    if (cloudError) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-[#020617] text-red-400 text-center px-6">
+          <p>Couldn't reach the cloud.</p>
+          <p className="text-xs text-slate-500">{cloudError}</p>
+        </div>
+      );
+    }
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#020617] text-slate-400">
+        Loading…
+      </div>
+    );
+  }
 
   if (authStatus.type === 'NONE') {
     return <LoginPage onLogin={handleLogin} config={landingConfig} version={APP_VERSION} />;
