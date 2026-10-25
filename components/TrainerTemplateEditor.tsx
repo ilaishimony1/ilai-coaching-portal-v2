@@ -215,7 +215,9 @@ const TrainerTemplateEditor: React.FC<Props> = ({ client, onUpdate, onAddClient,
 
   const handleSave = () => {
     if (!localClient.name) return alert("Please enter athlete name");
-    if (!localClient.username || !localClient.password) return alert("Please set username and password for account access");
+    if (!localClient.username) return alert("Please set a username for account access");
+    // A password is only needed the first time, to create the login account.
+    if (!localClient.authUid && !localClient.password) return alert("Please set a password so the athlete can log in");
     
     setIsDeploying(true);
     const finalData = { ...localClient };
@@ -625,7 +627,7 @@ const matches = [...startsWithMatches, ...includesMatches];
               <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest">Auth ✓</span>
             </div>
           )}
-          {localClient.username && localClient.password && (
+          {localClient.username && (localClient.authUid || localClient.password) && (
             <div className="flex items-center gap-3 bg-emerald-600/10 border border-emerald-500/20 px-6 py-2.5 rounded-2xl animate-in zoom-in-95">
                <ShieldCheck size={18} className="text-emerald-500" />
                <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest leading-none">Security Tokens Verified</p>
@@ -644,7 +646,7 @@ const matches = [...startsWithMatches, ...includesMatches];
               <div className="space-y-2">
                 <label className="text-[9px] font-black text-slate-600 uppercase">Encryption (Password)</label>
                 <div className="relative">
-                  <input type={showPassword ? "text" : "password"} value={localClient.password || ''} onChange={e => setLocalClient({...localClient, password: e.target.value})} onKeyDown={checkCapsLock} onKeyUp={checkCapsLock} className="w-full bg-slate-950 border border-slate-800 p-4 pr-20 rounded-xl text-white font-bold outline-none focus:ring-1 ring-blue-600" placeholder="••••••••" />
+                  <input type={showPassword ? "text" : "password"} value={localClient.password || ''} onChange={e => setLocalClient({...localClient, password: e.target.value})} onKeyDown={checkCapsLock} onKeyUp={checkCapsLock} className="w-full bg-slate-950 border border-slate-800 p-4 pr-20 rounded-xl text-white font-bold outline-none focus:ring-1 ring-blue-600" placeholder={localClient.authUid ? "Login already created" : "••••••••"} />
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
                     {isCapsLock && <span className="text-[9px] font-black text-amber-500 animate-pulse">CAPS</span>}
                     <button type="button" onClick={() => setShowPassword(!showPassword)} className="text-slate-600 hover:text-blue-400">{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>

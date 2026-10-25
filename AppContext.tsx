@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { ClientData, LandingPageConfig, WorkoutTemplate, WeeklyCheckIn, WorkoutLog } from './types';
 import { TEST_CLIENT, INITIAL_CONFIG } from './constants';
 import { FirebaseSyncService } from './firebaseService';
@@ -89,38 +90,35 @@ const [clients, setClients] = useState<ClientData[] | null>(null);
 
   // 1. Initial Load from Local Cache (Immediate UI)
   useEffect(() => {
-    const savedClients = localStorage.getItem('ilai_academy_clients');
-    const savedArchived = localStorage.getItem('ilai_academy_archived');
+    // Only branding is cached locally. Client records, archives and the
+    // workout library are never written to this browser: a cached copy is
+    // readable by anyone with the device, and every athlete who signed in
+    // used to end up holding a copy of every other athlete's details.
     const savedConfig = localStorage.getItem('ilai_academy_config');
-    const savedLibrary = localStorage.getItem('ilai_master_library');
-
-    if (savedClients) setClients(JSON.parse(savedClients));
-    if (savedArchived) setArchivedClients(JSON.parse(savedArchived));
     if (savedConfig) setLandingConfig(JSON.parse(savedConfig));
-    if (savedLibrary) setSavedWorkouts(JSON.parse(savedLibrary));
+
+    localStorage.removeItem('ilai_academy_clients');
+    localStorage.removeItem('ilai_academy_archived');
+    localStorage.removeItem('ilai_master_library');
   }, []);
 
   // 2. Continuous Cloud Sync
-  useEffect(() => {
-    const unsubscribe = syncService.listenToStore(
+  const applyUpdate = useCallback(
       (update: { type: string, payload: any }) => {
         isIncomingUpdate.current = true;
         setLastServerUpdate(new Date());
         setIsConnected(true);
         setCloudError(null);
-        
+
         switch (update.type) {
           case 'clients':
             setClients(update.payload || []);
-            localStorage.setItem('ilai_academy_clients', JSON.stringify(update.payload || []));
             break;
           case 'archived':
             setArchivedClients(update.payload || []);
-            localStorage.setItem('ilai_academy_archived', JSON.stringify(update.payload || []));
             break;
           case 'library':
             setSavedWorkouts(update.payload || []);
-            localStorage.setItem('ilai_master_library', JSON.stringify(update.payload || []));
             break;
           case 'config':
             if (update.payload) {
@@ -139,19 +137,63 @@ const [clients, setClients] = useState<ClientData[] | null>(null);
         setHasInitialCloudSync(true);
         setTimeout(() => { isIncomingUpdate.current = false; }, 500);
       },
-      (err: any) => {
-        console.error("Sync Error:", err);
-        setIsConnected(false);
-        if (err.code === 'permission-denied') {
-          setCloudError("PERMISSION DENIED: Update Firestore Rules to 'allow read, write: if true;'");
-        } else {
-          setCloudError(err.message || "Cloud Connection Lost");
-        }
-      }
-    );
+    []);
 
+  const handleSyncError = useCallback((err: any) => {
+    console.error("Sync Error:", err);
+    setIsConnected(false);
+    if (err.code === 'permission-denied') {
+      setCloudError("Permission denied — you may need to sign in again.");
+    } else {
+      setCloudError(err.message || "Cloud Connection Lost");
+    }
+  }, []);
+
+  // 2a. Branding only — the login screen needs it before anyone signs in.
+  useEffect(() => {
+    const unsubscribe = syncService.listenToBranding(applyUpdate, handleSyncError);
     return () => unsubscribe();
-  }, [syncService]);
+  }, [syncService, applyUpdate, handleSyncError]);
+
+  // 2b. Client data, workouts and logs load ONLY once someone is signed in,
+  // so none of it is readable to a signed-out visitor.
+  useEffect(() => {
+    const auth = getAuth();
+    let unsubStore: (() => void) | null = null;
+    // onAuthStateChanged fires asynchronously, so it can still deliver after
+    // this effect has been torn down. Without this guard that late call would
+    // subscribe listeners nothing ever unsubscribes.
+    let cancelled = false;
+
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
+      if (cancelled) return;
+      if (user) {
+        if (!unsubStore) {
+          unsubStore = syncService.listenToStore(applyUpdate, handleSyncError);
+        }
+        return;
+      }
+
+      if (unsubStore) {
+        unsubStore();
+        unsubStore = null;
+      }
+      setClients(null);
+      setArchivedClients([]);
+      setSavedWorkouts([]);
+      setWorkoutLogs([]);
+      setCheckIns([]);
+      localStorage.removeItem('ilai_academy_clients');
+      localStorage.removeItem('ilai_academy_archived');
+      localStorage.removeItem('ilai_master_library');
+    });
+
+    return () => {
+      cancelled = true;
+      unsubAuth();
+      if (unsubStore) unsubStore();
+    };
+  }, [syncService, applyUpdate, handleSyncError]);
 
   const forceSync = useCallback(async () => {
     setIsSyncing(true);
