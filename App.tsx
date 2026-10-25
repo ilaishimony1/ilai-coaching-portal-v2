@@ -135,7 +135,9 @@ const MainApp: React.FC = () => {
         return true;
       }
 
-      const client = clients.find(c => c.email?.toLowerCase() === cred.user.email?.toLowerCase());
+      // Looked up straight from Firestore: the live client list only starts
+      // loading once this sign-in completes, so it is not populated yet.
+      const client = await syncService.findClientByEmail(cred.user.email || "");
       if (client) {
         localStorage.setItem("loginTime", Date.now().toString());
         setAuthStatus({ type: "CLIENT", clientId: client.id });
@@ -173,6 +175,12 @@ const MainApp: React.FC = () => {
       }
     }
 
+    // The password is only needed to create the login account. It is never
+    // saved to the database — a stored password is readable client data.
+    const hadPassword = !!clientData.password;
+    const { password, ...clientWithoutPassword } = clientData;
+    clientData = clientWithoutPassword as ClientData;
+
     setClients(prev => {
       const exists = prev.find(c => c.id === clientData.id);
       if (exists) return prev.map(c => c.id === clientData.id ? clientData : c);
@@ -180,6 +188,7 @@ const MainApp: React.FC = () => {
     });
     try {
       await syncService.updateDocument('clients', clientData.id, clientData);
+      if (hadPassword) await syncService.clearStoredPassword(clientData.id);
       setViewMode('ADMIN');
     } catch (e: any) {
       console.error("Cloud Save Error:", e);
@@ -254,7 +263,7 @@ const MainApp: React.FC = () => {
 
   useEffect(() => {
     const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
         setAuthStatus({ type: "NONE" });
         return;
@@ -264,7 +273,7 @@ const MainApp: React.FC = () => {
         setViewMode("ADMIN");
         return;
       }
-      const client = clients.find(c => c.email === user.email);
+      const client = await syncService.findClientByEmail(user.email || "");
       if (client) {
         setAuthStatus({ type: "CLIENT", clientId: client.id });
         setCurrentClientData(mergeClient(client));

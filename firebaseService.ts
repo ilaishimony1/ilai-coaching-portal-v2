@@ -17,7 +17,9 @@ import {
   limit,
   getDocs,
   getDoc,
-  addDoc
+  addDoc,
+  updateDoc,
+  deleteField
 } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
@@ -114,19 +116,6 @@ export class FirebaseSyncService {
       onError
     );
 
-    const unsubBranding = onSnapshot(
-      doc(this.db, "settings", "branding"),
-      snap => {
-        if (snap.exists()) {
-          onUpdate({
-            type: "config",
-            payload: snap.data() as LandingPageConfig
-          });
-        }
-      },
-      onError
-    );
-
     const unsubWorkoutLogs = onSnapshot(
       collection(this.db, "workout_logs"),
       snap => {
@@ -159,10 +148,46 @@ export class FirebaseSyncService {
       unsubClients();
       unsubArchived();
       unsubLibrary();
-      unsubBranding();
       unsubWorkoutLogs();
       unsubCheckIns();
     };
+  }
+
+  // Branding is the only thing the login screen needs before anyone signs in,
+  // so it is subscribed separately from listenToStore.
+  listenToBranding(
+    onUpdate: (data: { type: string; payload: any }) => void,
+    onError: (err: any) => void
+  ) {
+    return onSnapshot(
+      doc(this.db, "settings", "branding"),
+      snap => {
+        if (snap.exists()) {
+          onUpdate({
+            type: "config",
+            payload: snap.data() as LandingPageConfig
+          });
+        }
+      },
+      onError
+    );
+  }
+
+  // Removes a password left in an older client record. Writes go through
+  // setDoc with merge, which never clears a field on its own.
+  async clearStoredPassword(clientId: string) {
+    await updateDoc(doc(this.db, "clients", clientId), { password: deleteField() });
+  }
+
+  // Looks a client up straight from Firestore. Used right after sign-in,
+  // when the live client list has not arrived yet.
+  async findClientByEmail(email: string): Promise<ClientData | null> {
+    const target = email.trim().toLowerCase();
+    const snap = await getDocs(collection(this.db, "clients"));
+    const match = snap.docs.find(
+      d => (d.data() as ClientData).email?.trim().toLowerCase() === target
+    );
+    return match ? { ...(match.data() as ClientData), id: match.id } : null;
   }
 
   async deleteDocument(collectionName: string, id: string) {
