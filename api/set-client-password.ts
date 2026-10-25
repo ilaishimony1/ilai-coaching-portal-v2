@@ -1,13 +1,12 @@
-import * as admin from 'firebase-admin';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getAuth, type DecodedIdToken } from 'firebase-admin/auth';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const COACH_EMAIL = 'ilaishimony1@gmail.com';
 
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert(
-      JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON!)
-    ),
+if (!getApps().length) {
+  initializeApp({
+    credential: cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON!)),
   });
 }
 
@@ -32,9 +31,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(401).json({ error: 'Not signed in' });
   }
 
-  let caller: admin.auth.DecodedIdToken;
+  let caller: DecodedIdToken;
   try {
-    caller = await admin.auth().verifyIdToken(authHeader.slice(7));
+    caller = await getAuth().verifyIdToken(authHeader.slice(7));
   } catch {
     return res.status(401).json({ error: 'Session expired — sign in again' });
   }
@@ -54,10 +53,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (typeof email !== 'string' || !email) {
         return res.status(400).json({ error: 'Need the athlete to identify them' });
       }
-      uid = (await admin.auth().getUserByEmail(email)).uid;
+      uid = (await getAuth().getUserByEmail(email)).uid;
     }
 
-    await admin.auth().updateUser(uid, { password });
+    await getAuth().updateUser(uid, { password });
     return res.status(200).json({ ok: true, authUid: uid });
   } catch (err: any) {
     if (err?.code === 'auth/user-not-found') {
