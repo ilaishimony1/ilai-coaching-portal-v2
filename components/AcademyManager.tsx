@@ -426,8 +426,8 @@ const onDragStart = (id: number | string) => {
           <div className="space-y-12">
             <header className="flex flex-col md:flex-row justify-between items-center gap-6">
               <div>
-                <h2 className="text-5xl font-black brand-font uppercase text-white tracking-tight leading-none">The Academy</h2>
-                <p className="text-blue-500 font-bold uppercase text-[10px] tracking-[0.4em] mt-2">Matrix Management Interface</p>
+                <h2 className="text-2xl font-extrabold text-ink">Academy</h2>
+                <p className="text-sm text-muted mt-1 flex items-center gap-2">Your video library</p>
               </div>
               <div className="relative w-full md:w-96">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />

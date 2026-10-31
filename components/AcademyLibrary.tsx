@@ -94,58 +94,40 @@ const assignedVideos = useMemo(() => {
   }, [assignedVideos, search]);
 
   return (
-    <div className="space-y-16 pb-20">
-      {/* HEADER */}
-      <header className="flex flex-col md:flex-row justify-between gap-6">
-        <div>
-          <h2 className="text-5xl font-black uppercase text-white">
-            Explanation Gallery
-          </h2>
-          <p className="text-blue-500 text-xs font-bold uppercase tracking-widest mt-2">
-            Technical Video Vault
-          </p>
-        </div>
+    <div className="flex flex-col gap-3.5">
+      <h2 className="text-2xl font-extrabold">Explanation videos</h2>
 
-        <div className="relative w-full md:w-80">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search..."
-            className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-12 pr-4 py-3 text-white text-xs uppercase tracking-widest"
-          />
-        </div>
-      </header>
+      <label className="flex items-center gap-2.5 h-12 rounded-[14px] border-[1.5px] border-edge bg-field px-3.5 text-muted focus-within:border-accent transition-colors">
+        <Search size={18} className="shrink-0" />
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search…"
+          aria-label="Search videos"
+          className="flex-1 min-w-0 bg-transparent border-0 text-ink text-base font-medium outline-none"
+        />
+      </label>
 
-{/* GRID */}
-<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-  {!assignmentsLoaded ? (
-    <div className="col-span-full text-center text-slate-500 uppercase text-xs">
-      Loading videos…
-    </div>
-  ) : assignedVideos.length === 0 ? (
-    <div className="col-span-full py-32 text-center border border-dashed border-slate-800 rounded-3xl">
-      <Lock size={48} className="mx-auto text-slate-700 mb-4" />
-      <p className="text-slate-600 uppercase text-xs font-bold">
-        No videos assigned yet
-      </p>
-    </div>
-  ) : filteredVideos.length === 0 ? (
-    <div className="col-span-full text-center text-slate-600 uppercase text-xs">
-      No results
-    </div>
-  ) : (
-    filteredVideos.map(video => (
-      <LibraryVideoCard
-        key={video.uid}
-        video={video}
-        onPlay={() => setActiveVideo(video)}
-      />
-    ))
-  )}
-</div>
-
-
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+        {!assignmentsLoaded ? (
+          <p className="col-span-full text-center text-muted text-[15px] py-10">Loading videos…</p>
+        ) : assignedVideos.length === 0 ? (
+          <div className="col-span-full py-16 text-center border-[1.5px] border-dashed border-tick rounded-[18px]">
+            <Lock size={36} className="mx-auto text-muted mb-3" />
+            <p className="text-muted text-[15px] font-semibold">No videos for you yet</p>
+          </div>
+        ) : filteredVideos.length === 0 ? (
+          <p className="col-span-full text-center text-muted text-[15px] py-10">No videos match that search</p>
+        ) : (
+          filteredVideos.map(video => (
+            <LibraryVideoCard
+              key={video.uid}
+              video={video}
+              onPlay={() => setActiveVideo(video)}
+            />
+          ))
+        )}
+      </div>
 
       {/* FULLSCREEN MODAL */}
      <div
@@ -158,10 +140,11 @@ const assignedVideos = useMemo(() => {
 
           />
 
-          <div className="relative w-full max-w-5xl bg-black rounded-3xl overflow-hidden">
+          <div className="relative w-full max-w-5xl bg-black rounded-2xl overflow-hidden mx-4">
             <button
               onClick={closeVideo}
-              className="absolute top-4 right-4 z-10 p-3 bg-black/60 rounded-full text-white"
+              aria-label="Close video"
+              className="absolute top-3 right-3 z-10 w-11 h-11 flex items-center justify-center bg-black/60 rounded-full text-white"
             >
               <X size={20} />
             </button>
@@ -192,22 +175,19 @@ const LibraryVideoCard: React.FC<{
   onPlay: () => void;
 }> = ({ video, onPlay }) => {
   return (
-    <div className="rounded-3xl overflow-hidden border border-slate-800 bg-slate-900">
-      <div className="aspect-video bg-black relative">
-  <img
-  src={video.thumbnail || "/video-placeholder.jpg"}
-  alt={video.name}
-  loading="eager"
-  decoding="async"
-  className="w-full h-full object-cover cursor-pointer"
-  style={{ display: "block" }}
-  onClick={onPlay}
-/>
-
-
-
-        {/* ✅ No extra buttons/icons for clients */}
-      </div>
-    </div>
+    <button
+      type="button"
+      onClick={onPlay}
+      aria-label={`Play: ${video.name}`}
+      className="h-[180px] rounded-2xl overflow-hidden border border-edge bg-black p-0 block w-full"
+    >
+      <img
+        src={video.thumbnail || "/video-placeholder.jpg"}
+        alt={video.name}
+        loading="eager"
+        decoding="async"
+        className="w-full h-full object-cover block"
+      />
+    </button>
   );
 };

@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { User, Lock, ArrowRight, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { LandingPageConfig } from '../types';
-import BrandLogo from './BrandLogo';
 
 interface Props {
   onLogin: (u: string, p: string) => boolean;
@@ -41,80 +40,70 @@ const LoginPage: React.FC<Props> = ({ onLogin, config, version }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#020617] flex items-center justify-center p-6">
-      <div className="w-full max-w-2xl space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-        
-        {/* Logo Section */}
-        <div className="text-center flex flex-col items-center pt-8">
-          {config.logoUrl ? (
-            <div 
-              className="w-full max-w-[650px] mb-8 animate-in zoom-in duration-700 relative flex flex-col items-center justify-center"
-            >
-              <BrandLogo src={config.logoUrl} size="lg" />
-            </div>
-          ) : (
-            <div className="mb-10">
-              <BrandLogo />
-            </div>
-          )}
-        </div>
-        
-        {/* Login Form Container */}
-        <form onSubmit={handleFormSubmit} className="glass-card p-10 rounded-[3rem] border-white/5 shadow-2xl space-y-6 relative overflow-hidden mx-auto max-w-md w-full">
+    <div className="min-h-screen bg-page text-ink flex flex-col justify-center px-6 py-10">
+      <div className="w-full max-w-sm mx-auto flex flex-col gap-7">
+        {/* The approved see-through logo. The handstand figure is the Y of Shimony. */}
+        <img
+          src="/logo-clear.png"
+          alt="Ilai Shimony, 1:1 online coaching"
+          className="w-[290px] max-w-full h-auto self-center"
+        />
+
+        <form onSubmit={handleFormSubmit} className="flex flex-col gap-3.5 bg-card border border-edge rounded-3xl p-[22px]">
+          <h1 className="text-[22px] font-extrabold">Log in</h1>
+
           {error && (
-            <div className="bg-red-500/10 border border-red-500/30 p-4 rounded-2xl flex items-center gap-3 animate-in fade-in zoom-in duration-300">
-              <AlertCircle className="text-red-500 shrink-0" size={18} />
-              <p className="text-red-500 text-[10px] font-black uppercase tracking-widest">{error}</p>
+            <div className="bg-alert/10 border border-alert/40 p-3 rounded-[14px] flex items-center gap-2.5">
+              <AlertCircle className="text-alert shrink-0" size={18} />
+              <p className="text-alert text-sm font-semibold">{error}</p>
             </div>
           )}
 
-          <div className="relative">
-            <input 
-              value={u} 
-              onChange={e => { setU(e.target.value); if(error) setError(null); }} 
-              className="w-full bg-slate-900 border border-slate-800 rounded-2xl pl-12 pr-4 py-4 font-bold text-white outline-none focus:ring-2 ring-blue-500 transition-all" 
-              placeholder="Athlete Username" 
-            />
-            <User className="absolute left-4 top-4 text-slate-600" />
-          </div>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-[13px] font-semibold text-muted">Username</span>
+            <span className="flex items-center gap-2.5 h-[52px] rounded-[14px] border-[1.5px] border-edge bg-field px-3.5 text-muted focus-within:border-accent transition-colors">
+              <User size={18} className="shrink-0" />
+              <input
+                value={u}
+                onChange={e => { setU(e.target.value); if(error) setError(null); }}
+                autoCapitalize="none"
+                autoCorrect="off"
+                className="flex-1 min-w-0 bg-transparent border-0 text-ink text-base font-semibold outline-none"
+                placeholder="Your username"
+              />
+            </span>
+          </label>
 
-          <div className="relative">
-            <input 
-              type={showPassword ? "text" : "password"} 
-              value={p} 
-              onChange={e => { setP(e.target.value); if(error) setError(null); }}
-              onKeyDown={checkCapsLock}
-              onKeyUp={checkCapsLock}
-              onFocus={checkCapsLock}
-              className="w-full bg-slate-900 border border-slate-800 rounded-2xl pl-12 pr-20 py-4 font-bold text-white outline-none focus:ring-2 ring-blue-500 transition-all" 
-              placeholder="Secure Password" 
-            />
-            <Lock className="absolute left-4 top-4 text-slate-600" />
-            
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-3">
-              {isCapsLock && (
-                <div className="w-6 h-6 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center animate-pulse">
-                  <span className="text-[10px] font-black text-amber-500">C</span>
-                </div>
-              )}
-              <button 
+          <label className="flex flex-col gap-1.5">
+            <span className="text-[13px] font-semibold text-muted">Password</span>
+            <span className="flex items-center gap-2.5 h-[52px] rounded-[14px] border-[1.5px] border-edge bg-field pl-3.5 pr-1.5 text-muted focus-within:border-accent transition-colors">
+              <Lock size={18} className="shrink-0" />
+              <input
+                type={showPassword ? "text" : "password"}
+                value={p}
+                onChange={e => { setP(e.target.value); if(error) setError(null); }}
+                onKeyDown={checkCapsLock}
+                onKeyUp={checkCapsLock}
+                onFocus={checkCapsLock}
+                className="flex-1 min-w-0 bg-transparent border-0 text-ink text-base font-semibold outline-none"
+                placeholder="Your password"
+              />
+              <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="text-slate-600 hover:text-blue-400 transition-colors"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                className="w-11 h-11 flex items-center justify-center text-muted hover:text-ink transition-colors shrink-0"
               >
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
-            </div>
-          </div>
+            </span>
+            {isCapsLock && <span className="text-[13px] font-semibold text-warn">Caps Lock is on</span>}
+          </label>
 
-          <button type="submit" className="w-full py-5 rounded-2xl text-white font-black text-xs tracking-widest uppercase flex items-center justify-center gap-4 transition-all shadow-xl hover:brightness-110 active:scale-95" style={{backgroundColor: config.accentColor}}>
-            LOG IN <ArrowRight size={18} />
+          <button type="submit" className="mt-1 h-[54px] rounded-[14px] bg-accent text-onaccent text-[17px] font-extrabold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
+            Log in <ArrowRight size={18} strokeWidth={2.5} />
           </button>
         </form>
-
-        <div className="text-center pt-8">
-           <p className="text-[8px] text-slate-700 font-bold uppercase tracking-[0.5em]">Terminal V{version} // Secured Connection</p>
-        </div>
       </div>
     </div>
   );

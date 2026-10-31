@@ -2,6 +2,7 @@
 import React from 'react';
 import { Target, Check } from 'lucide-react';
 import { Goal } from '../types';
+import { textDir } from './ui';
 
 interface Props {
   goals: Goal[];
@@ -11,56 +12,49 @@ interface Props {
 
 const GoalTracker: React.FC<Props> = ({ goals, onToggleMiniGoal, isCoach = false }) => {
   return (
-    <section className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Target className="text-blue-500 w-6 h-6" />
-        <h2 className="text-2xl font-bold uppercase brand-font">My Goals</h2>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <section className="flex flex-col gap-3">
+      <h2 className="text-2xl font-extrabold">{isCoach ? 'Goals' : 'My goals'}</h2>
+      {goals.length === 0 && (
+        <p className="text-[15px] text-muted bg-card rounded-[18px] p-4">No goals set yet.</p>
+      )}
+      <div className="grid grid-cols-1 gap-3">
         {goals.map(goal => (
-          <div key={goal.id} className="glass-card p-8 rounded-[2.5rem] border-slate-800 hover:border-blue-500/30 transition-all shadow-2xl">
-            <div className="flex items-center gap-4 mb-6">
-              <span className="text-3xl">{goal.icon || '🎯'}</span>
-              <h4 className="font-black text-xl uppercase text-slate-100">{goal.title}</h4>
+          <div key={goal.id} className="flex flex-col gap-3.5 bg-card rounded-[18px] p-4">
+            <div className="flex items-center gap-2.5">
+              <span className="w-9 h-9 rounded-[10px] bg-raised text-accent flex items-center justify-center shrink-0 text-lg">
+                {goal.icon && goal.icon !== '🎯' ? goal.icon : <Target size={20} />}
+              </span>
+              <h4 {...textDir(goal.title)} className="text-xl font-extrabold">{goal.title}</h4>
             </div>
-            <div className="space-y-4">
+            <div className="flex flex-col gap-2.5 pl-1">
               {goal.miniGoals?.map((mini, idx) => (
-                <div 
-                  key={idx} 
-                  className={`flex items-center gap-3 select-none ${isCoach ? 'cursor-pointer group/item' : 'cursor-default'}`}
+                <div
+                  key={idx}
+                  className={`flex items-center gap-3 select-none ${isCoach ? 'cursor-pointer min-h-[44px]' : ''}`}
                   onClick={() => isCoach && onToggleMiniGoal?.(goal.id, idx)}
                 >
                   {isCoach ? (
-                    /* Coach View: The master control checkbox */
-                    <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-200 ${
-                      mini.completed 
-                        ? 'bg-emerald-500 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]' 
-                        : 'border-slate-700 bg-slate-950 group-hover/item:border-blue-500/50'
+                    // Coach: a tick box per sub-goal.
+                    <span className={`w-6 h-6 rounded-[7px] flex items-center justify-center shrink-0 transition-colors ${
+                      mini.completed ? 'bg-done' : 'border-[1.5px] border-tick'
                     }`}>
-                      {mini.completed && (
-                        <Check size={14} className="text-white animate-in zoom-in duration-200" strokeWidth={4} />
-                      )}
-                    </div>
+                      {mini.completed && <Check size={13} className="text-white" strokeWidth={3.5} />}
+                    </span>
+                  ) : mini.completed ? (
+                    // Athlete: a green tick once the coach marks it done.
+                    <span className="w-5 h-5 rounded-md bg-done flex items-center justify-center shrink-0">
+                      <Check size={12} className="text-white" strokeWidth={3.5} />
+                    </span>
                   ) : (
-                    /* Client View: Show indicator only when completed. If not completed, show nothing left of text. */
-                    mini.completed && (
-                      <div className="w-5 h-5 flex items-center justify-center shrink-0 bg-emerald-500 rounded-lg shadow-[0_0_10px_rgba(16,185,129,0.4)] animate-in zoom-in duration-300">
-                        <Check size={12} className="text-white" strokeWidth={4} />
-                      </div>
-                    )
+                    <span className="w-1.5 h-1.5 rounded-full bg-tick shrink-0 mx-[7px]" />
                   )}
-
-                  <span className={`text-sm font-bold transition-all duration-300 leading-tight ${
-                    mini.completed 
-                      ? 'text-slate-400 line-through decoration-white decoration-2' 
-                      : 'text-slate-200'
-                  } ${isCoach ? 'group-hover/item:text-white' : ''}`}>
+                  <span {...textDir(mini.text)} className={`text-base leading-snug ${mini.completed ? 'text-muted line-through' : 'text-ink'}`}>
                     {mini.text}
                   </span>
                 </div>
               ))}
               {(!goal.miniGoals || goal.miniGoals.length === 0) && (
-                <p className="text-[10px] font-black text-slate-700 uppercase tracking-widest italic">No sub-targets defined</p>
+                <p className="text-sm text-muted">No steps added yet</p>
               )}
             </div>
           </div>

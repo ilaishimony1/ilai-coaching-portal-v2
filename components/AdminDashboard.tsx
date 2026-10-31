@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
-import { Users, UserPlus, Palette, Settings2, RefreshCw, ChevronRight, Inbox, AlertCircle, Database, Cpu, Shield, Clock, GripVertical, ClipboardList, Dumbbell, Archive, Library, AlertTriangle, CheckCircle2, StickyNote, X } from 'lucide-react';
+import { Plus, Palette, SlidersHorizontal, RefreshCw, ChevronRight, Inbox, AlertCircle, GripVertical, StickyNote, X } from 'lucide-react';
+import { textDir } from './ui';
 import { ClientSummary, ClientData } from '../types';
 import { getBillingCycle, formatBillingDate, getMonthsActive, BillingCycle } from '../billing';
 import { useApp } from '../AppContext';
@@ -40,11 +41,11 @@ const getProgramStatus = (startDate?: string, endDate?: string) => {
 };
 
 const statusStyles = {
-  none:     { bar: 'bg-slate-700',    text: 'text-slate-500',   label: 'text-slate-600',   badge: 'bg-slate-800 border-slate-700 text-slate-500' },
-  good:     { bar: 'bg-emerald-500',  text: 'text-emerald-400', label: 'text-emerald-600', badge: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' },
-  warning:  { bar: 'bg-amber-500',    text: 'text-amber-400',   label: 'text-amber-600',   badge: 'bg-amber-500/10 border-amber-500/30 text-amber-400' },
-  critical: { bar: 'bg-red-500',      text: 'text-red-400',     label: 'text-red-600',     badge: 'bg-red-500/10 border-red-500/30 text-red-400' },
-  expired:  { bar: 'bg-red-700',      text: 'text-red-500',     label: 'text-red-700',     badge: 'bg-red-500/10 border-red-500/30 text-red-500' },
+  none:     { bar: 'bg-tick',   text: 'text-muted' },
+  good:     { bar: 'bg-accent', text: 'text-muted' },
+  warning:  { bar: 'bg-warn',   text: 'text-warn' },
+  critical: { bar: 'bg-alert',  text: 'text-alert' },
+  expired:  { bar: 'bg-alert',  text: 'text-alert' },
 };
 
 const AdminDashboard: React.FC<Props> = ({
@@ -148,254 +149,231 @@ const AdminDashboard: React.FC<Props> = ({
     notesSavedTimer.current = setTimeout(() => setNotesSaved(false), 2000);
   };
 
+  const statusText = cloudSync.isSyncing ? 'Syncing…' : (cloudError ? 'Disconnected' : 'Live');
+  const statusColor = cloudSync.isSyncing ? 'text-warn' : (cloudError ? 'text-alert' : 'text-muted');
+  const statusDot = cloudSync.isSyncing ? 'bg-warn animate-pulse' : (cloudError ? 'bg-alert' : 'bg-done');
+
   return (
-    <div className="space-y-12 animate-in fade-in slide-in-from-top-4 duration-700 pb-20">
-      <header className="flex flex-col gap-6">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          {/* Sync status — compact on mobile */}
-          <div className="flex items-center gap-3 bg-slate-900/40 border border-slate-800/60 p-3 md:p-4 pr-5 md:pr-8 rounded-2xl md:rounded-3xl backdrop-blur-xl">
-            <div className={`p-2 md:p-3 rounded-xl md:rounded-2xl ${cloudSync.isSyncing ? 'bg-amber-500/10 text-amber-500' : (cloudError ? 'bg-red-500/10 text-red-500' : 'bg-blue-600/10 text-blue-500 shadow-[0_0_20px_rgba(37,99,235,0.2)]')}`}>
-              <Database size={18} className={cloudSync.isSyncing ? 'animate-spin' : ''} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${cloudError ? 'text-red-500' : 'text-blue-500'}`}>
-                  {cloudSync.isSyncing ? 'Syncing…' : (cloudError ? 'Disconnected' : 'Live')}
-                </p>
-                <div className={`w-1.5 h-1.5 rounded-full ${cloudSync.isSyncing ? 'bg-amber-500 animate-pulse' : (cloudError ? 'bg-red-500' : 'bg-emerald-500')}`}></div>
-              </div>
-              {lastServerUpdate && (
-                <div className="flex items-center gap-1 text-slate-500 mt-0.5">
-                  <Clock size={9} />
-                  <span className="text-[8px] font-black uppercase tracking-tighter">{lastServerUpdate.toLocaleTimeString()}</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="flex gap-2 md:gap-4 w-full md:w-auto">
-            <button
-              onClick={cloudSync.forceSync}
-              disabled={cloudSync.isSyncing}
-              className="flex items-center gap-2 px-4 py-2.5 md:px-5 md:py-3 bg-slate-900/60 border border-slate-800 rounded-xl md:rounded-2xl text-[9px] font-black uppercase text-slate-400 hover:text-blue-400 transition-all group disabled:opacity-50"
-            >
-              <RefreshCw size={12} className={cloudSync.isSyncing ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'} />
-              <span className="hidden sm:inline">Manual Cloud Push</span>
-              <span className="sm:hidden">Sync</span>
-            </button>
-            <button onClick={onAddClient} className="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 md:px-8 md:py-4 rounded-xl md:rounded-2xl font-black text-xs tracking-widest uppercase flex items-center justify-center gap-2 md:gap-3 shadow-2xl transition-all active:scale-95">
-              <UserPlus size={16} /> <span>Add Client</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="flex justify-between items-end border-b border-white/5 pb-6 md:pb-8">
-          <div>
-            <h2 className="text-4xl md:text-7xl font-black brand-font uppercase text-white tracking-tighter leading-none">Command Center</h2>
-            <p className="text-blue-500/60 font-black uppercase tracking-[0.4em] md:tracking-[0.6em] text-[10px] mt-2 md:mt-3 ml-1 flex items-center gap-2 md:gap-3">
-              <Cpu size={10} /> Management Terminal
-            </p>
-          </div>
-          <button onClick={onOpenBranding} className="p-3 md:p-4 bg-slate-950 border border-slate-900 rounded-xl md:rounded-2xl text-slate-700 hover:text-white transition-all group">
-            <Palette size={18} className="group-hover:scale-110 transition-transform" />
+    <div className="max-w-3xl mx-auto flex flex-col gap-3.5 pb-20 text-ink">
+      <header className="flex justify-between items-center gap-3">
+        <h1 className="text-2xl font-extrabold text-ink">Your clients</h1>
+        <div className="flex items-center gap-2">
+          <span className={`flex items-center gap-1.5 text-[13px] font-bold ${statusColor}`}>
+            <span className={`w-2 h-2 rounded-full ${statusDot}`} />
+            {statusText}
+            {lastServerUpdate && (
+              <span className="text-xs font-medium text-muted">· {lastServerUpdate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+            )}
+          </span>
+          <button
+            onClick={onOpenBranding}
+            aria-label="Branding"
+            className="w-11 h-11 rounded-xl border border-edge bg-card text-muted hover:text-ink flex items-center justify-center shrink-0"
+          >
+            <Palette size={18} />
           </button>
         </div>
       </header>
 
+      <div className="flex gap-2">
+        <button
+          onClick={cloudSync.forceSync}
+          disabled={cloudSync.isSyncing}
+          className="h-[46px] px-3.5 rounded-xl border border-edge bg-card text-muted hover:text-ink font-bold text-[15px] flex items-center gap-2 disabled:opacity-50"
+        >
+          <RefreshCw size={16} className={cloudSync.isSyncing ? 'animate-spin' : ''} />
+          Sync
+        </button>
+        <button
+          onClick={onAddClient}
+          className="flex-1 h-[46px] rounded-xl bg-accent text-onaccent font-extrabold text-[15px] flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+        >
+          <Plus size={18} strokeWidth={2.5} /> Add client
+        </button>
+      </div>
+
       {cloudError && (
-        <div className="p-6 bg-red-500/10 border border-red-500/30 rounded-3xl flex items-start gap-4 animate-in slide-in-from-left-4 duration-500">
-          <AlertCircle className="text-red-500 shrink-0" size={24} />
-          <div className="flex-1">
-            <p className="text-red-500 text-xs font-black uppercase tracking-widest">Connection Interrupted</p>
-            <p className="text-slate-400 text-[11px] mt-1 leading-relaxed font-bold">{cloudError}</p>
-            <button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 bg-red-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest">Re-Initialize Session</button>
+        <div className="p-4 bg-card border border-alert rounded-2xl flex items-start gap-3">
+          <AlertCircle className="text-alert shrink-0" size={20} />
+          <div className="flex-1 min-w-0">
+            <p className="text-alert text-[15px] font-bold">Lost the connection</p>
+            <p className="text-muted text-[13px] mt-1 leading-relaxed break-words">{cloudError}</p>
+            <button onClick={() => window.location.reload()} className="mt-3 h-11 px-4 bg-alert text-onaccent rounded-xl text-sm font-extrabold">Reload</button>
           </div>
         </div>
       )}
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label="Active Athletes" value={Math.max(0, clients.length - 2).toString()} icon={<Users className="text-blue-400" />} />
-        <StatCard label="Workouts This Week" value={logsThisWeek.toString()} icon={<Dumbbell className="text-emerald-400" />} />
-        <StatCard label="Unread Activity" value={totalUnread.toString()} icon={<ClipboardList className={totalUnread > 0 ? 'text-red-400' : 'text-slate-600'} />} alert={totalUnread > 0} />
-        <StatCard label="In The Vault" value={archivedClients.length.toString()} icon={<Archive className="text-slate-500" />} />
-        <EndingSoonCard clients={endingSoon} className="col-span-2 md:col-span-4" />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <StatCard label="Active athletes" value={Math.max(0, clients.length - 2).toString()} />
+        <StatCard label="Workouts this week" value={logsThisWeek.toString()} />
+        <StatCard label="Unread" value={totalUnread.toString()} alert={totalUnread > 0} />
+        <StatCard label="Archived" value={archivedClients.length.toString()} />
       </div>
+      <EndingSoonCard clients={endingSoon} />
 
-      <div className="space-y-6 pt-8">
-        <div className="flex items-center justify-between px-4">
-          <h3 className="text-[11px] font-black uppercase text-slate-600 tracking-[0.4em]">Current Roster</h3>
-          <div className="flex items-center gap-2 text-blue-500/40 bg-blue-500/5 px-4 py-1.5 rounded-full border border-blue-500/10">
-            <Shield size={10} />
-            <span className="text-[8px] font-black uppercase tracking-widest">Protocol Sync Secured</span>
+      <h2 className="text-base font-extrabold text-ink pt-1.5">Current clients</h2>
+
+      <div className="flex flex-col gap-3">
+        {orderedClients.length === 0 ? (
+          <div className="py-16 text-center border-[1.5px] border-dashed border-tick rounded-2xl">
+            <Inbox className="mx-auto text-muted mb-3" size={36} />
+            <p className="text-muted font-semibold text-[15px]">No clients yet</p>
           </div>
-        </div>
+        ) : (
+          orderedClients.map(clientSummary => {
+            const fullClient = fullClients.find(f => f.id === clientSummary.id);
+            const isMonthly = (fullClient?.billingType ?? clientSummary.billingType) === 'monthly';
+            const startDate = fullClient?.programStartDate ?? clientSummary.programStartDate;
+            const cycle = isMonthly
+              ? getBillingCycle(fullClient?.billingAnchorDate ?? clientSummary.billingAnchorDate)
+              : null;
+            const { progress, status } = isMonthly
+              ? getMonthlyStatus(cycle)
+              : getProgramStatus(startDate, clientSummary.programEndDate);
+            const styles = statusStyles[status];
+            const monthsActive = isMonthly ? getMonthsActive(startDate) : null;
+            const daysLeft = clientSummary.programEndDate
+              ? Math.ceil((new Date(clientSummary.programEndDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+              : null;
+            const isDragging = draggedId === clientSummary.id;
+            const isDragOver = dragOverId === clientSummary.id;
+            const hasNotes = !!fullClient?.coachNotes;
+            const firstName = clientSummary.name.split(' ')[0] || 'Client';
+            const programMonths = clientSummary.programLength || '3';
 
-        <div className="grid gap-6">
-          {orderedClients.length === 0 ? (
-            <div className="py-24 text-center border-2 border-dashed border-slate-900 rounded-[4rem] bg-slate-950/20">
-              <Inbox className="mx-auto text-slate-800 mb-6" size={56} />
-              <p className="text-slate-700 font-black uppercase text-sm tracking-widest">Roster Empty</p>
-            </div>
-          ) : (
-            orderedClients.map(clientSummary => {
-              const fullClient = fullClients.find(f => f.id === clientSummary.id);
-              const isMonthly = (fullClient?.billingType ?? clientSummary.billingType) === 'monthly';
-              const startDate = fullClient?.programStartDate ?? clientSummary.programStartDate;
-              const cycle = isMonthly
-                ? getBillingCycle(fullClient?.billingAnchorDate ?? clientSummary.billingAnchorDate)
-                : null;
-              const { progress, status } = isMonthly
-                ? getMonthlyStatus(cycle)
-                : getProgramStatus(startDate, clientSummary.programEndDate);
-              const styles = statusStyles[status];
-              const monthsActive = isMonthly ? getMonthsActive(startDate) : null;
-              const daysLeft = clientSummary.programEndDate
-                ? Math.ceil((new Date(clientSummary.programEndDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-                : null;
-              const isDragging = draggedId === clientSummary.id;
-              const isDragOver = dragOverId === clientSummary.id;
-
-              return (
-                <div
-                  key={clientSummary.id}
-                  draggable
-                  onDragStart={() => handleDragStart(clientSummary.id)}
-                  onDragOver={(e) => handleDragOver(e, clientSummary.id)}
-                  onDrop={() => handleDrop(clientSummary.id)}
-                  onDragEnd={handleDragEnd}
-                  className={`glass-card p-4 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] border-slate-800/50 flex items-center justify-between group transition-all shadow-xl bg-slate-950/20
-                    ${isDragging ? 'opacity-40 scale-[0.98]' : ''}
-                    ${isDragOver ? 'border-blue-500/60 bg-blue-500/5 scale-[1.01]' : 'hover:border-blue-500/40'}
-                  `}
-                >
-                  {/* Drag handle — hidden on mobile */}
-                  <div className="hidden md:block mr-4 text-slate-800 group-hover:text-slate-600 cursor-grab active:cursor-grabbing transition-colors shrink-0">
+            return (
+              <div
+                key={clientSummary.id}
+                draggable
+                onDragStart={() => handleDragStart(clientSummary.id)}
+                onDragOver={(e) => handleDragOver(e, clientSummary.id)}
+                onDrop={() => handleDrop(clientSummary.id)}
+                onDragEnd={handleDragEnd}
+                className={`flex flex-col gap-3 bg-card border rounded-[18px] p-3.5 group transition-all
+                  ${isDragging ? 'opacity-40' : ''}
+                  ${isDragOver ? 'border-accent' : 'border-edge'}
+                `}
+              >
+                <div className="flex items-center gap-3">
+                  {/* Drag handle — desktop only */}
+                  <div className="hidden md:block text-tick group-hover:text-muted cursor-grab active:cursor-grabbing shrink-0">
                     <GripVertical size={20} />
                   </div>
-
-                  <div className="flex items-center gap-4 md:gap-8 flex-1 min-w-0">
-                    <div className="w-12 h-12 md:w-20 md:h-20 rounded-2xl md:rounded-3xl bg-slate-900 border-2 border-slate-800 overflow-hidden relative shadow-inner shrink-0">
-                      {clientSummary.avatar
-                        ? <img src={clientSummary.avatar} className="w-full h-full object-cover" />
-                        : <div className="w-full h-full flex items-center justify-center text-slate-700 font-black italic text-sm md:text-2xl">IS</div>
-                      }
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h4 className="text-lg md:text-3xl font-black text-white brand-font tracking-tight truncate">
-                        {clientSummary.name}
-                      </h4>
-                      <div className="flex items-center gap-2 md:gap-4 mt-1 md:mt-2 flex-wrap">
-                        <div className={`border px-2 py-0.5 md:px-3 md:py-1 rounded-lg ${styles.badge}`}>
-                          <span className="text-[8px] md:text-[9px] uppercase font-black tracking-[0.1em]">
-                            {isMonthly ? 'Monthly' : `${clientSummary.programLength || '3'}M`}
-                          </span>
-                        </div>
-                        <p className={`text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] ${styles.text}`}>
-                          {isMonthly
-                            ? !cycle
-                              ? 'No payment date'
-                              : cycle.daysUntil <= 0
-                              ? 'Renews today'
-                              : cycle.daysUntil === 1
-                              ? 'Renews tomorrow'
-                              : `Renews ${formatBillingDate(cycle.next)}`
-                            : daysLeft === null
-                            ? 'No end date'
-                            : daysLeft <= 0
-                            ? 'Expired'
-                            : `${daysLeft}d left`}
-                          {isMonthly && monthsActive !== null && monthsActive > 0 && (
-                            <span className="text-slate-600"> · {monthsActive}mo in</span>
-                          )}
-                        </p>
-                      </div>
-
-                      {/* Progress bar */}
-                      {status !== 'none' && (
-                        <div className="mt-2 md:mt-3 w-full max-w-[160px] md:max-w-[200px]">
-                          <div className="h-1 md:h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all duration-700 ${styles.bar}`}
-                              style={{ width: `${Math.round(progress * 100)}%` }}
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                  <div className="w-12 h-12 rounded-[14px] bg-raised overflow-hidden shrink-0 flex items-center justify-center text-accent text-xl font-extrabold">
+                    {clientSummary.avatar
+                      ? <img src={clientSummary.avatar} className="w-full h-full object-cover" alt="" />
+                      : (clientSummary.name[0] || '?').toUpperCase()}
                   </div>
-
-                  <div className="flex gap-2 md:gap-3 shrink-0 ml-2 md:ml-4">
-                    <button
-                      onClick={() => openNotes(fullClients.find(f => f.id === clientSummary.id) || { ...clientSummary, goals: [], schedule: [], workouts: [] })}
-                      className={`p-3 md:p-5 bg-slate-950 rounded-xl md:rounded-2xl transition-colors border border-white/5 group-hover:bg-slate-900 relative ${fullClients.find(f => f.id === clientSummary.id)?.coachNotes ? 'text-amber-400 border-amber-500/20' : 'text-slate-600 hover:text-amber-400 group-hover:border-amber-500/10'}`}
-                      title="Coach Notes"
-                    >
-                      <StickyNote size={18} />
-                      {fullClients.find(f => f.id === clientSummary.id)?.coachNotes && (
-                        <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-amber-400" />
-                      )}
-                    </button>
-                    <button
-                      onClick={() => onEditPortal(clientSummary.id)}
-                      className="p-3 md:p-5 bg-slate-950 rounded-xl md:rounded-2xl text-slate-600 hover:text-blue-400 transition-colors border border-white/5 group-hover:bg-slate-900 group-hover:border-blue-500/20"
-                      title="Edit Protocol"
-                    >
-                      <Settings2 size={18} />
-                    </button>
-                    <button
-                      onClick={() => onOpenPortal(clientSummary.id)}
-                      className="px-4 py-3 md:px-10 md:py-5 bg-blue-600 rounded-xl md:rounded-2xl text-white font-black text-xs tracking-widest uppercase flex items-center justify-center gap-1 md:gap-3 hover:bg-blue-500 transition-all shadow-2xl active:scale-95 group/btn"
-                    >
-                      <span className="hidden sm:inline">Open Portal</span>
-                      <ChevronRight size={16} className="group-hover/btn:translate-x-1 transition-transform" />
-                    </button>
+                  <div className="flex-1 min-w-0 flex flex-col gap-1">
+                    <span className="text-lg font-extrabold text-ink truncate">{clientSummary.name}</span>
+                    <span className="flex items-center gap-2 text-[13px] text-muted flex-wrap">
+                      <span className="font-bold text-accent bg-raised px-2 py-0.5 rounded-md">
+                        {isMonthly ? 'Monthly' : `${programMonths} month${programMonths === '1' ? '' : 's'}`}
+                      </span>
+                      <span className={styles.text}>
+                        {isMonthly
+                          ? !cycle
+                            ? 'No payment date'
+                            : cycle.daysUntil <= 0
+                            ? 'Renews today'
+                            : cycle.daysUntil === 1
+                            ? 'Renews tomorrow'
+                            : `Renews ${formatBillingDate(cycle.next)}`
+                          : daysLeft === null
+                          ? 'No end date'
+                          : daysLeft <= 0
+                          ? 'Ended'
+                          : `${daysLeft} days left`}
+                        {isMonthly && monthsActive !== null && monthsActive > 0 && (
+                          <span> · {monthsActive} mo in</span>
+                        )}
+                      </span>
+                    </span>
                   </div>
                 </div>
-              );
-            })
-          )}
-        </div>
-      </div>
-      {/* Coach Notes Modal */}
-      {notesClient && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-6 animate-in fade-in duration-200">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-xl" onClick={() => setNotesClient(null)} />
-          <div className="relative w-full max-w-lg bg-[#0a0f1a] border border-slate-800 rounded-t-[2rem] md:rounded-[2rem] overflow-hidden shadow-2xl animate-in slide-in-from-bottom-4 md:zoom-in-95 duration-200 flex flex-col">
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
-              <div className="flex items-center gap-3">
-                <StickyNote size={16} className="text-amber-400" />
-                <div>
-                  <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-600">Private · Coach Only</p>
-                  <h3 className="text-base font-black text-white uppercase tracking-tight">{notesClient.name}</h3>
+
+                {status !== 'none' && (
+                  <div className="h-1.5 rounded-full bg-field overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-700 ${styles.bar}`}
+                      style={{ width: `${Math.round(progress * 100)}%` }}
+                    />
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => openNotes(fullClient || { ...clientSummary, goals: [], schedule: [], workouts: [] })}
+                    aria-label="Coach notes"
+                    title="Coach notes"
+                    className={`relative w-11 h-11 rounded-xl border border-edge bg-card flex items-center justify-center shrink-0 ${hasNotes ? 'text-warn' : 'text-muted hover:text-ink'}`}
+                  >
+                    <StickyNote size={18} />
+                    {hasNotes && <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-warn" />}
+                  </button>
+                  <button
+                    onClick={() => onEditPortal(clientSummary.id)}
+                    aria-label="Edit program"
+                    title="Edit program"
+                    className="w-11 h-11 rounded-xl border border-edge bg-card text-muted hover:text-ink flex items-center justify-center shrink-0"
+                  >
+                    <SlidersHorizontal size={18} />
+                  </button>
+                  <button
+                    onClick={() => onOpenPortal(clientSummary.id)}
+                    className="flex-1 min-w-0 h-11 rounded-xl bg-accent text-onaccent text-[15px] font-extrabold flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform"
+                  >
+                    <span className="truncate">Open {firstName}'s page</span>
+                    <ChevronRight size={16} strokeWidth={2.5} className="shrink-0" />
+                  </button>
                 </div>
               </div>
-              <button onClick={() => setNotesClient(null)} className="p-2 bg-slate-900 border border-slate-800 rounded-xl text-slate-500 hover:text-white transition-colors">
-                <X size={16} />
+            );
+          })
+        )}
+      </div>
+
+      {/* Coach notes */}
+      {notesClient && (
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-6">
+          <div className="absolute inset-0 bg-black/70" onClick={() => setNotesClient(null)} />
+          <div
+            className="relative w-full max-w-lg bg-card border border-edge rounded-t-3xl md:rounded-3xl overflow-hidden flex flex-col"
+            style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+          >
+            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-line">
+              <div className="flex items-center gap-3 min-w-0">
+                <StickyNote size={18} className="text-warn shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-[13px] font-semibold text-muted">Private notes · only you see these</p>
+                  <h3 className="text-lg font-extrabold text-ink truncate">{notesClient.name}</h3>
+                </div>
+              </div>
+              <button onClick={() => setNotesClient(null)} aria-label="Close" className="w-11 h-11 rounded-xl border border-edge bg-raised text-muted hover:text-ink flex items-center justify-center shrink-0">
+                <X size={18} />
               </button>
             </div>
-            {/* Textarea */}
-            <div className="px-6 py-5">
+            <div className="px-5 py-4">
               <textarea
                 value={notesText}
                 onChange={e => setNotesText(e.target.value)}
-                placeholder="Write private notes about this client — injuries, goals, reminders, renewal dates…"
+                placeholder="Injuries, goals, reminders, renewal dates…"
                 rows={8}
-                className="w-full bg-slate-950/60 border border-slate-800 rounded-2xl px-5 py-4 text-sm text-slate-200 placeholder-slate-700 font-medium resize-none focus:outline-none focus:border-amber-500/40 transition-all leading-relaxed"
+                {...textDir(notesText)}
+                className="w-full bg-field border-[1.5px] border-edge rounded-2xl px-4 py-3 text-[15px] text-ink font-medium resize-none focus:outline-none focus:border-accent leading-relaxed"
                 autoFocus
               />
             </div>
-            {/* Footer */}
-            <div className="px-6 pb-6 flex items-center justify-between">
-              <span className={`text-[9px] font-black uppercase tracking-widest transition-colors ${notesSaved ? 'text-emerald-400' : 'text-slate-700'}`}>
-                {notesSaved ? '✓ Saved' : `${notesText.length} chars`}
+            <div className="px-5 pb-5 flex items-center justify-between gap-3">
+              <span className={`text-[13px] font-semibold ${notesSaved ? 'text-done' : 'text-muted'}`}>
+                {notesSaved ? 'Saved ✓' : `${notesText.length} characters`}
               </span>
               <button
                 onClick={saveNotes}
                 disabled={notesSaving}
-                className="px-6 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs tracking-widest uppercase rounded-xl transition-all active:scale-95 disabled:opacity-50"
+                className="h-11 px-5 bg-warn text-onaccent font-extrabold text-[15px] rounded-xl active:scale-[0.98] transition-transform disabled:opacity-50"
               >
-                {notesSaving ? 'Saving…' : 'Save Notes'}
+                {notesSaving ? 'Saving…' : 'Save notes'}
               </button>
             </div>
           </div>
@@ -405,46 +383,30 @@ const AdminDashboard: React.FC<Props> = ({
   );
 };
 
-const EndingSoonCard = ({ clients, className }: { clients: { id: string; name: string; daysLeft: number }[]; className?: string }) => (
-  <div className={`glass-card p-5 md:p-7 rounded-[2rem] border-slate-800/60 bg-slate-950/20 shadow-2xl ${clients.length > 0 ? 'border-amber-500/20 bg-amber-500/5' : ''} ${className ?? ''}`}>
-    <div className="flex items-center gap-3 mb-4">
-      <div className={`p-2.5 rounded-xl border ${clients.length > 0 ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' : 'bg-slate-950 border-slate-800 text-slate-600'}`}>
-        {clients.length > 0 ? <AlertTriangle size={16} /> : <CheckCircle2 size={16} />}
-      </div>
-      <p className="text-[9px] font-black text-slate-600 uppercase tracking-[0.3em]">Ending Soon — Next 14 Days</p>
-    </div>
+const EndingSoonCard = ({ clients }: { clients: { id: string; name: string; daysLeft: number }[] }) => (
+  <div className="flex justify-between items-center gap-2.5 bg-card rounded-[14px] px-3.5 py-3 flex-wrap">
+    <span className="text-sm font-semibold text-muted">Ending in the next 14 days</span>
     {clients.length === 0 ? (
-      <p className="text-sm font-black text-slate-700 uppercase tracking-widest">All clear ✓</p>
+      <span className="text-sm font-bold text-done">All clear</span>
     ) : (
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-1.5">
         {clients.map(c => (
-          <div key={c.id} className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-black uppercase tracking-wide ${
-            c.daysLeft <= 3
-              ? 'bg-red-500/10 border-red-500/30 text-red-400'
-              : c.daysLeft <= 7
-              ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
-              : 'bg-slate-900 border-slate-700 text-slate-300'
+          <span key={c.id} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-raised text-[13px] font-bold ${
+            c.daysLeft <= 3 ? 'text-alert' : c.daysLeft <= 7 ? 'text-warn' : 'text-ink'
           }`}>
             {c.name}
-            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-lg ${
-              c.daysLeft <= 3 ? 'bg-red-500/20 text-red-300' : c.daysLeft <= 7 ? 'bg-amber-500/20 text-amber-300' : 'bg-slate-800 text-slate-500'
-            }`}>
-              {c.daysLeft}d
-            </span>
-          </div>
+            <span className="font-semibold text-muted">{c.daysLeft === 1 ? '1 day' : `${c.daysLeft} days`}</span>
+          </span>
         ))}
       </div>
     )}
   </div>
 );
 
-const StatCard = ({ label, value, icon, highlight, alert }: any) => (
-  <div className={`glass-card p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border-slate-800/60 flex flex-col gap-4 md:gap-6 shadow-2xl relative overflow-hidden transition-all duration-500 ${alert ? 'border-red-500/30 bg-red-500/5' : highlight ? 'border-blue-500/40 bg-blue-600/5' : 'bg-slate-950/20'}`}>
-    <div className={`w-fit p-3 md:p-4 bg-slate-950 rounded-2xl border border-slate-800 z-10 ${alert ? 'border-red-500/30' : highlight ? 'border-blue-500/40' : ''}`}>{icon}</div>
-    <div className="z-10">
-      <p className="text-[9px] font-black text-slate-600 uppercase tracking-[0.3em] mb-1">{label}</p>
-      <p className={`text-4xl md:text-6xl font-black brand-font leading-none ${alert ? 'text-red-400' : highlight ? 'text-white' : 'text-slate-500'}`}>{value}</p>
-    </div>
+const StatCard = ({ label, value, alert }: { label: string; value: string; alert?: boolean }) => (
+  <div className="flex flex-col gap-1 bg-card rounded-[14px] px-3.5 py-3">
+    <span className="text-[13px] font-semibold text-muted">{label}</span>
+    <span className={`text-[30px] font-extrabold leading-tight ${alert ? 'text-alert' : 'text-ink'}`}>{value}</span>
   </div>
 );
 

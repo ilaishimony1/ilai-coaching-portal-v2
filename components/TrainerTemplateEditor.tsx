@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-// Added RefreshCw to imports from lucide-react
-import { Save, Plus, X, Dumbbell, Info, Eye, EyeOff, Target, User, Phone, Mail, Globe, Calendar, Zap, Check, Clock, Ruler as RulerIcon, Weight, Activity, Search, BarChart, Move, Shapes, Library, Download, Type, ShieldCheck, CheckCircle2, RefreshCw, Archive, PlayCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, X, Eye, EyeOff, Zap, Check, Library, Type, RefreshCw, Archive, Play, PlayCircle, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { ClientData, Workout, Exercise, Goal, MiniGoal, WorkoutTemplate } from '../types';
 import { db, VideoFile } from '../db';
 import { useApp } from '../AppContext';
 import { getSkillVideos } from '../firebase/skillVideos';
 import { getBillingCycle, formatBillingDate, getMonthsActive } from '../billing';
+import { niceCase, textDir, exerciseMeta } from './ui';
 
 
 interface Props {
@@ -88,6 +88,19 @@ const TrainerTemplateEditor: React.FC<Props> = ({ client, onUpdate, onAddClient,
   const [deletingMiniGoalKey, setDeletingMiniGoalKey] = useState<string | null>(null);
 
   const countryRef = useRef<HTMLDivElement>(null);
+
+  // Which folded sections and exercises are open. A new client starts with the
+  // two sections that have to be filled in before saving.
+  const [openSections, setOpenSections] = useState<Set<string>>(
+    () => new Set(isEditing ? [] : ['login', 'personal'])
+  );
+  const [openExercises, setOpenExercises] = useState<Set<string>>(new Set());
+  const toggleSection = (key: string) =>
+    setOpenSections(prev => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n; });
+  const toggleExercise = (id: string) =>
+    setOpenExercises(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const openExercise = (...ids: string[]) =>
+    setOpenExercises(prev => { const n = new Set(prev); ids.forEach(id => n.add(id)); return n; });
 
   useEffect(() => {
     setLocalClient(client);
@@ -354,6 +367,7 @@ const TrainerTemplateEditor: React.FC<Props> = ({ client, onUpdate, onAddClient,
     }
     return { ...prev, workouts: prev.workouts.map(mapWorkout) };
   });
+  openExercise(newExercise.id);
 };
 
 const addHeader = (workoutId: string, afterExerciseId?: string) => {
@@ -382,6 +396,7 @@ const addHeader = (workoutId: string, afterExerciseId?: string) => {
     }
     return { ...prev, workouts: prev.workouts.map(mapWorkout) };
   });
+  openExercise(newHeader.id);
 };
 
 const addSuperset = (workoutId: string, afterExerciseId?: string) => {
@@ -402,6 +417,7 @@ const addSuperset = (workoutId: string, afterExerciseId?: string) => {
     }
     return { ...prev, workouts: prev.workouts.map(mapWorkout) };
   });
+  openExercise(ex1.id, ex2.id);
 };
 
 const addToSuperset = (workoutId: string, afterExerciseId: string, groupId: string) => {
@@ -419,6 +435,7 @@ const addToSuperset = (workoutId: string, afterExerciseId: string, groupId: stri
     }
     return { ...prev, workouts: prev.workouts.map(mapWorkout) };
   });
+  openExercise(newEx.id);
 };
 
   const executeDeleteExercise = (workoutId: string, exerciseId: string) => {
@@ -604,796 +621,632 @@ const matches = [...startsWithMatches, ...includesMatches];
     ? (localClient.draftWorkouts || []).find(w => w.id === activeDraftWorkoutId)
     : localClient.workouts.find(w => w.id === activeWorkoutId);
 
-  return (
-    <div className="space-y-12 animate-in fade-in duration-500 pb-20">
-      <header className="flex flex-col sm:flex-row justify-between items-center gap-6">
-        <div>
-          <h2 className="text-4xl font-black brand-font uppercase text-white tracking-tight">{isEditing ? 'Athlete Protocol' : 'Add Client'}</h2>
-          <p className="text-blue-500 font-black uppercase tracking-widest text-[10px]">Strategic Programming Interface</p>
-        </div>
-        <div className="flex items-center gap-3">
-          {isEditing && onArchive && (
-            <button 
-              type="button" 
-              onClick={() => onArchive(localClient)}
-              className="px-6 py-2.5 bg-slate-900 border border-amber-500/20 text-amber-500 hover:bg-amber-600 hover:text-white rounded-2xl font-black text-[10px] tracking-widest uppercase flex items-center gap-2 transition-all shadow-xl"
-            >
-              <Archive size={16} /> Archive Protocol
-            </button>
-          )}
-          {localClient.authUid && (
-            <div className="flex items-center gap-2 bg-blue-600/10 border border-blue-500/20 px-4 py-2 rounded-2xl" title={`Auth UID: ${localClient.authUid}`}>
-              <ShieldCheck size={14} className="text-blue-400" />
-              <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest">Auth ✓</span>
-            </div>
-          )}
-          {localClient.username && (localClient.authUid || localClient.password) && (
-            <div className="flex items-center gap-3 bg-emerald-600/10 border border-emerald-500/20 px-6 py-2.5 rounded-2xl animate-in zoom-in-95">
-               <ShieldCheck size={18} className="text-emerald-500" />
-               <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest leading-none">Security Tokens Verified</p>
-            </div>
-          )}
-        </div>
-      </header>
+  const firstName = (localClient.firstName ?? localClient.name?.split(' ')[0]) || 'the client';
+  const loginReady = !!(localClient.username && (localClient.authUid || localClient.password));
+  const personalSummary = [
+    localClient.gender,
+    localClient.level,
+    localClient.billingType === 'monthly'
+      ? 'Monthly'
+      : localClient.programLength ? `${localClient.programLength} month${localClient.programLength === '1' ? '' : 's'}` : '',
+  ].filter(Boolean).join(' · ') || 'Not filled in yet';
+  const noteFirstLine = (localClient.generalNotes || '').split('\n').find(l => l.trim()) || '';
+  const goalCount = localClient.goals.length;
+  const tabWorkouts = planMode === 'draft' ? (localClient.draftWorkouts || []) : localClient.workouts;
+  const activeTabId = planMode === 'draft' ? activeDraftWorkoutId : activeWorkoutId;
+  const activeIdx = tabWorkouts.findIndex(w => w.id === activeTabId);
 
-      {/* Main Form Fields */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-        <div className="lg:col-span-4 space-y-6">
-          <div className="glass-card p-8 rounded-[2.5rem] border-slate-800 space-y-6 shadow-2xl h-full">
-            <h3 className="text-[10px] font-black uppercase text-slate-500 tracking-widest flex items-center gap-2 border-b border-white/5 pb-4"><Info size={12}/> Client Username & Password</h3>
-            <div className="space-y-4">
-              <InfoFieldSimple label="Login Access Name" value={localClient.username} onChange={(v: string) => setLocalClient({...localClient, username: v})} placeholder="itay1" />
-              <div className="space-y-2">
-                <label className="text-[9px] font-black text-slate-600 uppercase">Encryption (Password)</label>
-                <div className="relative">
-                  <input type={showPassword ? "text" : "password"} value={localClient.password || ''} onChange={e => setLocalClient({...localClient, password: e.target.value})} onKeyDown={checkCapsLock} onKeyUp={checkCapsLock} className="w-full bg-slate-950 border border-slate-800 p-4 pr-20 rounded-xl text-white font-bold outline-none focus:ring-1 ring-blue-600" placeholder={localClient.authUid ? "Type a new one to change it" : "••••••••"} />
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                    {isCapsLock && <span className="text-[9px] font-black text-amber-500 animate-pulse">CAPS</span>}
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="text-slate-600 hover:text-blue-400">{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-            {!isEditing && (
-              <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest leading-relaxed italic">The athlete will use these credentials to access their personalized coaching terminal.</p>
+  const updateActiveWorkout = (field: 'name' | 'title', val: string) => {
+    if (!activeWorkout) return;
+    setLocalClient((prev: ClientData) => {
+      if (planMode === 'draft') return { ...prev, draftWorkouts: (prev.draftWorkouts || []).map((w: Workout) => w.id === activeWorkout.id ? { ...w, [field]: val } : w) };
+      return { ...prev, workouts: prev.workouts.map((w: Workout) => w.id === activeWorkout.id ? { ...w, [field]: val } : w) };
+    });
+  };
+
+  const DeleteConfirm = ({ question, onNo, onYes }: { question: string; onNo: () => void; onYes: () => void }) => (
+    <div className="absolute inset-0 z-50 bg-page/95 rounded-[inherit] flex flex-col items-center justify-center gap-3 p-4">
+      <p className="text-[15px] font-bold text-ink text-center">{question}</p>
+      <div className="flex gap-2 w-full max-w-[240px]">
+        <button type="button" onClick={onNo} className="flex-1 h-11 rounded-xl border border-edge bg-card text-ink font-bold text-[14px]">No</button>
+        <button type="button" onClick={onYes} className="flex-1 h-11 rounded-xl bg-alert text-onaccent font-extrabold text-[14px]">Yes, delete</button>
+      </div>
+    </div>
+  );
+
+  const renderExercise = (ex: Exercise, inSuperset: boolean, wId: string) => {
+    const isOpen = openExercises.has(ex.id);
+
+    if (ex.category === 'header') {
+      if (!isOpen) {
+        return (
+          <button key={ex.id} type="button" onClick={() => toggleExercise(ex.id)} className="w-full flex gap-3 items-center border-[1.5px] border-edge rounded-[14px] px-3 py-[11px] min-h-[44px] text-left">
+            <span className="flex-1 min-w-0 flex flex-col gap-px">
+              <span className="text-[16px] font-extrabold text-mob" {...textDir(ex.name)}>Header: {niceCase(ex.name) || 'New section'}</span>
+              {ex.notes && <span className="text-[13px] text-muted truncate" {...textDir(ex.notes)}>{ex.notes}</span>}
+            </span>
+            <ChevronDown size={18} className="text-muted shrink-0" />
+          </button>
+        );
+      }
+      return (
+        <div key={ex.id} className="relative flex flex-col gap-3 bg-raised border border-edge rounded-2xl p-3">
+          {deletingExerciseId === ex.id && (
+            <DeleteConfirm question="Delete this header?" onNo={() => setDeletingExerciseId(null)} onYes={() => executeDeleteExercise(wId, ex.id)} />
+          )}
+          <div className="flex gap-2.5 items-center">
+            <span className="flex-1 text-[16px] font-extrabold text-mob">Header</span>
+            <IconBtn label="Delete header" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeletingExerciseId(ex.id); }}><X size={18} /></IconBtn>
+            <button type="button" aria-label="Close" onClick={() => toggleExercise(ex.id)} className="w-9 h-11 flex items-center justify-center text-muted"><ChevronUp size={18} /></button>
+          </div>
+          <Field label="Header title">
+            <input value={ex.name || ''} onChange={e => updateExercise(wId, ex.id, 'name', e.target.value)} className={INPUT} placeholder="e.g. Mobility" {...textDir(ex.name)} />
+          </Field>
+          <Field label="Description">
+            <textarea value={ex.notes || ''} onChange={e => updateExercise(wId, ex.id, 'notes', e.target.value)} className={`${TEXTAREA} h-20`} placeholder="A line about this part of the workout…" {...textDir(ex.notes)} />
+          </Field>
+        </div>
+      );
+    }
+
+    if (!isOpen) {
+      const meta = exerciseMeta(ex);
+      return (
+        <button key={ex.id} type="button" onClick={() => toggleExercise(ex.id)} className="w-full flex gap-3 items-center bg-card rounded-[14px] px-3 py-[11px] min-h-[44px] text-left">
+          <span className="flex-1 min-w-0 flex flex-col gap-px">
+            <span className="text-[16px] font-bold text-ink" {...textDir(ex.name)}>{niceCase(ex.name) || 'New exercise'}</span>
+            {(meta || ex.category === 'mobility') && (
+              <span className="text-[13px] text-muted">
+                {ex.category === 'mobility' && <span className="text-mob font-bold">Mobility{meta ? ' · ' : ''}</span>}
+                {meta}
+              </span>
             )}
+          </span>
+          {ex.videoUrl && <Play size={16} className="text-accent fill-accent shrink-0" />}
+          <ChevronDown size={18} className="text-muted shrink-0" />
+        </button>
+      );
+    }
 
-            <div className="border-t border-white/5 pt-6 space-y-4">
-              <h3 className="text-[10px] font-black uppercase text-slate-500 tracking-widest flex items-center gap-2">
-                <ShieldCheck size={12} /> Feature Access
-              </h3>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-black text-slate-300 uppercase tracking-wide">Weekly Check-In</p>
-                  <p className="text-[9px] font-bold text-slate-600 mt-0.5">Client can submit weekend reviews</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setLocalClient(prev => ({ ...prev, weeklyCheckInEnabled: !prev.weeklyCheckInEnabled }))}
-                  className={`relative w-12 h-6 rounded-full transition-all duration-300 focus:outline-none ${
-                    localClient.weeklyCheckInEnabled ? 'bg-blue-600' : 'bg-slate-800'
-                  }`}
-                >
-                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all duration-300 ${
-                    localClient.weeklyCheckInEnabled ? 'left-7' : 'left-1'
-                  }`} />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="lg:col-span-8">
-          <div className="glass-card p-8 rounded-[3rem] border-slate-800 space-y-8 shadow-2xl h-full">
-            <h3 className="text-[10px] font-black uppercase text-slate-500 tracking-widest flex items-center gap-2 border-b border-white/5 pb-4"><User size={12}/> Personal Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              <InfoFieldIcon label="First Name" icon={<User size={14}/>} value={localClient.firstName ?? (localClient.name?.split(' ')[0] ?? '')} onChange={(v: string) => {
-                const last = localClient.lastName ?? (localClient.name?.split(' ').slice(1).join(' ') ?? '');
-                setLocalClient({...localClient, firstName: v, name: [v, last].filter(Boolean).join(' ')});
-              }} placeholder="John" />
-              <InfoFieldIcon label="Last Name" icon={<User size={14}/>} value={localClient.lastName ?? (localClient.name?.split(' ').slice(1).join(' ') ?? '')} onChange={(v: string) => {
-                const first = localClient.firstName ?? (localClient.name?.split(' ')[0] ?? '');
-                setLocalClient({...localClient, lastName: v, name: [first, v].filter(Boolean).join(' ')});
-              }} placeholder="Doe" />
-              <InfoFieldIcon label="Email Address" icon={<Mail size={14}/>} value={localClient.email} onChange={(v: string) => setLocalClient({...localClient, email: v})} placeholder="athlete@mail.com" />
-              
-              <div className="space-y-2 relative" ref={countryRef}>
-                <label className="text-[9px] font-black text-slate-600 uppercase flex items-center gap-1"><Globe size={14}/> Country</label>
-                <div className="relative">
-                  <input 
-                    value={countrySearch} 
-                    onChange={e => {
-                      setCountrySearch(e.target.value);
-                      setShowCountrySuggestions(true);
-                      if (e.target.value === '') setLocalClient({...localClient, country: ''});
+    const isMobility = ex.category === 'mobility';
+    return (
+      <div key={ex.id} className="relative flex flex-col gap-3 bg-raised border border-edge rounded-2xl p-3">
+        {deletingExerciseId === ex.id && (
+          <DeleteConfirm question="Delete this exercise?" onNo={() => setDeletingExerciseId(null)} onYes={() => executeDeleteExercise(wId, ex.id)} />
+        )}
+        <div className="flex gap-2.5 items-center">
+          <div className="flex-1 min-w-0 relative">
+            <input
+              value={ex.name || ''}
+              onChange={e => updateExercise(wId, ex.id, 'name', e.target.value)}
+              aria-label="Exercise name"
+              className={`${INPUT} font-bold text-[16px]`}
+              placeholder="Exercise name"
+            />
+            {exerciseSuggestions[ex.id]?.length > 0 && (
+              <div className="absolute z-50 left-0 right-0 top-full mt-1.5 bg-card border border-edge rounded-xl shadow-2xl max-h-64 overflow-y-auto">
+                {exerciseSuggestions[ex.id].map(suggestion => (
+                  <button
+                    key={suggestion.uid}
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      selectExerciseSuggestion(wId, ex.id, suggestion);
                     }}
-                    onFocus={() => setShowCountrySuggestions(true)}
-                    className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-white font-bold text-xs outline-none focus:ring-1 ring-blue-600" 
-                    placeholder="Search Country..." 
-                  />
-                  {showCountrySuggestions && filteredCountries.length > 0 && (
-                    <div className="absolute z-50 left-0 right-0 top-full mt-2 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200 max-h-60 overflow-y-auto">
-                      {filteredCountries.map(c => (
-                        <button 
-                          key={c.name} 
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            handleCountrySelect(c);
-                          }}
-                          className="w-full text-left px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-300 hover:bg-blue-600 hover:text-white transition-colors border-b border-white/5 last:border-0 flex justify-between items-center"
-                        >
-                          <span>{c.name}</span>
-                          <span className="opacity-50">{c.dial}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                    className="w-full text-left px-3 py-2.5 text-[14px] font-semibold text-ink hover:bg-raised border-b border-line last:border-0 flex justify-between items-center gap-3"
+                  >
+                    <span>{niceCase(suggestion.name)}</span>
+                    <span className="text-[12px] text-muted shrink-0">Has a video</span>
+                  </button>
+                ))}
               </div>
-              
-              <div className="space-y-2">
-                <label className="text-[9px] font-black text-slate-600 uppercase flex items-center gap-1"><Phone size={14}/> Phone (Include +Prefix)</label>
-                <input 
-                  value={localClient.phone || ''} 
-                  onChange={e => handlePhoneChange(e.target.value)} 
-                  className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-white font-bold text-xs outline-none focus:ring-1 ring-blue-600" 
-                  placeholder="+972..." 
-                />
-              </div>
-
-            <InfoFieldIcon
-  label="Height (CM)"
-  icon={<RulerIcon size={14} />}
-  value={localClient.height || ''}
-  onChange={(v: string) =>
-    setLocalClient(prev => ({ ...prev, height: v }))
-  }
-  placeholder="180"
-/>
-
-              <InfoFieldIcon
-  label="Weight (KG)"
-  icon={<Weight size={14} />}
-  value={localClient.weight || ''}
-  onChange={(v: string) =>
-    setLocalClient(prev => ({ ...prev, weight: v }))
-  }
-  placeholder="75"
-/>
-
-              
-              <div className="space-y-2">
-                <label className="text-[9px] font-black text-slate-600 uppercase flex items-center gap-1"><Activity size={14}/> Gender</label>
-                <select value={localClient.gender || ''} onChange={e => setLocalClient({...localClient, gender: e.target.value})} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-white font-bold text-xs outline-none focus:ring-1 ring-blue-600 cursor-pointer">
-                  <option value="" disabled>Select</option>
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[9px] font-black text-slate-600 uppercase flex items-center gap-1"><Zap size={14}/> Membership</label>
-                <select value={localClient.billingType === 'monthly' ? 'monthly' : (localClient.programLength || '')} onChange={e => handleProgramLengthChange(e.target.value)} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-white font-bold text-xs outline-none focus:ring-1 ring-blue-600 cursor-pointer">
-                  <option value="" disabled>Select Membership</option>
-                  <option value="monthly">Monthly — Recurring</option>
-                  {[1, 3, 6, 12].map(m => <option key={m} value={m}>{m} Month{m > 1 ? 's' : ''} — Fixed</option>)}
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[9px] font-black text-slate-600 uppercase flex items-center gap-1"><BarChart size={14}/> Skill Level</label>
-                <select value={localClient.level || ''} onChange={e => handleLevelChange(e.target.value)} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-white font-bold text-xs outline-none focus:ring-1 ring-blue-600 cursor-pointer">
-                  <option value="" disabled>Select Level</option>
-                  {["HS Foundations", "HS Balance & Control", "Advanced HS Skills"].map(l => <option key={l} value={l}>{l}</option>)}
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[9px] font-black text-slate-600 uppercase flex items-center gap-1"><Calendar size={14}/> Start Date</label>
-                <input type="date" value={localClient.programStartDate || ''} onChange={e => handleStartDateChange(e.target.value)} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-white font-bold text-xs outline-none focus:ring-1 ring-blue-600" />
-              </div>
-
-              {localClient.billingType === 'monthly' ? (
-                <div className="space-y-2">
-                  <label className="text-[9px] font-black text-slate-600 uppercase flex items-center gap-1"><RefreshCw size={14}/> Payment Date</label>
-                  <input type="date" value={localClient.billingAnchorDate || ''} onChange={e => setLocalClient({...localClient, billingAnchorDate: e.target.value})} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-white font-bold text-xs outline-none focus:ring-1 ring-blue-600" />
-                  {(() => {
-                    const cycle = getBillingCycle(localClient.billingAnchorDate);
-                    if (!cycle) return <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Pick the day they pay</p>;
-                    const months = getMonthsActive(localClient.programStartDate);
-                    return (
-                      <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">
-                        Renews {formatBillingDate(cycle.next)} · every month
-                        {months !== null && months > 0 && <span className="text-slate-600"> · {months}mo in</span>}
-                      </p>
-                    );
-                  })()}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <label className="text-[9px] font-black text-slate-600 uppercase flex items-center gap-1"><Calendar size={14}/> End Date</label>
-                  <input type="date" value={localClient.programEndDate || ''} onChange={e => setLocalClient({...localClient, programEndDate: e.target.value})} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-white font-bold text-xs outline-none focus:ring-1 ring-blue-600" />
-                </div>
-              )}
-            </div>
+            )}
           </div>
+          <button type="button" aria-label="Close" onClick={() => toggleExercise(ex.id)} className="w-9 h-11 flex items-center justify-center text-muted shrink-0"><ChevronUp size={18} /></button>
         </div>
+        <div className="flex gap-2 items-center">
+          <div className="flex-1 grid grid-cols-2 p-[3px] rounded-xl bg-field border border-edge">
+            <button type="button" onClick={() => updateExercise(wId, ex.id, 'category', 'strength')}
+              className={`h-[38px] rounded-[9px] text-[14px] ${!isMobility ? 'bg-accent text-onaccent font-extrabold' : 'text-muted font-bold'}`}>Strength</button>
+            <button type="button" onClick={() => updateExercise(wId, ex.id, 'category', 'mobility')}
+              className={`h-[38px] rounded-[9px] text-[14px] ${isMobility ? 'bg-mob text-onaccent font-extrabold' : 'text-muted font-bold'}`}>Mobility</button>
+          </div>
+          {ex.videoUrl && (
+            <IconBtn label="Watch the linked video" onClick={() => setPreviewVideoUrl(ex.videoUrl!)} accent><PlayCircle size={18} /></IconBtn>
+          )}
+          <IconBtn label="Delete exercise" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeletingExerciseId(ex.id); }}><X size={18} /></IconBtn>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <Field label="Sets"><input value={ex.sets || ''} onChange={e => updateExercise(wId, ex.id, 'sets', e.target.value)} className={`${INPUT} px-2.5`} placeholder="4" /></Field>
+          <Field label="Target"><input value={ex.reps || ''} onChange={e => updateExercise(wId, ex.id, 'reps', e.target.value)} className={`${INPUT} px-2.5`} placeholder="10-12" /></Field>
+          <Field label="Rest"><input value={ex.restTime || ''} onChange={e => updateExercise(wId, ex.id, 'restTime', e.target.value)} className={`${INPUT} px-2.5`} placeholder="90s" /></Field>
+        </div>
+        <Field label={`Cue for ${firstName}`}>
+          <textarea value={ex.notes || ''} onChange={e => updateExercise(wId, ex.id, 'notes', e.target.value)} className={`${TEXTAREA} h-16`} placeholder="What to focus on…" {...textDir(ex.notes)} />
+        </Field>
+        {!inSuperset && (
+          <div className="flex justify-between gap-1.5 flex-wrap">
+            <button type="button" onClick={() => addExercise(wId, ex.id)} className="text-[13px] font-bold text-accent py-2">+ Exercise below</button>
+            <button type="button" onClick={() => addSuperset(wId, ex.id)} className="text-[13px] font-bold text-accent py-2">+ Superset below</button>
+            <button type="button" onClick={() => addHeader(wId, ex.id)} className="text-[13px] font-bold text-accent py-2">+ Header below</button>
+          </div>
+        )}
       </div>
+    );
+  };
 
-      {/* Goal Tracker Editor */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-        <div className="lg:col-span-4">
-          <div className="glass-card p-8 rounded-[2.5rem] border-slate-800 space-y-4 shadow-2xl h-full">
-             <h3 className="text-[10px] font-black uppercase text-slate-500 tracking-[0.3em] text-blue-500 border-b border-white/5 pb-4">Coaches Note</h3>
-             <textarea value={localClient.generalNotes || ''} onChange={e => setLocalClient({...localClient, generalNotes: e.target.value})} className="w-full h-[300px] bg-slate-950 border border-slate-800 p-6 rounded-[1.5rem] text-white text-sm font-medium outline-none focus:ring-1 ring-blue-600 resize-none leading-relaxed" placeholder="Enter coaching cues and strategy..." />
-          </div>
-        </div>
-
-        <div className="lg:col-span-8">
-          <div className="glass-card p-8 rounded-[2.5rem] border-slate-800 space-y-6 shadow-2xl h-full">
-            <div className="flex justify-between items-center border-b border-white/5 pb-4">
-              <h3 className="text-[10px] font-black uppercase text-slate-500 tracking-widest flex items-center gap-2"><Target size={12}/> Sub-goals</h3>
-              <button type="button" onClick={addGoal} className="text-blue-400 font-black uppercase text-[10px] tracking-widest flex items-center gap-2 hover:text-white transition-colors cursor-pointer"><Plus size={14}/> New Goal</button>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[350px] overflow-y-auto pr-2 no-scrollbar">
-              {localClient.goals.map(goal => (
-                <div key={goal.id} className="bg-slate-950/50 p-6 rounded-3xl border border-slate-900 space-y-4 relative group overflow-hidden">
-                  {deletingGoalId === goal.id && (
-                    <div className="absolute inset-0 z-50 bg-black/95 backdrop-blur-md rounded-3xl flex flex-col items-center justify-start p-6 pt-10 animate-in fade-in duration-300">
-                      <p className="text-white font-black brand-font uppercase text-[10px] mb-6 tracking-widest text-center">Delete Goal & Sub-targets?</p>
-                      <div className="flex gap-2 w-full max-w-[160px]">
-                        <button onClick={() => setDeletingGoalId(null)} className="flex-1 py-2 bg-slate-800 text-white rounded-lg font-black text-[8px] uppercase tracking-widest hover:bg-slate-700 transition-all">No</button>
-                        <button onClick={() => executeDeleteGoal(goal.id)} className="flex-1 py-2 bg-red-600 text-white rounded-lg font-black text-[8px] uppercase tracking-widest hover:bg-red-500 transition-all">Yes</button>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex gap-3 pr-8">
-                    <input value={goal.icon} onChange={e => updateGoal(goal.id, 'icon', e.target.value)} className="w-10 bg-slate-900 border border-slate-800 p-2 rounded-xl text-center" />
-                    <input value={goal.title || ''} onChange={e => updateGoal(goal.id, 'title', e.target.value)} placeholder="NEW TARGET" className="flex-1 bg-slate-900 border border-slate-800 p-2 px-4 rounded-xl text-xs font-black uppercase text-white outline-none" />
-                    <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeletingGoalId(goal.id); }} className="absolute top-4 right-4 text-slate-700 hover:text-red-500 p-2 transition-all cursor-pointer flex items-center justify-center bg-slate-950/50 rounded-lg">
-                      <X size={18} className="pointer-events-none" />
-                    </button>
-                  </div>
-                  <div className="space-y-2">
-                    {(goal.miniGoals || []).map((mini, idx) => {
-                      const miniKey = `${goal.id}:${idx}`;
-                      const isDeletingMini = deletingMiniGoalKey === miniKey;
-
-                      return (
-                        <div key={idx} className="flex gap-2 items-center group/mini relative">
-                          {isDeletingMini && (
-                            <div className="absolute inset-0 z-50 bg-black/95 rounded-lg flex items-center justify-center gap-3 px-2 animate-in fade-in duration-200">
-                              <span className="text-[7px] text-white font-black uppercase tracking-tighter shrink-0">DELETE?</span>
-                              <div className="flex gap-1 flex-1">
-                                <button onClick={() => setDeletingMiniGoalKey(null)} className="flex-1 py-1 bg-slate-800 text-white rounded-md font-black text-[7px] uppercase tracking-tighter">No</button>
-                                <button onClick={() => executeDeleteMiniGoal(goal.id, idx)} className="flex-1 py-1 bg-red-600 text-white rounded-md font-black text-[7px] uppercase tracking-tighter">Yes</button>
-                              </div>
-                            </div>
-                          )}
-
-                          <button type="button" onClick={() => toggleMiniGoalStatus(goal.id, idx)} className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-all ${mini.completed ? 'bg-emerald-500 border-emerald-500' : 'bg-slate-950 border-slate-800'}`}>{mini.completed && <Check size={12} className="text-white" strokeWidth={4} />}</button>
-                          <input value={mini.text} onChange={e => updateMiniGoalText(goal.id, idx, e.target.value)} placeholder="Milestone..." className={`flex-1 bg-transparent border-b border-slate-800 text-[10px] p-1 outline-none ${mini.completed ? 'text-slate-600 line-through' : 'text-slate-400'}`} />
-                          <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeletingMiniGoalKey(miniKey); }} className="text-slate-800 hover:text-red-500 p-1.5 transition-all cursor-pointer flex items-center justify-center opacity-0 group-hover/mini:opacity-100">
-                            <X size={12} className="pointer-events-none" />
-                          </button>
-                        </div>
-                      );
-                    })}
-                    <button type="button" onClick={() => addMiniGoal(goal.id)} className="text-[9px] font-black text-slate-600 hover:text-blue-400 uppercase tracking-widest">+ Add Sub-Target</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Frequency Editor */}
-      <div className="glass-card p-8 rounded-[3rem] border-slate-800 shadow-2xl space-y-8">
-        <div className="flex items-center justify-between border-b border-white/5 pb-4">
-          <div className="flex items-center gap-4">
-            <Clock className="text-blue-500" size={20} />
-            <h3 className="text-xl font-black brand-font text-white uppercase tracking-tight">Weekly Frequency</h3>
-          </div>
-          {/* On/Off toggle */}
+  return (
+    <div className="max-w-3xl mx-auto flex flex-col gap-3 pb-20">
+      {/* Header */}
+      <div className="flex justify-between items-center gap-3">
+        <span className="flex flex-col gap-0.5 min-w-0">
+          <span className="text-[24px] font-extrabold text-ink truncate">{isEditing ? (localClient.name || 'Client') : 'Add client'}</span>
+          {loginReady && <span className="text-[13px] font-semibold text-done">Login set up</span>}
+          {localClient.authUid && <span className="text-[12px] text-muted" title={`Auth UID: ${localClient.authUid}`}>Account connected ✓</span>}
+        </span>
+        {isEditing && onArchive && (
           <button
             type="button"
-            onClick={() => setLocalClient((prev: ClientData) => ({ ...prev, weeklyScheduleEnabled: !prev.weeklyScheduleEnabled }))}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl border font-black text-[9px] uppercase tracking-widest transition-all ${
-              localClient.weeklyScheduleEnabled
-                ? 'bg-blue-600/20 border-blue-500/40 text-blue-400'
-                : 'bg-slate-900 border-slate-700 text-slate-500'
-            }`}
+            onClick={() => onArchive(localClient)}
+            className="h-11 px-3.5 rounded-xl border border-edge bg-card text-muted font-bold text-[14px] flex items-center gap-1.5 shrink-0"
           >
-            <span className={`w-7 h-4 rounded-full relative transition-colors ${localClient.weeklyScheduleEnabled ? 'bg-blue-500' : 'bg-slate-700'}`}>
-              <span className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-all ${localClient.weeklyScheduleEnabled ? 'left-3.5' : 'left-0.5'}`} />
-            </span>
-            {localClient.weeklyScheduleEnabled ? 'Visible to client' : 'Hidden'}
+            <Archive size={16} /> Archive
           </button>
-        </div>
-        {localClient.weeklyScheduleEnabled && (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-            {DAYS_OF_WEEK.map((day, idx) => (
-              <div key={day} className="">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest text-center block w-full">{day}</label>
-                <select value={localClient.weeklySchedule?.[idx] || ''} onChange={e => setLocalClient((prev: ClientData) => ({ ...prev, weeklySchedule: { ...(prev.weeklySchedule || {}), [idx]: e.target.value } }))} className="w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl text-[10px] font-black uppercase text-white outline-none cursor-pointer">
-                  <option value="">Rest Day</option>
-                  {localClient.workouts.map((w: Workout) => <option key={w.id} value={w.id}>{w.name}</option>)}
-                </select>
-              </div>
-            ))}
-          </div>
-        )}
-        {!localClient.weeklyScheduleEnabled && (
-          <p className="text-[9px] font-black uppercase tracking-widest text-slate-700">Schedule is hidden — toggle on to show it to the client.</p>
         )}
       </div>
 
-      {/* Protocol Modules Editor */}
-      <div className="space-y-8 pt-8">
-        <div className="flex flex-col md:flex-row justify-between items-center px-4 gap-4">
-          <div className="flex items-center gap-4">
-             <Dumbbell className="text-blue-500" />
-             <h3 className="text-[10px] font-black uppercase text-slate-500 tracking-[0.3em]">Training Plan</h3>
-          </div>
-          <div className="flex flex-col items-end gap-2">
-            {/* LIVE / DRAFT toggle */}
-            <div className="flex items-center gap-3">
-              {planMode === 'live' && (localClient.draftWorkouts || []).length > 0 && (
-                <button
-                  type="button"
-                  onClick={switchToDraft}
-                  className="text-[9px] font-black uppercase tracking-widest text-amber-500 hover:text-amber-400 flex items-center gap-1 animate-pulse"
-                >
-                  Draft in progress →
-                </button>
-              )}
-              <div className="flex p-1 bg-slate-950 border border-slate-800 rounded-2xl">
-                <button
-                  type="button"
-                  onClick={() => setPlanMode('live')}
-                  className={`px-5 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${planMode === 'live' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-600 hover:text-slate-300'}`}
-                >
-                  Live Plan
-                </button>
-                <button
-                  type="button"
-                  onClick={switchToDraft}
-                  className={`px-5 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all relative ${planMode === 'draft' ? 'bg-amber-500 text-white shadow-lg' : 'text-slate-600 hover:text-slate-300'}`}
-                >
-                  Draft Plan
-                  {(localClient.draftWorkouts || []).length > 0 && (
-                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-400 rounded-full border border-slate-950" />
-                  )}
-                </button>
+      {/* Folded sections */}
+      <div className="flex flex-col gap-1.5">
+        <Fold title="Login details" summary="Username and password" open={openSections.has('login')} onToggle={() => toggleSection('login')}>
+          <Field label="Username">
+            <input value={localClient.username || ''} onChange={e => setLocalClient({...localClient, username: e.target.value})} className={INPUT} placeholder="itay1" />
+          </Field>
+          <Field label="Password">
+            <div className="relative">
+              <input type={showPassword ? "text" : "password"} value={localClient.password || ''} onChange={e => setLocalClient({...localClient, password: e.target.value})} onKeyDown={checkCapsLock} onKeyUp={checkCapsLock} className={`${INPUT} pr-24`} placeholder={localClient.authUid ? "Type a new one to change it" : "••••••••"} />
+              <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                {isCapsLock && <span className="text-[12px] font-bold text-warn">Caps lock on</span>}
+                <button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword(!showPassword)} className="w-10 h-10 flex items-center justify-center text-muted">{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
               </div>
             </div>
-            {planMode === 'draft' && (
-              <p className="text-[8px] font-black text-amber-500/60 uppercase tracking-widest">⚠ Client sees LIVE until published</p>
-            )}
-            {/* Workout tabs */}
-            {(() => {
-              const tabWorkouts = planMode === 'draft' ? (localClient.draftWorkouts || []) : localClient.workouts;
-              const activeId = planMode === 'draft' ? activeDraftWorkoutId : activeWorkoutId;
-              const activeIdx = tabWorkouts.findIndex(w => w.id === activeId);
-              return (
-                <div className="flex items-center gap-1.5 p-2 bg-slate-950 border border-slate-800 rounded-2xl flex-wrap">
-                  {tabWorkouts.map((w: Workout) => (
-                    <button key={w.id} type="button"
-                      onClick={() => planMode === 'draft' ? setActiveDraftWorkoutId(w.id) : setActiveWorkoutId(w.id)}
-                      className={`w-10 h-10 rounded-xl font-black text-xs transition-all ${
-                        (planMode === 'draft' ? activeDraftWorkoutId : activeWorkoutId) === w.id
-                          ? planMode === 'draft' ? 'bg-amber-500 text-white shadow-lg' : 'bg-blue-600 text-white shadow-lg'
-                          : 'text-slate-600 hover:text-white'
-                      }`}
-                    >{w.name}</button>
+          </Field>
+          {!isEditing && (
+            <p className="text-[13px] text-muted">{firstName === 'the client' ? 'They' : firstName} will use these to log in to their page.</p>
+          )}
+        </Fold>
+
+        <Fold
+          title="Weekly check-in"
+          summary={localClient.weeklyCheckInEnabled ? `On: ${firstName} can send weekend reviews` : 'Off'}
+          open={openSections.has('checkin')}
+          onToggle={() => toggleSection('checkin')}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <span className="flex flex-col gap-0.5">
+              <span className="text-[15px] font-bold text-ink">Weekly check-in</span>
+              <span className="text-[13px] text-muted">{firstName === 'the client' ? 'They' : firstName} can send a review on weekends</span>
+            </span>
+            <Toggle on={!!localClient.weeklyCheckInEnabled} onClick={() => setLocalClient(prev => ({ ...prev, weeklyCheckInEnabled: !prev.weeklyCheckInEnabled }))} />
+          </div>
+        </Fold>
+
+        <Fold title="Personal details" summary={personalSummary} open={openSections.has('personal')} onToggle={() => toggleSection('personal')}>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="First name">
+              <input value={localClient.firstName ?? (localClient.name?.split(' ')[0] ?? '')} onChange={e => {
+                const v = e.target.value;
+                const last = localClient.lastName ?? (localClient.name?.split(' ').slice(1).join(' ') ?? '');
+                setLocalClient({...localClient, firstName: v, name: [v, last].filter(Boolean).join(' ')});
+              }} className={INPUT} placeholder="John" />
+            </Field>
+            <Field label="Last name">
+              <input value={localClient.lastName ?? (localClient.name?.split(' ').slice(1).join(' ') ?? '')} onChange={e => {
+                const v = e.target.value;
+                const first = localClient.firstName ?? (localClient.name?.split(' ')[0] ?? '');
+                setLocalClient({...localClient, lastName: v, name: [first, v].filter(Boolean).join(' ')});
+              }} className={INPUT} placeholder="Doe" />
+            </Field>
+          </div>
+          <Field label="Email">
+            <input value={localClient.email || ''} onChange={e => setLocalClient({...localClient, email: e.target.value})} className={INPUT} placeholder="athlete@mail.com" />
+          </Field>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="relative min-w-0" ref={countryRef}>
+              <Field label="Country">
+                <input
+                  value={countrySearch}
+                  onChange={e => {
+                    setCountrySearch(e.target.value);
+                    setShowCountrySuggestions(true);
+                    if (e.target.value === '') setLocalClient({...localClient, country: ''});
+                  }}
+                  onFocus={() => setShowCountrySuggestions(true)}
+                  className={INPUT}
+                  placeholder="Search…"
+                />
+              </Field>
+              {showCountrySuggestions && filteredCountries.length > 0 && (
+                <div className="absolute z-50 left-0 right-0 top-full mt-1.5 bg-card border border-edge rounded-xl shadow-2xl max-h-60 overflow-y-auto">
+                  {filteredCountries.map(c => (
+                    <button
+                      key={c.name}
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleCountrySelect(c);
+                      }}
+                      className="w-full text-left px-3 py-2.5 text-[14px] font-semibold text-ink hover:bg-raised border-b border-line last:border-0 flex justify-between items-center"
+                    >
+                      <span>{c.name}</span>
+                      <span className="text-muted">{c.dial}</span>
+                    </button>
                   ))}
-                  {/* Divider */}
-                  {tabWorkouts.length > 0 && <div className="w-px h-6 bg-slate-800 mx-1" />}
-                  {/* Move left */}
-                  <button type="button" onClick={() => moveWorkout('left')} disabled={activeIdx <= 0}
-                    title="Move module left"
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-700 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-all">
-                    <ChevronLeft size={16} />
-                  </button>
-                  {/* Move right */}
-                  <button type="button" onClick={() => moveWorkout('right')} disabled={activeIdx < 0 || activeIdx >= tabWorkouts.length - 1}
-                    title="Move module right"
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-700 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-all">
-                    <ChevronRight size={16} />
-                  </button>
-                  {/* Insert after active */}
-                  <button type="button" onClick={addWorkout}
-                    title={activeIdx >= 0 ? `Insert new module after ${tabWorkouts[activeIdx]?.name}` : 'Add module'}
-                    className="w-10 h-10 rounded-xl border border-dashed border-slate-700 text-slate-700 hover:text-blue-500 hover:border-blue-500/40 flex items-center justify-center transition-all">
-                    <Plus size={18} />
-                  </button>
                 </div>
-              );
-            })()}
-          </div>
-        </div>
-
-        {activeWorkout && (
-          <div key={activeWorkout.id} className={`glass-card p-10 rounded-[3rem] space-y-8 relative shadow-2xl ${planMode === 'draft' ? 'border border-amber-500/30' : 'border-slate-800'}`}>
-            {planMode === 'draft' && (
-              <div className="flex items-center gap-3 px-6 py-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl">
-                <Zap size={14} className="text-amber-400 shrink-0" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-amber-400">DRAFT — not visible to client yet</span>
-              </div>
-            )}
-            {deletingWorkoutId === activeWorkout.id && (
-              <div className="absolute inset-0 z-[100] bg-black/95 backdrop-blur-xl rounded-[3rem] flex flex-col items-center justify-start p-10 pt-16 animate-in fade-in duration-300">
-                <p className="text-white font-black brand-font uppercase text-2xl mb-10 tracking-tighter text-center">Delete entire Module {activeWorkout.name}?</p>
-                <div className="flex gap-6 w-full max-sm:flex-col max-w-sm">
-                  <button onClick={() => setDeletingWorkoutId(null)} className="flex-1 py-5 bg-slate-800 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-700 transition-all">No, Keep It</button>
-                  <button onClick={() => executeDeleteWorkout(activeWorkout.id)} className="flex-1 py-5 bg-red-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-red-500 transition-all">Yes, Delete</button>
-                </div>
-              </div>
-            )}
-
-            <div className="flex justify-between items-start gap-6">
-              <div className="flex-1 flex gap-4 items-end">
-                <div className="space-y-2 shrink-0">
-                  <label className="text-[9px] font-black text-slate-600 uppercase">Module ID</label>
-                  <input value={activeWorkout.name} onChange={e => {
-                    const val = e.target.value.toUpperCase();
-                    setLocalClient((prev: ClientData) => {
-                      if (planMode === 'draft') return { ...prev, draftWorkouts: (prev.draftWorkouts || []).map((w: Workout) => w.id === activeWorkout.id ? { ...w, name: val } : w) };
-                      return { ...prev, workouts: prev.workouts.map((w: Workout) => w.id === activeWorkout.id ? { ...w, name: val } : w) };
-                    });
-                  }} className="bg-slate-900 text-2xl font-black text-white uppercase outline-none border border-slate-800 rounded-xl w-16 h-16 text-center" maxLength={1} />
-                </div>
-                <div className="space-y-2 flex-1">
-                  <label className="text-[9px] font-black text-slate-600 uppercase">Label</label>
-                  <input value={activeWorkout.title || ''} onChange={e => {
-                    const val = e.target.value;
-                    setLocalClient((prev: ClientData) => {
-                      if (planMode === 'draft') return { ...prev, draftWorkouts: (prev.draftWorkouts || []).map((w: Workout) => w.id === activeWorkout.id ? { ...w, title: val } : w) };
-                      return { ...prev, workouts: prev.workouts.map((w: Workout) => w.id === activeWorkout.id ? { ...w, title: val } : w) };
-                    });
-                  }} className="bg-transparent text-3xl font-black text-white uppercase outline-none border-b border-slate-800/50 w-full pb-2 brand-font" placeholder="e.g. Strength & Balance" />
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <button 
-                  type="button" 
-                  onClick={() => saveToLibrary(activeWorkout)}
-                  title="Save to Master Library"
-                  className={`p-4 rounded-2xl transition-all flex items-center justify-center border border-white/5 relative group ${saveIndicatorId === activeWorkout.id ? 'bg-emerald-600 text-white' : 'bg-slate-950/80 text-blue-500 hover:bg-blue-600 hover:text-white'}`}
-                >
-                  {saveIndicatorId === activeWorkout.id ? (
-                    <div className="flex items-center gap-2 animate-in zoom-in duration-300">
-                      <Check size={24} strokeWidth={4} className="pointer-events-none" />
-                      <span className="text-[10px] font-black uppercase tracking-widest hidden md:block">Saved!</span>
-                    </div>
-                  ) : (
-                    <Library size={24} className="pointer-events-none" />
-                  )}
-                  {saveIndicatorId !== activeWorkout.id && (
-                    <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[7px] font-black uppercase px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">Save to Library</span>
-                  )}
-                </button>
-                <button 
-                  type="button" 
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeletingWorkoutId(activeWorkout.id); }} 
-                  className="p-4 bg-slate-950/80 rounded-2xl text-slate-700 hover:text-red-500 transition-all flex items-center justify-center border border-white/5"
-                >
-                  <X size={28} className="pointer-events-none" />
-                </button>
-              </div>
+              )}
             </div>
+            <Field label="Phone (with +code)">
+              <input value={localClient.phone || ''} onChange={e => handlePhoneChange(e.target.value)} className={INPUT} placeholder="+972..." />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Height (cm)">
+              <input value={localClient.height || ''} onChange={e => { const v = e.target.value; setLocalClient(prev => ({ ...prev, height: v })); }} className={INPUT} placeholder="180" />
+            </Field>
+            <Field label="Weight (kg)">
+              <input value={localClient.weight || ''} onChange={e => { const v = e.target.value; setLocalClient(prev => ({ ...prev, weight: v })); }} className={INPUT} placeholder="75" />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Gender">
+              <select value={localClient.gender || ''} onChange={e => setLocalClient({...localClient, gender: e.target.value})} className={`${INPUT} cursor-pointer`}>
+                <option value="" disabled>Select</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </select>
+            </Field>
+            <Field label="Membership">
+              <select value={localClient.billingType === 'monthly' ? 'monthly' : (localClient.programLength || '')} onChange={e => handleProgramLengthChange(e.target.value)} className={`${INPUT} cursor-pointer`}>
+                <option value="" disabled>Select</option>
+                <option value="monthly">Monthly (recurring)</option>
+                {[1, 3, 6, 12].map(m => <option key={m} value={m}>{m} month{m > 1 ? 's' : ''} (fixed)</option>)}
+              </select>
+            </Field>
+          </div>
+          <Field label="Skill level">
+            <select value={localClient.level || ''} onChange={e => handleLevelChange(e.target.value)} className={`${INPUT} cursor-pointer`}>
+              <option value="" disabled>Select level</option>
+              {["HS Foundations", "HS Balance & Control", "Advanced HS Skills"].map(l => <option key={l} value={l}>{l}</option>)}
+            </select>
+          </Field>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Start date">
+              <input type="date" value={localClient.programStartDate || ''} onChange={e => handleStartDateChange(e.target.value)} className={INPUT} />
+            </Field>
+            {localClient.billingType === 'monthly' ? (
+              <Field label="Payment date">
+                <input type="date" value={localClient.billingAnchorDate || ''} onChange={e => setLocalClient({...localClient, billingAnchorDate: e.target.value})} className={INPUT} />
+              </Field>
+            ) : (
+              <Field label="End date">
+                <input type="date" value={localClient.programEndDate || ''} onChange={e => setLocalClient({...localClient, programEndDate: e.target.value})} className={INPUT} />
+              </Field>
+            )}
+          </div>
+          {localClient.billingType === 'monthly' && (() => {
+            const cycle = getBillingCycle(localClient.billingAnchorDate);
+            if (!cycle) return <p className="text-[13px] text-muted">Pick the day they pay</p>;
+            const months = getMonthsActive(localClient.programStartDate);
+            return (
+              <p className="text-[13px] font-semibold text-done">
+                Renews {formatBillingDate(cycle.next)} · every month
+                {months !== null && months > 0 && <span className="text-muted font-normal"> · {months} mo in</span>}
+              </p>
+            );
+          })()}
+        </Fold>
 
-            <div className="grid grid-cols-1 gap-6">
-              {(() => {
-                const nodes: React.ReactNode[] = [];
-                const seen = new Set<string>();
+        <Fold
+          title="Coach note"
+          summary={noteFirstLine || 'No note yet'}
+          summaryDirText={noteFirstLine}
+          open={openSections.has('note')}
+          onToggle={() => toggleSection('note')}
+        >
+          <textarea
+            value={localClient.generalNotes || ''}
+            onChange={e => setLocalClient({...localClient, generalNotes: e.target.value})}
+            className={`${TEXTAREA} h-40`}
+            placeholder={`A note ${firstName === 'the client' ? 'they' : firstName} will see above the workout…`}
+            {...textDir(localClient.generalNotes)}
+          />
+        </Fold>
 
-                const renderCard = (ex: Exercise, inSuperset = false) => (
-                  <div key={ex.id} className={`${inSuperset ? 'bg-slate-950/60 p-6 rounded-[1.5rem]' : 'bg-slate-950/50 p-8 rounded-[2rem]'} border border-slate-900 space-y-5 relative group/ex overflow-hidden`}>
-                    {deletingExerciseId === ex.id && (
-                      <div className="absolute inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col items-center justify-start p-6 pt-10 animate-in fade-in duration-300">
-                        <p className="text-white font-black brand-font uppercase text-xs mb-6 tracking-widest text-center">Delete this {ex.category === 'header' ? 'Header' : 'Movement'}?</p>
-                        <div className="flex gap-4 w-full max-w-[240px]">
-                          <button onClick={() => setDeletingExerciseId(null)} className="flex-1 py-3 bg-slate-800 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-700 transition-all">No</button>
-                          <button onClick={() => executeDeleteExercise(activeWorkout.id, ex.id)} className="flex-1 py-3 bg-red-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-red-500 transition-all">Yes</button>
-                        </div>
-                      </div>
-                    )}
-
-                    {ex.category === 'header' ? (
-                      <div className="space-y-6">
-                        <div className="flex justify-between items-center gap-4 border-b border-blue-500/20 pb-4">
-                           <div className="flex items-center gap-3">
-                              <div className="p-2 bg-blue-600/10 text-blue-500 rounded-lg">
-                                 <Type size={18} />
-                              </div>
-                              <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Section Header</span>
-                           </div>
-                           <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeletingExerciseId(ex.id); }} className="p-3 bg-slate-900/80 text-slate-700 hover:text-red-500 rounded-xl transition-all">
-                            <X size={20} className="pointer-events-none" />
-                          </button>
-                        </div>
-                        <div className="space-y-4">
-                          <div className="space-y-1">
-                            <label className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Header Title</label>
-                            <input
-                              value={ex.name || ''}
-                              onChange={e => updateExercise(activeWorkout.id, ex.id, 'name', e.target.value)}
-                              className="bg-slate-900 font-black text-white uppercase text-2xl brand-font outline-none w-full border border-slate-800 p-4 rounded-2xl focus:ring-1 ring-blue-500"
-                              placeholder="e.g. ENDURANCE PHASE"
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Sub-header Description</label>
-                            <textarea
-                              value={ex.notes || ''}
-                              onChange={e => updateExercise(activeWorkout.id, ex.id, 'notes', e.target.value)}
-                              className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 text-xs text-slate-400 outline-none resize-none h-20 focus:ring-1 ring-blue-500"
-                              placeholder="Provide context for this section..."
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="flex justify-between items-center gap-4 border-b border-white/5 pb-4">
-                           <div className="flex-1 relative">
-                              <input
-                                value={ex.name || ''}
-                                onChange={e => updateExercise(activeWorkout.id, ex.id, 'name', e.target.value)}
-                                className="bg-transparent font-black text-white uppercase text-2xl brand-font outline-none w-full"
-                                placeholder="Enter Movement Name"
-                              />
-                              {exerciseSuggestions[ex.id]?.length > 0 && (
-                               <div className="absolute z-50 left-0 right-0 top-full mt-2 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200 max-h-64 overflow-y-auto">
-                                   {exerciseSuggestions[ex.id].map(suggestion => (
-                                     <button
-                                       key={suggestion.uid}
-                                       onMouseDown={(e) => {
-                                         e.preventDefault();
-                                         selectExerciseSuggestion(activeWorkout.id, ex.id, suggestion);
-                                       }}
-                                       className="w-full text-left px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-300 hover:bg-blue-600 hover:text-white transition-colors border-b border-white/5 last:border-0 flex justify-between items-center"
-                                     >
-                                        <span>{suggestion.name}</span>
-                                        <span className="text-[8px] opacity-40">AUTO-LINK SKILL</span>
-                                     </button>
-                                   ))}
-                                </div>
-                              )}
-                           </div>
-                           <div className="flex items-center gap-3">
-                              {ex.videoUrl && (
-                                <button
-                                  type="button"
-                                  onClick={() => setPreviewVideoUrl(ex.videoUrl!)}
-                                  className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-500 hover:text-blue-400 hover:border-blue-500/40 transition-all"
-                                  title="Preview linked video"
-                                >
-                                  <PlayCircle size={18} />
-                                </button>
-                              )}
-                              <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800">
-                                 <button
-                                  type="button"
-                                  onClick={() => updateExercise(activeWorkout.id, ex.id, 'category', 'strength')}
-                                  className={`px-4 py-2 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all ${ex.category === 'strength' || !ex.category ? 'bg-blue-600 text-white' : 'text-slate-600 hover:text-white'}`}
-                                 >
-                                  Strength
-                                 </button>
-                                 <button
-                                  type="button"
-                                  onClick={() => updateExercise(activeWorkout.id, ex.id, 'category', 'mobility')}
-                                  className={`px-4 py-2 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all ${ex.category === 'mobility' ? 'bg-emerald-600 text-white' : 'text-slate-600 hover:text-white'}`}
-                                 >
-                                  Mobility
-                                 </button>
-                              </div>
-                              <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeletingExerciseId(ex.id); }} className="p-3 bg-slate-900/80 text-slate-700 hover:text-red-500 rounded-xl transition-all">
-                                <X size={20} className="pointer-events-none" />
-                              </button>
-                           </div>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                           <InfoFieldInline label="Sets" value={ex.sets} onChange={(v: string) => updateExercise(activeWorkout.id, ex.id, 'sets', v)} placeholder="4" />
-                           <InfoFieldInline label="Target" value={ex.reps || ''} onChange={(v: string) => updateExercise(activeWorkout.id, ex.id, 'reps', v)} placeholder="10-12" />
-                           <InfoFieldInline label="Rest" value={ex.restTime || ''} onChange={(v: string) => updateExercise(activeWorkout.id, ex.id, 'restTime', v)} placeholder="90s" />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[8px] font-black text-slate-600 uppercase">Technical Cues</label>
-                          <textarea value={ex.notes || ''} onChange={e => updateExercise(activeWorkout.id, ex.id, 'notes', e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-4 text-xs text-slate-400 outline-none resize-none h-14" placeholder="Cues..." />
-                          {!inSuperset && (
-                            <div className="flex justify-center gap-4 pt-4">
-                              <button type="button" onClick={() => addExercise(activeWorkout.id, ex.id)} className="text-[9px] font-black uppercase tracking-widest text-slate-600 hover:text-blue-400">+ Insert Exercise</button>
-                              <button type="button" onClick={() => addSuperset(activeWorkout.id, ex.id)} className="text-[9px] font-black uppercase tracking-widest text-slate-600 hover:text-purple-400">⚡ Insert Superset</button>
-                              <button type="button" onClick={() => addHeader(activeWorkout.id, ex.id)} className="text-[9px] font-black uppercase tracking-widest text-slate-600 hover:text-amber-400">+ Insert Header</button>
-                            </div>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                );
-
-                activeWorkout.exercises.forEach((ex: Exercise) => {
-                  if (seen.has(ex.id)) return;
-
-                  if (ex.supersetGroup) {
-                    const group = activeWorkout.exercises.filter(e => e.supersetGroup === ex.supersetGroup);
-                    group.forEach(e => seen.add(e.id));
-                    const groupId = ex.supersetGroup;
-
-                    nodes.push(
-                      <div key={groupId} className="rounded-[2rem] border border-purple-500/20 bg-purple-500/[0.03] overflow-hidden">
-                        <div className="flex items-center gap-3 px-8 py-3 border-b border-purple-500/15 bg-purple-500/5">
-                          <Zap size={12} className="text-purple-400" />
-                          <span className="text-[9px] font-black uppercase tracking-widest text-purple-400">Superset</span>
-                          <span className="text-[8px] text-purple-400/40 font-black uppercase ml-2">· No rest between movements</span>
-                        </div>
-                        <div className="p-4 space-y-2">
-                          {group.map((ssEx, ssIdx) => (
-                            <React.Fragment key={ssEx.id}>
-                              {renderCard(ssEx, true)}
-                              {ssIdx < group.length - 1 && (
-                                <div className="flex items-center justify-center py-1.5">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-16 border-t border-dashed border-purple-500/25" />
-                                    <span className="text-[8px] font-black text-purple-400/60 uppercase tracking-widest">⚡ No Rest · Straight Into Next</span>
-                                    <div className="w-16 border-t border-dashed border-purple-500/25" />
-                                  </div>
-                                </div>
-                              )}
-                            </React.Fragment>
-                          ))}
-                          {group.length < 3 && (
-                            <button
-                              type="button"
-                              onClick={() => addToSuperset(activeWorkout.id, group[group.length - 1].id, groupId)}
-                              className="w-full py-3 mt-1 text-[9px] font-black uppercase tracking-widest text-purple-400/50 hover:text-purple-400 transition-colors border border-dashed border-purple-500/20 rounded-xl"
-                            >
-                              + Add 3rd Movement to Superset
-                            </button>
-                          )}
-                        </div>
+        <Fold title="Goals" summary={`${goalCount} goal${goalCount === 1 ? '' : 's'}`} open={openSections.has('goals')} onToggle={() => toggleSection('goals')}>
+          {localClient.goals.map(goal => (
+            <div key={goal.id} className="relative flex flex-col gap-2.5 bg-raised border border-edge rounded-2xl p-3">
+              {deletingGoalId === goal.id && (
+                <DeleteConfirm question="Delete this goal and its steps?" onNo={() => setDeletingGoalId(null)} onYes={() => executeDeleteGoal(goal.id)} />
+              )}
+              <div className="flex gap-2 items-center">
+                <input value={goal.icon} onChange={e => updateGoal(goal.id, 'icon', e.target.value)} aria-label="Goal icon" className={`${INPUT} w-12 px-0 text-center shrink-0`} />
+                <input value={goal.title || ''} onChange={e => updateGoal(goal.id, 'title', e.target.value)} placeholder="New goal" className={`${INPUT} font-bold`} {...textDir(goal.title)} />
+                <IconBtn label="Delete goal" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeletingGoalId(goal.id); }}><X size={18} /></IconBtn>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                {(goal.miniGoals || []).map((mini, idx) => {
+                  const miniKey = `${goal.id}:${idx}`;
+                  if (deletingMiniGoalKey === miniKey) {
+                    return (
+                      <div key={idx} className="flex items-center gap-2 min-h-[44px]">
+                        <span className="flex-1 text-[14px] font-bold text-ink">Delete this step?</span>
+                        <button type="button" onClick={() => setDeletingMiniGoalKey(null)} className="h-10 px-4 rounded-xl border border-edge bg-card text-ink font-bold text-[14px]">No</button>
+                        <button type="button" onClick={() => executeDeleteMiniGoal(goal.id, idx)} className="h-10 px-4 rounded-xl bg-alert text-onaccent font-extrabold text-[14px]">Yes</button>
                       </div>
                     );
-                  } else {
-                    seen.add(ex.id);
-                    nodes.push(renderCard(ex, false));
                   }
-                });
-
-                return nodes;
-              })()}
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
-              <button
-                type="button"
-                onClick={() => addExercise(activeWorkout.id)}
-                className="py-10 border-2 border-dashed border-slate-800 rounded-[2.5rem] text-slate-600 hover:text-blue-500 font-black uppercase text-[11px] tracking-[0.2em] transition-all flex items-center justify-center gap-3 bg-slate-950/20"
-              >
-                <Plus size={24} /> ADD MOVEMENT
-              </button>
-              <button
-                type="button"
-                onClick={() => addSuperset(activeWorkout.id)}
-                className="py-10 border-2 border-dashed border-purple-500/30 rounded-[2.5rem] text-slate-600 hover:text-purple-400 font-black uppercase text-[11px] tracking-[0.2em] transition-all flex items-center justify-center gap-3 bg-purple-500/5"
-              >
-                <Zap size={24} /> ADD SUPERSET
-              </button>
-              <button
-                type="button"
-                onClick={() => addHeader(activeWorkout.id)}
-                className="py-10 border-2 border-dashed border-slate-800 rounded-[2.5rem] text-slate-600 hover:text-amber-500 font-black uppercase text-[11px] tracking-[0.2em] transition-all flex items-center justify-center gap-3 bg-slate-950/20"
-              >
-                <Type size={24} /> ADD HEADER
-              </button>
-            </div>
-
-            {planMode === 'draft' && (
-              <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t border-amber-500/20">
-                {/* Publish */}
-                {confirmPublish ? (
-                  <div className="flex-1 flex flex-col gap-3 p-5 bg-emerald-950/40 border border-emerald-500/30 rounded-2xl animate-in fade-in duration-200">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-emerald-300 text-center">
-                      Replace {localClient.name}'s live plan with this draft?<br/>
-                      <span className="text-emerald-600 font-medium normal-case tracking-normal">This cannot be undone.</span>
-                    </p>
-                    <div className="flex gap-3">
-                      <button type="button" onClick={() => setConfirmPublish(false)}
-                        className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all">
-                        Cancel
+                  return (
+                    <div key={idx} className="flex gap-2 items-center">
+                      <button
+                        type="button"
+                        aria-label={mini.completed ? 'Mark as not done' : 'Mark as done'}
+                        onClick={() => toggleMiniGoalStatus(goal.id, idx)}
+                        className="w-11 h-11 flex items-center justify-center shrink-0"
+                      >
+                        <span className={`w-6 h-6 rounded-[7px] flex items-center justify-center ${mini.completed ? 'bg-done' : 'border-[1.5px] border-tick'}`}>
+                          {mini.completed && <Check size={13} className="text-white" strokeWidth={3.5} />}
+                        </span>
                       </button>
-                      <button type="button" onClick={publishDraft}
-                        className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black text-[9px] uppercase tracking-widest transition-all flex items-center justify-center gap-2">
-                        <Check size={14} /> Yes, Publish
+                      <input
+                        value={mini.text}
+                        onChange={e => updateMiniGoalText(goal.id, idx, e.target.value)}
+                        placeholder="A step towards it…"
+                        className={`${INPUT} h-11 ${mini.completed ? 'line-through text-muted' : ''}`}
+                        {...textDir(mini.text)}
+                      />
+                      <button type="button" aria-label="Delete step" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeletingMiniGoalKey(miniKey); }} className="w-9 h-11 flex items-center justify-center text-muted shrink-0">
+                        <X size={16} className="pointer-events-none" />
                       </button>
                     </div>
-                  </div>
-                ) : (
-                  <button type="button" onClick={() => setConfirmPublish(true)}
-                    className="flex-1 py-5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-lg">
-                    <Check size={18} /> PUBLISH DRAFT → LIVE
-                  </button>
-                )}
-
-                {/* Discard */}
-                {confirmDiscard ? (
-                  <div className="flex-1 flex flex-col gap-3 p-5 bg-red-950/40 border border-red-500/30 rounded-2xl animate-in fade-in duration-200">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-red-300 text-center">
-                      Discard the entire draft?<br/>
-                      <span className="text-red-600 font-medium normal-case tracking-normal">All draft changes will be lost.</span>
-                    </p>
-                    <div className="flex gap-3">
-                      <button type="button" onClick={() => setConfirmDiscard(false)}
-                        className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all">
-                        Cancel
-                      </button>
-                      <button type="button" onClick={discardDraft}
-                        className="flex-1 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl font-black text-[9px] uppercase tracking-widest transition-all flex items-center justify-center gap-2">
-                        <X size={14} /> Yes, Discard
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <button type="button" onClick={() => setConfirmDiscard(true)}
-                    className="flex-1 py-5 bg-slate-900 hover:bg-red-900/40 border border-red-500/30 text-red-400 hover:text-red-300 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3">
-                    <X size={18} /> DISCARD DRAFT
-                  </button>
-                )}
+                  );
+                })}
+                <button type="button" onClick={() => addMiniGoal(goal.id)} className="self-start text-[13px] font-bold text-accent py-2">+ Add a step</button>
               </div>
-            )}
-          </div>
-        )}
-      </div>
+            </div>
+          ))}
+          <button type="button" onClick={addGoal} className="h-12 rounded-[14px] border-[1.5px] border-dashed border-tick text-ink font-bold text-[14px] flex items-center justify-center gap-2">
+            <Plus size={18} className="text-accent" /> New goal
+          </button>
+        </Fold>
 
-      <div className="flex justify-center pt-10 pb-20 border-t border-white/5">
-        <button 
-          type="button" 
-          onClick={handleSave} 
-          disabled={isDeploying}
-          className={`w-full max-w-2xl py-6 rounded-[2rem] font-black text-sm uppercase tracking-[0.3em] shadow-2xl transition-all flex items-center justify-center gap-4 text-white ${isDeploying ? 'bg-slate-700 cursor-wait' : 'bg-emerald-600 hover:bg-emerald-500'}`}
+        <Fold
+          title="Weekly schedule"
+          summary={localClient.weeklyScheduleEnabled ? `Visible to ${firstName}` : `Hidden from ${firstName}`}
+          open={openSections.has('schedule')}
+          onToggle={() => toggleSection('schedule')}
         >
-          {isDeploying ? (
-            <>
-              <RefreshCw size={20} className="animate-spin" /> SYNCHRONIZING NODE...
-            </>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[15px] font-bold text-ink">{localClient.weeklyScheduleEnabled ? `${firstName === 'the client' ? 'They' : firstName} can see it` : 'Hidden'}</span>
+            <Toggle on={!!localClient.weeklyScheduleEnabled} onClick={() => setLocalClient((prev: ClientData) => ({ ...prev, weeklyScheduleEnabled: !prev.weeklyScheduleEnabled }))} />
+          </div>
+          {localClient.weeklyScheduleEnabled ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {DAYS_OF_WEEK.map((day, idx) => (
+                <Field key={day} label={day}>
+                  <select value={localClient.weeklySchedule?.[idx] || ''} onChange={e => setLocalClient((prev: ClientData) => ({ ...prev, weeklySchedule: { ...(prev.weeklySchedule || {}), [idx]: e.target.value } }))} className={`${INPUT} cursor-pointer`}>
+                    <option value="">Rest day</option>
+                    {localClient.workouts.map((w: Workout) => <option key={w.id} value={w.id}>{w.name}</option>)}
+                  </select>
+                </Field>
+              ))}
+            </div>
           ) : (
-            <>
-              {isEditing ? <Save size={20} /> : <CheckCircle2 size={20} />} 
-              {isEditing ? 'COMMIT CHANGES' : 'ADD CLIENT'}
-            </>
+            <p className="text-[13px] text-muted">The schedule is hidden. Switch it on to show it.</p>
           )}
-        </button>
+        </Fold>
       </div>
 
-      {/* ── VIDEO PREVIEW MODAL ── */}
+      {/* Training plan */}
+      <div className="flex justify-between items-center gap-2.5 pt-2 flex-wrap">
+        <span className="text-[20px] font-extrabold text-ink">Training plan</span>
+        <div className="flex items-center gap-2">
+          {planMode === 'live' && (localClient.draftWorkouts || []).length > 0 && (
+            <button type="button" onClick={switchToDraft} className="text-[13px] font-bold text-warn">Draft in progress →</button>
+          )}
+          <div className="grid grid-cols-2 p-[3px] rounded-xl bg-field border border-edge">
+            <button type="button" onClick={() => setPlanMode('live')}
+              className={`h-9 px-3 rounded-[9px] text-[13px] ${planMode === 'live' ? 'bg-accent text-onaccent font-extrabold' : 'text-muted font-bold'}`}>Live plan</button>
+            <button type="button" onClick={switchToDraft}
+              className={`relative h-9 px-3 rounded-[9px] text-[13px] ${planMode === 'draft' ? 'bg-warn text-onaccent font-extrabold' : 'text-muted font-bold'}`}>
+              Draft plan
+              {(localClient.draftWorkouts || []).length > 0 && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-warn rounded-full border-2 border-page" />
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+      {planMode === 'draft' && (
+        <p className="text-[13px] font-semibold text-warn">{firstName === 'the client' ? 'They see' : `${firstName} sees`} the live plan until you publish this draft.</p>
+      )}
+
+      <div className="flex items-center gap-1.5 flex-wrap">
+        {tabWorkouts.map((w: Workout) => {
+          const on = activeTabId === w.id;
+          return (
+            <button key={w.id} type="button"
+              onClick={() => planMode === 'draft' ? setActiveDraftWorkoutId(w.id) : setActiveWorkoutId(w.id)}
+              className={`w-11 h-11 rounded-xl text-[17px] font-extrabold shrink-0 ${on ? (planMode === 'draft' ? 'bg-warn text-onaccent' : 'bg-accent text-onaccent') : 'bg-card text-ink'}`}
+            >{w.name}</button>
+          );
+        })}
+        {tabWorkouts.length > 0 && <span className="w-px h-6 bg-line mx-0.5 shrink-0" />}
+        <button type="button" aria-label="Move workout left" title="Move workout left" onClick={() => moveWorkout('left')} disabled={activeIdx <= 0}
+          className="w-9 h-11 flex items-center justify-center text-muted disabled:opacity-30 shrink-0"><ChevronLeft size={18} /></button>
+        <button type="button" aria-label="Move workout right" title="Move workout right" onClick={() => moveWorkout('right')} disabled={activeIdx < 0 || activeIdx >= tabWorkouts.length - 1}
+          className="w-9 h-11 flex items-center justify-center text-muted disabled:opacity-30 shrink-0"><ChevronRight size={18} /></button>
+        <button type="button" aria-label="Add a workout" onClick={addWorkout}
+          title={activeIdx >= 0 ? `Add a workout after ${tabWorkouts[activeIdx]?.name}` : 'Add a workout'}
+          className="w-11 h-11 rounded-xl border-[1.5px] border-dashed border-tick text-accent flex items-center justify-center shrink-0"><Plus size={18} /></button>
+      </div>
+
+      {activeWorkout && (
+        <div key={activeWorkout.id} className="relative flex flex-col gap-3">
+          {planMode === 'draft' && (
+            <div className="flex items-center gap-2.5 px-3.5 py-2.5 bg-raised border border-warn/40 rounded-[14px]">
+              <Zap size={16} className="text-warn shrink-0" />
+              <span className="text-[14px] font-bold text-warn">Draft: {firstName === 'the client' ? 'the client' : firstName} can't see this yet</span>
+            </div>
+          )}
+          {deletingWorkoutId === activeWorkout.id && (
+            <div className="absolute inset-0 z-[100] bg-page/95 rounded-2xl flex flex-col items-center justify-start gap-4 p-6 pt-10">
+              <p className="text-[18px] font-extrabold text-ink text-center">Delete the whole workout {activeWorkout.name}?</p>
+              <div className="flex gap-2 w-full max-w-sm">
+                <button type="button" onClick={() => setDeletingWorkoutId(null)} className="flex-1 h-12 rounded-xl border border-edge bg-card text-ink font-bold text-[15px]">No, keep it</button>
+                <button type="button" onClick={() => executeDeleteWorkout(activeWorkout.id)} className="flex-1 h-12 rounded-xl bg-alert text-onaccent font-extrabold text-[15px]">Yes, delete</button>
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-end gap-2.5">
+            <Field label="Letter" className="shrink-0">
+              <input value={activeWorkout.name} onChange={e => updateActiveWorkout('name', e.target.value.toUpperCase())} maxLength={1}
+                className="w-[52px] h-[46px] box-border rounded-xl border-[1.5px] border-edge bg-field text-ink text-center text-[20px] font-extrabold outline-none focus:border-accent" />
+            </Field>
+            <Field label="Name" className="flex-1 min-w-0">
+              <input value={activeWorkout.title || ''} onChange={e => updateActiveWorkout('title', e.target.value)} className={`${INPUT} font-bold text-[16px]`} placeholder="e.g. Strength & balance" />
+            </Field>
+            <button
+              type="button"
+              onClick={() => saveToLibrary(activeWorkout)}
+              aria-label="Save to library"
+              title="Save to library"
+              className={`h-11 rounded-xl flex items-center justify-center gap-1.5 shrink-0 ${saveIndicatorId === activeWorkout.id ? 'bg-done text-white px-3 font-bold text-[14px]' : 'w-11 border border-edge bg-card text-accent'}`}
+            >
+              {saveIndicatorId === activeWorkout.id ? <><Check size={18} strokeWidth={3} /> Saved</> : <Library size={18} />}
+            </button>
+            <IconBtn label={`Delete workout ${activeWorkout.name}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeletingWorkoutId(activeWorkout.id); }}><X size={18} /></IconBtn>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            {(() => {
+              const nodes: React.ReactNode[] = [];
+              const seen = new Set<string>();
+              activeWorkout.exercises.forEach((ex: Exercise) => {
+                if (seen.has(ex.id)) return;
+                if (ex.supersetGroup) {
+                  const group = activeWorkout.exercises.filter(e => e.supersetGroup === ex.supersetGroup);
+                  group.forEach(e => seen.add(e.id));
+                  const groupId = ex.supersetGroup;
+                  nodes.push(
+                    <div key={groupId} className="flex flex-col gap-1.5 border-[1.5px] border-accent/50 rounded-2xl p-2">
+                      <span className="flex items-center gap-1.5 px-1 pt-0.5 text-[13px] font-bold text-accent">
+                        <Zap size={14} /> Superset · back to back, no rest between
+                      </span>
+                      {group.map(ssEx => renderExercise(ssEx, true, activeWorkout.id))}
+                      {group.length < 3 && (
+                        <button
+                          type="button"
+                          onClick={() => addToSuperset(activeWorkout.id, group[group.length - 1].id, groupId)}
+                          className="h-11 rounded-xl border border-dashed border-accent/50 text-[13px] font-bold text-accent"
+                        >
+                          + Add a 3rd exercise
+                        </button>
+                      )}
+                    </div>
+                  );
+                } else {
+                  seen.add(ex.id);
+                  nodes.push(renderExercise(ex, false, activeWorkout.id));
+                }
+              });
+              return nodes;
+            })()}
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            <DashedBtn onClick={() => addExercise(activeWorkout.id)} icon={<Plus size={18} />} label="Exercise" />
+            <DashedBtn onClick={() => addSuperset(activeWorkout.id)} icon={<Zap size={18} />} label="Superset" />
+            <DashedBtn onClick={() => addHeader(activeWorkout.id)} icon={<Type size={18} />} label="Header" />
+          </div>
+
+          {planMode === 'draft' && (
+            <div className="flex flex-col sm:flex-row gap-2 pt-1">
+              {confirmPublish ? (
+                <div className="flex-1 flex flex-col gap-2.5 p-3.5 bg-card border border-done rounded-[14px]">
+                  <p className="text-[14px] font-bold text-ink text-center">
+                    Replace {localClient.name}'s live plan with this draft?
+                    <span className="block text-[13px] font-normal text-muted">This can't be undone.</span>
+                  </p>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setConfirmPublish(false)} className="flex-1 h-11 rounded-xl border border-edge bg-card text-ink font-bold text-[14px]">Cancel</button>
+                    <button type="button" onClick={publishDraft} className="flex-1 h-11 rounded-xl bg-done text-white font-extrabold text-[14px] flex items-center justify-center gap-1.5"><Check size={16} /> Yes, publish</button>
+                  </div>
+                </div>
+              ) : (
+                <button type="button" onClick={() => setConfirmPublish(true)}
+                  className="flex-1 h-[52px] rounded-[14px] bg-done text-white font-extrabold text-[15px] flex items-center justify-center gap-2">
+                  <Check size={18} /> Publish the draft
+                </button>
+              )}
+              {confirmDiscard ? (
+                <div className="flex-1 flex flex-col gap-2.5 p-3.5 bg-card border border-alert rounded-[14px]">
+                  <p className="text-[14px] font-bold text-ink text-center">
+                    Throw away the whole draft?
+                    <span className="block text-[13px] font-normal text-muted">All draft changes will be lost.</span>
+                  </p>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setConfirmDiscard(false)} className="flex-1 h-11 rounded-xl border border-edge bg-card text-ink font-bold text-[14px]">Cancel</button>
+                    <button type="button" onClick={discardDraft} className="flex-1 h-11 rounded-xl bg-alert text-onaccent font-extrabold text-[14px] flex items-center justify-center gap-1.5"><X size={16} /> Yes, throw away</button>
+                  </div>
+                </div>
+              ) : (
+                <button type="button" onClick={() => setConfirmDiscard(true)}
+                  className="flex-1 h-[52px] rounded-[14px] border border-alert/60 bg-card text-alert font-extrabold text-[15px] flex items-center justify-center gap-2">
+                  <X size={18} /> Discard the draft
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={handleSave}
+        disabled={isDeploying}
+        className={`h-14 rounded-[14px] font-extrabold text-[17px] mt-1 flex items-center justify-center gap-2 ${isDeploying ? 'bg-raised text-muted cursor-wait' : 'bg-accent text-onaccent'}`}
+      >
+        {isDeploying ? (
+          <><RefreshCw size={18} className="animate-spin" /> Saving…</>
+        ) : (
+          isEditing ? 'Save changes' : 'Add client'
+        )}
+      </button>
+
+      {/* Video preview */}
       {previewVideoUrl && (
-        <div className="fixed inset-0 z-[900] flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={() => setPreviewVideoUrl(null)} />
+        <div className="fixed inset-0 z-[900] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/85" onClick={() => setPreviewVideoUrl(null)} />
           <div className="relative w-full max-w-2xl">
             <button
+              type="button"
               onClick={() => setPreviewVideoUrl(null)}
-              className="absolute -top-12 right-0 p-2 text-slate-400 hover:text-white transition-colors flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
+              className="absolute -top-12 right-0 h-11 px-3 text-muted flex items-center gap-1.5 text-[14px] font-bold"
             >
-              <X size={16} /> Close
+              <X size={18} /> Close
             </button>
             <video
               src={previewVideoUrl}
               controls
               autoPlay
-              className="w-full rounded-3xl shadow-2xl bg-black"
+              className="w-full rounded-2xl bg-black"
               style={{ maxHeight: '75vh' }}
             />
           </div>
         </div>
       )}
 
-      {/* ── SAVE TO LIBRARY MODAL ── */}
+      {/* Save to library */}
       {showSaveModal && pendingSaveWorkout && (() => {
         // Read explicit folders/subfolders from localStorage (same source as MasterLibrary)
         let storedFolders: string[] = [];
@@ -1412,25 +1265,23 @@ const matches = [...startsWithMatches, ...includesMatches];
         const existingSubCategories = [...new Set([...explicitSubs, ...fromWorkoutsSubs])].sort();
 
         const activeSubCategory = newSubCategoryInput.trim() || saveSubCategory;
+        const chip = (on: boolean) =>
+          `h-10 px-3 rounded-xl text-[14px] ${on ? 'bg-accent text-onaccent font-extrabold' : 'border border-edge bg-card text-ink font-bold'}`;
         return (
-          <div className="fixed inset-0 z-[800] flex items-center justify-center p-4 animate-in fade-in duration-200">
-            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowSaveModal(false)} />
-            <div className="relative w-full max-w-md bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl overflow-hidden">
-
-              {/* Header */}
-              <div className="p-6 border-b border-white/5 flex items-center justify-between">
-                <div>
-                  <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500 mb-1">Save to Library</p>
-                  <h3 className="text-lg font-black uppercase brand-font text-white leading-none">{pendingSaveWorkout.title || 'Untitled'}</h3>
-                </div>
-                <button onClick={() => setShowSaveModal(false)} className="p-2 text-slate-500 hover:text-white transition-colors"><X size={18} /></button>
+          <div className="fixed inset-0 z-[800] flex items-end sm:items-center justify-center sm:p-4">
+            <div className="absolute inset-0 bg-black/70" onClick={() => setShowSaveModal(false)} />
+            <div className="relative w-full max-w-md bg-card border border-edge rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-line flex items-center justify-between gap-3">
+                <span className="flex flex-col gap-0.5 min-w-0">
+                  <span className="text-[13px] font-semibold text-muted">Save to library</span>
+                  <span className="text-[18px] font-extrabold text-ink truncate">{niceCase(pendingSaveWorkout.title) || 'Untitled'}</span>
+                </span>
+                <button type="button" aria-label="Close" onClick={() => setShowSaveModal(false)} className="w-11 h-11 flex items-center justify-center text-muted"><X size={18} /></button>
               </div>
 
-              <div className="p-6 space-y-6">
-
-                {/* Folder */}
-                <div className="space-y-3">
-                  <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500">Folder</p>
+              <div className="p-5 flex flex-col gap-5">
+                <div className="flex flex-col gap-2.5">
+                  <span className="text-[13px] font-semibold text-muted">Folder</span>
                   {existingCategories.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {existingCategories.map(cat => (
@@ -1438,7 +1289,7 @@ const matches = [...startsWithMatches, ...includesMatches];
                           key={cat}
                           type="button"
                           onClick={() => { setSaveCategory(saveCategory === cat ? '' : cat); setNewCategoryInput(''); setSaveSubCategory(''); setNewSubCategoryInput(''); }}
-                          className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${saveCategory === cat && !newCategoryInput ? 'bg-blue-600 border-blue-400 text-white' : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'}`}
+                          className={chip(saveCategory === cat && !newCategoryInput)}
                         >
                           {cat}
                         </button>
@@ -1449,14 +1300,13 @@ const matches = [...startsWithMatches, ...includesMatches];
                     value={newCategoryInput}
                     onChange={e => { setNewCategoryInput(e.target.value); setSaveCategory(''); setSaveSubCategory(''); setNewSubCategoryInput(''); }}
                     placeholder={existingCategories.length > 0 ? 'Or type a new folder name…' : 'Type a folder name…'}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white font-medium placeholder-slate-600 outline-none focus:border-blue-500/60 transition-all"
+                    className={INPUT}
                   />
                 </div>
 
-                {/* Subfolder — only show once a folder is chosen */}
                 {activeCategory && (
-                  <div className="space-y-3 animate-in slide-in-from-top-2 duration-200">
-                    <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500">Subfolder <span className="text-slate-700 normal-case font-medium">(optional)</span></p>
+                  <div className="flex flex-col gap-2.5">
+                    <span className="text-[13px] font-semibold text-muted">Subfolder (optional)</span>
                     {existingSubCategories.length > 0 && (
                       <div className="flex flex-wrap gap-2">
                         {existingSubCategories.map(sub => (
@@ -1464,7 +1314,7 @@ const matches = [...startsWithMatches, ...includesMatches];
                             key={sub}
                             type="button"
                             onClick={() => { setSaveSubCategory(saveSubCategory === sub ? '' : sub); setNewSubCategoryInput(''); }}
-                            className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${saveSubCategory === sub && !newSubCategoryInput ? 'bg-purple-600 border-purple-400 text-white' : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'}`}
+                            className={chip(saveSubCategory === sub && !newSubCategoryInput)}
                           >
                             {sub}
                           </button>
@@ -1475,33 +1325,23 @@ const matches = [...startsWithMatches, ...includesMatches];
                       value={newSubCategoryInput}
                       onChange={e => { setNewSubCategoryInput(e.target.value); setSaveSubCategory(''); }}
                       placeholder={existingSubCategories.length > 0 ? 'Or type a new subfolder…' : 'Type a subfolder name…'}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white font-medium placeholder-slate-600 outline-none focus:border-purple-500/60 transition-all"
+                      className={INPUT}
                     />
                   </div>
                 )}
 
-                {/* Summary */}
                 {activeCategory && (
-                  <div className="px-4 py-3 bg-slate-800/50 rounded-2xl text-[9px] font-black uppercase tracking-widest text-slate-400">
+                  <div className="px-3.5 py-2.5 bg-field rounded-xl text-[14px] font-semibold text-muted">
                     📁 {activeCategory}{activeSubCategory ? ` › ${activeSubCategory}` : ''}
                   </div>
                 )}
               </div>
 
-              {/* Footer */}
-              <div className="p-6 border-t border-white/5 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => { setShowSaveModal(false); }}
-                  className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-2xl font-black text-[9px] uppercase tracking-widest transition-all"
-                >
+              <div className="px-5 pt-1 flex gap-2" style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom, 0px))' }}>
+                <button type="button" onClick={() => { setShowSaveModal(false); }} className="flex-1 h-12 rounded-xl border border-edge bg-card text-ink font-bold text-[15px]">
                   Cancel
                 </button>
-                <button
-                  type="button"
-                  onClick={confirmSaveToLibrary}
-                  className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-[9px] uppercase tracking-widest transition-all"
-                >
+                <button type="button" onClick={confirmSaveToLibrary} className="flex-1 h-12 rounded-xl bg-accent text-onaccent font-extrabold text-[15px] truncate px-2">
                   {activeCategory ? `Save to ${activeCategory}` : 'Save (no folder)'}
                 </button>
               </div>
@@ -1513,25 +1353,69 @@ const matches = [...startsWithMatches, ...includesMatches];
   );
 };
 
-const InfoFieldSimple = ({ label, value, onChange, placeholder }: any) => (
-  <div className="space-y-2">
-    <label className="text-[9px] font-black text-slate-600 uppercase">{label}</label>
-    <input value={value || ''} onChange={e => onChange(e.target.value)} className="w-full bg-slate-950 border border-slate-800 p-4 rounded-xl text-white font-bold outline-none focus:ring-1 ring-blue-600" placeholder={placeholder} />
+const INPUT = 'h-[46px] w-full box-border rounded-xl border-[1.5px] border-edge bg-field text-ink px-3 text-[15px] font-semibold outline-none focus:border-accent';
+const TEXTAREA = 'w-full box-border rounded-xl border-[1.5px] border-edge bg-field text-ink px-3 py-2.5 text-[15px] font-medium leading-relaxed outline-none resize-none focus:border-accent';
+
+const Field = ({ label, children, className = '' }: { label: string; children: React.ReactNode; className?: string }) => (
+  <label className={`flex flex-col gap-1.5 min-w-0 ${className}`}>
+    <span className="text-[13px] font-semibold text-muted">{label}</span>
+    {children}
+  </label>
+);
+
+/** One line that folds open: a title, a one-line summary and a chevron. */
+const Fold = ({ title, summary, summaryDirText, open, onToggle, children }: {
+  title: string; summary: string; summaryDirText?: string; open: boolean; onToggle: () => void; children: React.ReactNode;
+}) => (
+  <div className={`rounded-[14px] ${open ? 'bg-raised border border-edge' : 'bg-card'}`}>
+    <button type="button" onClick={onToggle} aria-expanded={open} className="w-full flex gap-3 items-center px-3 py-[11px] min-h-[44px] text-left">
+      <span className="flex-1 min-w-0 flex flex-col gap-px">
+        <span className="text-[16px] font-bold text-ink">{title}</span>
+        {summaryDirText
+          ? <span className="text-[13px] text-muted truncate" {...textDir(summaryDirText)}>{summary}</span>
+          : <span className="text-[13px] text-muted truncate">{summary}</span>}
+      </span>
+      {open ? <ChevronUp size={18} className="text-muted shrink-0" /> : <ChevronDown size={18} className="text-muted shrink-0" />}
+    </button>
+    {open && <div className="flex flex-col gap-3 px-3 pb-3">{children}</div>}
   </div>
 );
 
-const InfoFieldIcon = ({ label, icon, value, onChange, placeholder }: any) => (
-  <div className="space-y-2">
-    <label className="text-[9px] font-black text-slate-600 uppercase flex items-center gap-1">{icon} {label}</label>
-    <input value={value || ''} onChange={e => onChange(e.target.value)} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-white font-bold text-xs outline-none focus:ring-1 ring-blue-600" placeholder={placeholder} />
-  </div>
+const IconBtn = ({ label, onClick, children, accent = false }: {
+  label: string; onClick: (e: React.MouseEvent) => void; children: React.ReactNode; accent?: boolean;
+}) => (
+  <button
+    type="button"
+    aria-label={label}
+    title={label}
+    onClick={onClick}
+    className={`w-11 h-11 rounded-xl border border-edge bg-card flex items-center justify-center shrink-0 ${accent ? 'text-accent' : 'text-muted'}`}
+  >
+    {children}
+  </button>
 );
 
-const InfoFieldInline = ({ label, value, onChange, placeholder }: any) => (
-  <div className="space-y-1">
-    <label className="text-[8px] font-black text-slate-600 uppercase">{label}</label>
-    <input value={value || ''} onChange={e => onChange(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-sm font-black text-white outline-none" placeholder={placeholder} />
-  </div>
+const Toggle = ({ on, onClick }: { on: boolean; onClick: () => void }) => (
+  <button
+    type="button"
+    role="switch"
+    aria-checked={on}
+    onClick={onClick}
+    className={`relative w-12 h-7 rounded-full shrink-0 transition-colors ${on ? 'bg-accent' : 'bg-tick'}`}
+  >
+    <span className={`absolute top-1 w-5 h-5 rounded-full shadow transition-all ${on ? 'left-6 bg-onaccent' : 'left-1 bg-ink'}`} />
+  </button>
+);
+
+const DashedBtn = ({ onClick, icon, label }: { onClick: () => void; icon: React.ReactNode; label: string }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className="h-14 rounded-[14px] border-[1.5px] border-dashed border-tick text-ink font-bold text-[14px] flex flex-col items-center justify-center gap-0.5"
+  >
+    <span className="text-accent">{icon}</span>
+    {label}
+  </button>
 );
 
 export default TrainerTemplateEditor;

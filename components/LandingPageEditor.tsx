@@ -33,8 +33,8 @@ const LandingPageEditor: React.FC<Props> = ({ config, onUpdate, onBack }) => {
     <div className="space-y-12 animate-in fade-in slide-in-from-left-4 duration-500">
       <header className="flex justify-between items-center">
         <div>
-          <h2 className="text-4xl font-black brand-font uppercase text-white tracking-tight">Portal Branding</h2>
-          <p className="text-blue-500 font-black uppercase text-[10px] tracking-[0.4em] mt-2">Visual Identity Settings</p>
+          <h2 className="text-2xl font-extrabold text-ink">Branding</h2>
+          <p className="text-sm text-muted mt-1 flex items-center gap-2">Logo, photo and colours</p>
         </div>
         <button onClick={onBack} className="text-slate-500 hover:text-white flex items-center gap-2 uppercase font-black text-[10px] tracking-widest transition-colors">
           <ChevronLeft size={16}/> Back

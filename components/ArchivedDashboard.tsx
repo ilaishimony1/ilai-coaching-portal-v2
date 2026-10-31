@@ -17,27 +17,27 @@ const ArchivedDashboard: React.FC<Props> = ({ clients, onRestore, onDelete, onOp
     <div className="space-y-12 animate-in fade-in duration-700">
       <header className="flex flex-col md:flex-row justify-between items-center gap-6">
         <div>
-          <h2 className="text-5xl font-black brand-font uppercase text-white tracking-tight leading-none">The Vault</h2>
-          <p className="text-amber-500 font-bold uppercase text-[10px] tracking-[0.4em] mt-2 flex items-center gap-2">
-            <ShieldAlert size={14} /> Archived Athletes & Protocols
+          <h2 className="text-2xl font-extrabold text-ink">Archive</h2>
+          <p className="text-sm text-muted mt-1 flex items-center gap-2">
+            <ShieldAlert size={14} /> Past clients and their programs
           </p>
         </div>
         <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex items-center gap-3">
           <Archive className="text-amber-500" />
-          <span className="text-xs font-black uppercase text-white">{clients.length} Records Contained</span>
+          <span className="text-xs font-black uppercase text-white">{clients.length} archived</span>
         </div>
       </header>
 
       {clients.length === 0 ? (
         <div className="py-32 text-center border-2 border-dashed border-slate-900 rounded-[4rem] bg-slate-950/20">
           <Archive className="mx-auto text-slate-800 mb-6" size={64} />
-          <h4 className="text-xl font-black text-slate-700 uppercase brand-font">Vault Empty</h4>
-          <p className="text-slate-800 font-bold uppercase text-[9px] tracking-widest mt-2">No archived protocols found in storage.</p>
+          <h4 className="text-xl font-black text-slate-700 uppercase brand-font">Nothing archived</h4>
+          <p className="text-slate-800 font-bold uppercase text-[9px] tracking-widest mt-2">Clients you archive show up here.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {clients.map(client => (
-            <div key={client.id} className="glass-card p-8 rounded-[2.5rem] border-slate-800 grayscale hover:grayscale-0 transition-all duration-500 group relative overflow-hidden">
+            <div key={client.id} className="glass-card p-8 rounded-[2.5rem] border-slate-800 transition-all duration-500 group relative overflow-hidden">
               {/* Deletion Confirmation Overlay - Styled like Video Gallery, Positioned Top */}
               {deletingId === client.id && (
                 <div className="absolute inset-0 z-[100] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-start pt-16 p-6 animate-in fade-in duration-300">

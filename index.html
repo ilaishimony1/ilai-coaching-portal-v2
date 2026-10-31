@@ -6,41 +6,68 @@
     <title>Ilai Shimony – Coaching Portal</title>
     <meta name="apple-mobile-web-app-title" content="Ilai Shimony – Coaching Portal">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+    <script>
+      // COLOUR 8 (dim navy), approved 31 Oct 2026. Every screen takes its colours from here.
+      // The slate and blue scales are remapped onto the same navy so screens that still
+      // use them match the rest of the app.
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              page: '#1B2638',
+              card: '#253349',
+              raised: '#2C3D57',
+              edge: '#3B5070',
+              ink: '#F1F5FA',
+              muted: '#B3BFCE',
+              accent: '#9CC8FF',
+              onaccent: '#0F1B2B',
+              navbar: '#202D42',
+              line: '#2C3A50',
+              tick: '#566A88',
+              field: '#1F2B3F',
+              done: '#2FAE6B',
+              mob: '#7FD6A6',
+              alert: '#F28B82',
+              warn: '#F2C46D',
+              slate: {
+                50: '#F8FAFD', 100: '#F1F5FA', 200: '#E3E9F1', 300: '#CDD6E1', 400: '#B3BFCE',
+                500: '#9AA8BB', 600: '#8392A8', 700: '#566A88', 800: '#3B5070', 900: '#253349', 950: '#1F2B3F',
+              },
+              blue: {
+                300: '#C4DEFF', 400: '#9CC8FF', 500: '#9CC8FF', 600: '#9CC8FF', 700: '#7FB0EA',
+              },
+            },
+            fontFamily: {
+              sans: ['Manrope', 'Rubik', 'system-ui', 'sans-serif'],
+            },
+          },
+        },
+        // No all-caps anywhere: the uppercase utility is switched off.
+        corePlugins: { textTransform: false },
+      };
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
       body {
-        font-family: 'Inter', sans-serif;
-        background-color: #020617;
-        color: #f8fafc;
+        font-family: 'Manrope', 'Rubik', system-ui, sans-serif;
+        background-color: #1B2638;
+        color: #F1F5FA;
         overflow-x: hidden;
-        background-image: linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-                          linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-        background-size: 40px 40px;
       }
-      h1, h2, h3, .brand-font {
-        font-family: 'Oswald', sans-serif;
-        text-transform: uppercase;
-        letter-spacing: -0.02em;
-      }
-      .glass-card {
-        background: rgba(15, 23, 42, 0.6);
-        backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.05);
-      }
+      /* Hebrew falls through to Rubik, which Manrope does not cover. */
+      [lang="he"], [dir="rtl"] { font-family: 'Rubik', 'Manrope', sans-serif; }
+      input::placeholder, textarea::placeholder { color: #8D9BB0; }
+      .brand-font { font-family: 'Manrope', 'Rubik', sans-serif; font-weight: 800; }
+      .glass-card { background: #253349; border: 1px solid #2C3A50; }
+      /* Older screens: solid accent buttons get dark text, tiny labels grow to 12px,
+         and the wide letter-spacing goes. */
+      [class~="bg-blue-500"], [class~="bg-blue-600"],
+      [class*="hover:bg-blue-500"]:hover, [class*="hover:bg-blue-600"]:hover { color: #0F1B2B !important; }
+      [class*="text-[7px]"], [class*="text-[8px]"], [class*="text-[9px]"], [class*="text-[10px]"], [class*="text-[11px]"] { font-size: 12px !important; }
+      [class*="tracking-"] { letter-spacing: normal !important; }
       .no-scrollbar::-webkit-scrollbar { display: none; }
       .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      
-      @keyframes pulse-glow {
-        0%, 100% { box-shadow: 0 0 20px rgba(37, 99, 235, 0.2); }
-        50% { box-shadow: 0 0 40px rgba(37, 99, 235, 0.5); }
-      }
-      .timer-active {
-        animation: pulse-glow 2s infinite;
-      }
-
-      .hs-lab-gradient {
-        background: radial-gradient(circle at center, rgba(37, 99, 235, 0.15) 0%, transparent 70%);
-      }
     </style>
   <script type="importmap">
 {

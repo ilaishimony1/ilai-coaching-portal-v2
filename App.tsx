@@ -11,12 +11,11 @@ import {
 import { initializeApp, getApps } from "firebase/app";
 import { firebaseConfig } from "./firebaseService";
 import React, { useState, useRef, useEffect } from 'react';
-import { Home, LogOut, Palette, User, ChevronLeft, Archive, BookOpen, Video, Camera, Library, ClipboardList, Bell, BellOff, Smartphone, Monitor } from 'lucide-react';
+import { LogOut, Palette, ChevronLeft, Archive, BookOpen, Video, Camera, Library, ClipboardList, BellOff, Smartphone, Monitor, Dumbbell, Target, Users } from 'lucide-react';
 import { ViewMode, AuthStatus, ClientData } from './types';
 import { COACH_EMAIL } from './constants';
 import LoginPage from './components/LoginPage'; 
 import GoalTracker from './components/GoalTracker';
-import CoachDirectives from './components/CoachDirectives';
 import AdminDashboard from './components/AdminDashboard';
 import TrainerTemplateEditor from './components/TrainerTemplateEditor';
 import WorkoutLibrary from './components/WorkoutLibrary';
@@ -110,25 +109,21 @@ const MainApp: React.FC = () => {
   const [mobilePreview, setMobilePreview] = useState(false);
   const [pendingEditorPlanMode, setPendingEditorPlanMode] = useState<'live' | 'draft'>('live');
 
-  const NavButtons = (
-    <>
-      {authStatus.type === 'CLIENT' ? (
-        <>
-          <NavBtn active={viewMode === 'CLIENT'} onClick={() => setViewMode('CLIENT')} icon={<User />} color={landingConfig.accentColor} />
-          <NavBtn active={viewMode === 'ACADEMY'} onClick={() => setViewMode('ACADEMY')} icon={<BookOpen />} color={landingConfig.accentColor} badge={currentClientData?.unseenVideoUids?.length || 0} />
-        </>
-      ) : (
-        <>
-          <NavBtn active={viewMode === 'ADMIN'} onClick={() => setViewMode('ADMIN')} icon={<Home />} color={landingConfig.accentColor} />
-          <NavBtn active={viewMode === 'ACADEMY'} onClick={() => setViewMode('ACADEMY')} icon={<Video />} color={landingConfig.accentColor} />
-          <NavBtn active={viewMode === 'WEEKLY_CHECKIN'} onClick={() => setViewMode('WEEKLY_CHECKIN')} icon={<ClipboardList />} color={landingConfig.accentColor} badge={unreadCheckInsCount + unreadWorkoutLogsCount} />
-          <NavBtn active={viewMode === 'SAVED_PROGRAMS'} onClick={() => setViewMode('SAVED_PROGRAMS')} icon={<Library />} color={landingConfig.accentColor} />
-          <NavBtn active={viewMode === 'ARCHIVE'} onClick={() => setViewMode('ARCHIVE')} icon={<Archive />} color={landingConfig.accentColor} />
-          <NavBtn active={viewMode === 'LANDING_EDITOR'} onClick={() => setViewMode('LANDING_EDITOR')} icon={<Palette />} color={landingConfig.accentColor} />
-        </>
-      )}
-    </>
-  );
+  // The menu, with words. Tal: Workout · Goals · Academy. Coach: six sections.
+  const navItems: NavItem[] = authStatus.type === 'CLIENT'
+    ? [
+        { mode: 'CLIENT', label: 'Workout', icon: <Dumbbell size={22} /> },
+        { mode: 'GOALS', label: 'Goals', icon: <Target size={22} /> },
+        { mode: 'ACADEMY', label: 'Academy', icon: <BookOpen size={22} />, badge: currentClientData?.unseenVideoUids?.length || 0 },
+      ]
+    : [
+        { mode: 'ADMIN', label: 'Clients', icon: <Users size={22} /> },
+        { mode: 'ACADEMY', label: 'Academy', icon: <Video size={22} /> },
+        { mode: 'WEEKLY_CHECKIN', label: 'Check-ins', icon: <ClipboardList size={22} />, badge: unreadCheckInsCount + unreadWorkoutLogsCount },
+        { mode: 'SAVED_PROGRAMS', label: 'Programs', icon: <Library size={22} /> },
+        { mode: 'ARCHIVE', label: 'Archive', icon: <Archive size={22} /> },
+        { mode: 'LANDING_EDITOR', label: 'Branding', icon: <Palette size={22} /> },
+      ];
 
   // Signing out has to clear the Firebase session too. It used to only hide
   // the screen, so a reload put the person straight back in.
@@ -351,6 +346,9 @@ const MainApp: React.FC = () => {
     return () => unsubscribe();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // A new screen starts at its top, not wherever the last one was scrolled to.
+  useEffect(() => { window.scrollTo(0, 0); }, [viewMode]);
+
   // Keep currentClientData in sync with live Firestore updates
   useEffect(() => {
     if (authStatus.type === 'CLIENT' && clients) {
@@ -384,14 +382,14 @@ const MainApp: React.FC = () => {
   if (authStatus.type !== 'NONE' && !clients) {
     if (cloudError) {
       return (
-        <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-[#020617] text-red-400 text-center px-6">
-          <p>Couldn't reach the cloud.</p>
-          <p className="text-xs text-slate-500">{cloudError}</p>
+        <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-page text-alert text-center px-6">
+          <p className="text-base font-bold">Couldn't reach the cloud.</p>
+          <p className="text-sm text-muted">{cloudError}</p>
         </div>
       );
     }
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#020617] text-slate-400">
+      <div className="min-h-screen flex items-center justify-center bg-page text-muted text-base">
         Loading…
       </div>
     );
@@ -401,74 +399,118 @@ const MainApp: React.FC = () => {
     return <LoginPage onLogin={handleLogin} config={landingConfig} version={APP_VERSION} />;
   }
 
-  return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-[#020617] text-slate-200">
+  const isClient = authStatus.type === 'CLIENT';
+  const firstName = (currentClientData?.name || '').split(' ')[0];
+  const coachAvatar = landingConfig.coachAvatar;
 
-      <nav className="hidden md:flex w-24 bg-[#010409]/80 backdrop-blur-xl border-r border-slate-900 flex-col items-center py-10 z-50">
-        <button
-          onClick={() => setViewMode(authStatus.type === 'COACH' ? 'ADMIN' : 'CLIENT')}
-          className="w-12 h-12 rounded-2xl bg-slate-800 border-2 border-white/5 overflow-hidden transition-all hover:scale-105 active:scale-95 shadow-xl group mb-12"
-        >
-          {landingConfig.coachAvatar ? (
-            <img src={landingConfig.coachAvatar} className="w-full h-full object-cover group-hover:brightness-110" alt="Coach" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-blue-600 text-white font-black text-[10px]">IS</div>
-          )}
-        </button>
-        <div className="flex-1 space-y-8 flex flex-col items-center">
-          {NavButtons}
-        </div>
-        {authStatus.type === 'COACH' && notifPermission !== 'granted' && (
-          <button onClick={requestNotifPermission} title="Enable notifications" className="p-4 text-slate-600 hover:text-yellow-400 transition-colors">
-            <BellOff size={20} />
-          </button>
-        )}
-        {authStatus.type === 'COACH' && (
-          <button onClick={() => setMobilePreview(p => !p)} title={mobilePreview ? 'Switch to desktop view' : 'Switch to mobile view'} className={`p-4 transition-colors ${mobilePreview ? 'text-blue-400' : 'text-slate-600 hover:text-slate-300'}`}>
-            {mobilePreview ? <Monitor size={20} /> : <Smartphone size={20} />}
-          </button>
-        )}
-        <button onClick={handleLogout} className="mt-auto p-4 text-slate-700 hover:text-red-500 transition-colors">
-          <LogOut size={24} />
-        </button>
+  // How wide each screen may get on a computer. Tal's screens and the coach's
+  // single-column screens stay phone-shaped; the libraries keep their grids.
+  const widthClass = mobilePreview && authStatus.type === 'COACH'
+    ? 'max-w-[390px]'
+    : ['CLIENT', 'GOALS'].includes(viewMode) || (isClient && ['ACADEMY', 'WEEKLY_CHECKIN'].includes(viewMode))
+    ? 'max-w-xl'
+    : ['ADMIN', 'TRAINER', 'WEEKLY_CHECKIN'].includes(viewMode)
+    ? 'max-w-3xl'
+    : 'max-w-6xl';
+
+  const checkInBanner = () => {
+    if (!currentClientData?.weeklyCheckInEnabled || !isClient) return null;
+    const twoDaysAgo = Date.now() - 2 * 24 * 60 * 60 * 1000;
+    const submitted = checkIns.some(c => c.clientId === currentClientData.id && new Date(c.submittedAt).getTime() > twoDaysAgo);
+    const day = new Date().getDay();
+    const weekend = day === 0 || day === 6;
+
+    if (submitted || !weekend) return (
+      <button
+        onClick={() => setViewMode('WEEKLY_CHECKIN')}
+        className="self-start flex items-center gap-2 h-10 px-3 rounded-xl bg-card text-muted text-[13px] font-semibold"
+      >
+        <ClipboardList size={16} />
+        {submitted ? 'Weekly check-in sent ✓' : 'Weekly check-in opens on weekends'}
+      </button>
+    );
+
+    return (
+      <button
+        onClick={() => setViewMode('WEEKLY_CHECKIN')}
+        className="w-full flex items-center justify-between gap-3 bg-raised border border-edge rounded-[14px] py-2.5 pl-3 pr-2.5 text-left active:scale-[0.99] transition-transform"
+      >
+        <span className="flex items-center gap-2.5 text-accent">
+          <ClipboardList size={20} />
+          <span className="flex flex-col">
+            <span className="text-[15px] font-bold text-ink">Weekly check-in</span>
+            <span className="text-[13px] text-muted">This week's review is ready to fill</span>
+          </span>
+        </span>
+        <span className="shrink-0 text-sm font-extrabold bg-accent text-onaccent px-3 py-2 rounded-[10px]">Fill now</span>
+      </button>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-page text-ink md:flex">
+
+      {/* Computer: the menu runs down the left side, with words. */}
+      <nav className="hidden md:flex w-28 shrink-0 sticky top-0 h-screen flex-col items-center gap-2 py-6 bg-navbar border-r border-line z-40">
+        {navItems.map(item => (
+          <NavBtn key={item.mode} item={item} active={viewMode === item.mode} onClick={() => setViewMode(item.mode)} vertical />
+        ))}
       </nav>
 
-      {/* 📱 Mobile Top Bar — logo + logout only */}
-      <div className="md:hidden sticky top-0 z-50 bg-[#010409]/90 backdrop-blur-xl border-b border-slate-900/60">
-        <div className="flex items-center justify-between px-5 py-3">
-          <button
-            onClick={() => setViewMode(authStatus.type === 'COACH' ? 'ADMIN' : 'CLIENT')}
-            className="w-9 h-9 rounded-xl overflow-hidden bg-slate-800 border border-white/5"
-          >
-            {landingConfig.coachAvatar ? (
-              <img src={landingConfig.coachAvatar} className="w-full h-full object-cover" />
+      <div className="flex-1 min-w-0 flex flex-col">
+        {/* Top bar: who is signed in, and log out. */}
+        <header className="sticky top-0 z-40 bg-page/95 backdrop-blur border-b border-line">
+          <div className="flex items-center justify-between gap-3 px-5 py-3">
+            {isClient && currentClientData ? (
+              <div className="flex items-center gap-3 min-w-0">
+                <button
+                  onClick={() => avatarInputRef.current?.click()}
+                  aria-label="Change your photo"
+                  className={`relative w-11 h-11 rounded-[14px] overflow-hidden shrink-0 flex items-center justify-center text-muted ${resolvedClientAvatar ? '' : 'border-[1.5px] border-dashed border-tick'}`}
+                >
+                  {resolvedClientAvatar
+                    ? <img src={resolvedClientAvatar} className="w-full h-full object-cover" alt="" />
+                    : <Camera size={18} />}
+                </button>
+                <input type="file" ref={avatarInputRef} className="hidden" accept="image/*" onChange={handleAvatarUpload} />
+                <span className="flex flex-col min-w-0">
+                  <span className="text-lg font-extrabold truncate">{firstName}'s portal</span>
+                  <span className="text-xs font-semibold text-accent">1:1 online coaching</span>
+                </span>
+              </div>
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-xs font-bold text-white">IS</div>
-            )}
-          </button>
-          <div className="flex items-center gap-1">
-            {authStatus.type === 'COACH' && notifPermission !== 'granted' && (
-              <button onClick={requestNotifPermission} className="p-2 text-slate-600 hover:text-yellow-400 transition-colors">
-                <BellOff size={18} />
+              <button onClick={() => setViewMode('ADMIN')} className="flex items-center gap-3 min-w-0 text-left">
+                {coachAvatar ? (
+                  <img src={coachAvatar} className="w-10 h-10 rounded-xl object-cover object-[center_20%] shrink-0" alt="" />
+                ) : (
+                  <span className="w-10 h-10 rounded-xl bg-raised text-accent font-extrabold text-sm flex items-center justify-center shrink-0">IS</span>
+                )}
+                <span className="flex flex-col">
+                  <span className="text-lg font-extrabold">Coach</span>
+                  <span className="text-xs font-semibold text-accent">Ilai Shimony</span>
+                </span>
               </button>
             )}
-            <button onClick={handleLogout} className="p-2 text-slate-600 hover:text-red-500 transition-colors">
-              <LogOut size={18} />
-            </button>
+            <div className="flex items-center">
+              {authStatus.type === 'COACH' && notifPermission !== 'granted' && (
+                <button onClick={requestNotifPermission} aria-label="Turn on notifications" title="Turn on notifications" className="w-11 h-11 flex items-center justify-center text-muted hover:text-warn transition-colors">
+                  <BellOff size={20} />
+                </button>
+              )}
+              {authStatus.type === 'COACH' && (
+                <button onClick={() => setMobilePreview(p => !p)} aria-label={mobilePreview ? 'Show computer width' : 'Show phone width'} title={mobilePreview ? 'Show computer width' : 'Show phone width'} className={`hidden md:flex w-11 h-11 items-center justify-center transition-colors ${mobilePreview ? 'text-accent' : 'text-muted hover:text-ink'}`}>
+                  {mobilePreview ? <Monitor size={20} /> : <Smartphone size={20} />}
+                </button>
+              )}
+              <button onClick={handleLogout} aria-label="Log out" title="Log out" className="w-11 h-11 flex items-center justify-center text-muted hover:text-alert transition-colors">
+                <LogOut size={20} />
+              </button>
+            </div>
           </div>
-        </div>
-      </div>
+        </header>
 
-      {/* 📱 Mobile Bottom Tab Bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#010409]/95 backdrop-blur-xl border-t border-slate-900/80"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-        <div className="flex items-center justify-around px-2 py-2">
-          {NavButtons}
-        </div>
-      </nav>
-
-      <main className="flex-1 overflow-y-auto p-4 md:p-12 pb-28 md:pb-12 no-scrollbar">
-        <div className={`mx-auto transition-all duration-300 ${mobilePreview && authStatus.type === 'COACH' ? 'max-w-[390px]' : 'max-w-6xl'}`}>
+        <main className="flex-1 px-5 pt-4 pb-32 md:px-10 md:pt-8 md:pb-12">
+          <div className={`mx-auto transition-all duration-300 ${widthClass}`}>
 
           {viewMode === 'ADMIN' && (
             <AdminDashboard
@@ -566,114 +608,46 @@ const MainApp: React.FC = () => {
           )}
 
           {viewMode === 'CLIENT' && currentClientData && (
-            <div className="space-y-12 animate-in fade-in duration-1000">
-              <header className="flex flex-col md:flex-row justify-between items-center gap-6">
-                <div className="relative group/avatar text-center md:text-left flex items-center gap-6">
-                  <div
-                    onClick={() => avatarInputRef.current?.click()}
-                    className="relative w-20 h-20 md:w-24 md:h-24 rounded-3xl overflow-hidden cursor-pointer shrink-0 border-2 border-dashed border-slate-700 hover:border-blue-500/60 transition-all"
-                  >
-                    {resolvedClientAvatar ? (
-                      <>
-                        <img
-                          src={resolvedClientAvatar}
-                          className="w-full h-full object-cover transition-transform group-hover/avatar:scale-110"
-                          alt="avatar"
-                        />
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center transition-opacity">
-                          <Camera size={20} className="text-white" />
-                        </div>
-                      </>
-                    ) : (
-                      <div className="w-full h-full bg-black flex flex-col items-center justify-center gap-1 p-2 group-hover/avatar:bg-slate-950 transition-colors">
-                        <Camera size={18} className="text-slate-500 group-hover/avatar:text-blue-400 transition-colors" />
-                        <span className="text-[7px] font-black uppercase tracking-wider text-slate-600 group-hover/avatar:text-blue-400 text-center leading-tight transition-colors">Upload<br/>Photo</span>
-                      </div>
-                    )}
-                    <input type="file" ref={avatarInputRef} className="hidden" accept="image/*" onChange={handleAvatarUpload} />
-                  </div>
-                  <div>
-                    <h1 className="text-4xl md:text-6xl font-black text-white brand-font uppercase tracking-tighter leading-none">
-                      {currentClientData.name.split(' ')[0]}'s <span className="text-blue-600/50">Portal</span>
-                    </h1>
-                    <p className="font-bold uppercase tracking-[0.5em] text-[10px] mt-2 text-blue-500">1:1 ONLINE COACHING</p>
-                  </div>
-                </div>
-                {authStatus.type === 'COACH' && (
+            <div className="flex flex-col gap-4">
+              {authStatus.type === 'COACH' && (
+                <div className="flex items-center justify-between gap-3">
                   <button
                     onClick={() => setViewMode('ADMIN')}
-                    className="flex items-center gap-2 px-5 py-3 bg-slate-900/60 border border-slate-800 rounded-2xl text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-white hover:border-slate-600 transition-all group"
+                    className="flex items-center gap-1.5 h-11 pr-3 text-muted hover:text-ink text-[15px] font-bold transition-colors"
                   >
-                    <ChevronLeft size={14} className="group-hover:-translate-x-0.5 transition-transform" />
-                    Command Center
+                    <ChevronLeft size={18} /> Your clients
                   </button>
-                )}
-                {authStatus.type === 'CLIENT' && (
-                  <button
-                    onClick={() => document.getElementById('workout-section')?.scrollIntoView({ behavior: 'smooth' })}
-                    className="flex items-center gap-2 px-5 py-3 bg-slate-900/60 border border-slate-800 rounded-2xl text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-white hover:border-slate-600 transition-all active:scale-95"
-                  >
-                    Workout ↓
-                  </button>
-                )}
-              </header>
-
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-                <div className="lg:col-span-8 space-y-12">
-                  {currentClientData.weeklyCheckInEnabled && authStatus.type === 'CLIENT' && (() => {
-                    const twoDaysAgo = Date.now() - 2 * 24 * 60 * 60 * 1000;
-                    const submitted = checkIns.some(c => c.clientId === currentClientData.id && new Date(c.submittedAt).getTime() > twoDaysAgo);
-                    const day = new Date().getDay();
-                    const weekend = day === 0 || day === 6;
-                    const inactive = submitted || !weekend;
-
-                    if (inactive) return (
-                      <button
-                        onClick={() => setViewMode('WEEKLY_CHECKIN')}
-                        className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-800 bg-slate-950/40 text-slate-600 hover:text-slate-400 hover:border-slate-700 transition-all text-[10px] font-bold uppercase tracking-widest"
-                      >
-                        <ClipboardList size={12} />
-                        {submitted ? 'Check-in submitted ✓' : 'Check-in — opens weekends'}
-                      </button>
-                    );
-
-                    return (
-                      <button
-                        onClick={() => setViewMode('WEEKLY_CHECKIN')}
-                        className="w-full flex items-center justify-between px-8 py-6 rounded-[2rem] border transition-all group bg-blue-600/5 border-blue-500/20 hover:bg-blue-600/10 hover:border-blue-500/40 active:scale-[0.99]"
-                      >
-                        <div className="flex items-center gap-5">
-                          <div className="p-3 rounded-2xl bg-blue-600/10">
-                            <ClipboardList size={22} className="text-blue-400" />
-                          </div>
-                          <div className="text-left">
-                            <p className="text-sm font-black uppercase tracking-wide text-white">Weekly Check-In</p>
-                            <p className="text-[10px] font-bold mt-0.5 text-slate-500">This week's review is ready to fill</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-xl border text-blue-400 bg-blue-500/10 border-blue-500/20 group-hover:bg-blue-500/20">
-                          Fill Now →
-                        </div>
-                      </button>
-                    );
-                  })()}
-                  <CoachDirectives notes={currentClientData.generalNotes} />
+                  <span className="text-[13px] font-semibold text-muted truncate">{firstName}'s page</span>
+                </div>
+              )}
+              {checkInBanner()}
+              <div id="workout-section">
+                <WorkoutLibrary
+                  workouts={currentClientData.workouts || []}
+                  clientData={currentClientData}
+                  accentColor={landingConfig.accentColor}
+                  isCoach={authStatus.type === 'COACH'}
+                />
+              </div>
+              {/* Tal has a Goals tab; the coach ticks goals off from here. */}
+              {authStatus.type === 'COACH' && (
+                <div className="pt-6">
                   <GoalTracker
                     goals={currentClientData.goals || []}
-                    isCoach={authStatus.type === 'COACH'}
+                    isCoach
                     onToggleMiniGoal={(goalId, miniIdx) => handleToggleMiniGoal(currentClientData.id, goalId, miniIdx)}
                   />
-                  <div id="workout-section">
-                    <WorkoutLibrary
-                      workouts={currentClientData.workouts || []}
-                      clientData={currentClientData}
-                      accentColor={landingConfig.accentColor}
-                      isCoach={authStatus.type === 'COACH'}
-                    />
-                  </div>
                 </div>
-              </div>
+              )}
             </div>
+          )}
+
+          {viewMode === 'GOALS' && currentClientData && (
+            <GoalTracker
+              goals={currentClientData.goals || []}
+              isCoach={authStatus.type === 'COACH'}
+              onToggleMiniGoal={(goalId, miniIdx) => handleToggleMiniGoal(currentClientData.id, goalId, miniIdx)}
+            />
           )}
 
           {viewMode === 'WEEKLY_CHECKIN' && authStatus.type === 'COACH' && (
@@ -691,28 +665,39 @@ const MainApp: React.FC = () => {
             <LandingPageEditor config={landingConfig} onUpdate={(c) => { setLandingConfig(c); }} onBack={() => setViewMode('ADMIN')} />
           )}
 
-        </div>
-      </main>
+          </div>
+        </main>
+      </div>
+
+      {/* Phone: the menu sits at the bottom, with words. */}
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-navbar border-t border-line grid pt-2.5"
+        style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))`, paddingBottom: 'max(14px, env(safe-area-inset-bottom, 0px))' }}
+      >
+        {navItems.map(item => (
+          <NavBtn key={item.mode} item={item} active={viewMode === item.mode} onClick={() => setViewMode(item.mode)} />
+        ))}
+      </nav>
     </div>
   );
 };
 
-const NavBtn = ({ active, icon, onClick, color, badge }: any) => (
-  <div className="relative">
-    {/* Desktop sidebar style */}
-    <button
-      onClick={onClick}
-      className={`p-3 md:p-4 rounded-2xl transition-all duration-300 ${active ? 'text-white shadow-lg' : 'text-slate-700 hover:text-white'}`}
-      style={active ? { backgroundColor: color, boxShadow: `0 10px 30px -10px ${color}` } : {}}
-    >
-      {icon}
-    </button>
-    {badge > 0 && (
-      <div className="absolute -top-1 -right-1 min-w-[20px] h-[20px] px-1.5 bg-red-500 rounded-full flex items-center justify-center text-[10px] font-black text-white shadow-lg pointer-events-none leading-none">
-        {badge > 9 ? '9+' : badge}
-      </div>
+type NavItem = { mode: ViewMode; label: string; icon: React.ReactNode; badge?: number };
+
+const NavBtn = ({ item, active, onClick, vertical }: { item: NavItem; active: boolean; onClick: () => void; vertical?: boolean }) => (
+  <button
+    onClick={onClick}
+    aria-current={active ? 'page' : undefined}
+    className={`relative flex flex-col items-center gap-1 min-h-[44px] text-xs transition-colors ${vertical ? 'w-full py-3' : ''} ${active ? 'text-accent font-extrabold' : 'text-muted font-semibold hover:text-ink'}`}
+  >
+    {item.icon}
+    {!!item.badge && item.badge > 0 && (
+      <span className="absolute -top-1 left-1/2 ml-1.5 min-w-[18px] h-[18px] px-[5px] rounded-full bg-alert text-onaccent text-[11px] font-extrabold flex items-center justify-center leading-none pointer-events-none">
+        {item.badge > 9 ? '9+' : item.badge}
+      </span>
     )}
-  </div>
+    {item.label}
+  </button>
 );
 
 const App = () => (

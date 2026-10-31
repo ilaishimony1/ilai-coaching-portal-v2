@@ -94,7 +94,7 @@ export interface ClientSummary {
   billingAnchorDate?: string;
 }
 
-export type ViewMode = 'ADMIN' | 'TRAINER' | 'CLIENT' | 'LANDING_EDITOR' | 'ARCHIVE' | 'ACADEMY' | 'CHAT' | 'SAVED_PROGRAMS' | 'WEEKLY_CHECKIN';
+export type ViewMode = 'ADMIN' | 'TRAINER' | 'CLIENT' | 'LANDING_EDITOR' | 'ARCHIVE' | 'ACADEMY' | 'CHAT' | 'SAVED_PROGRAMS' | 'WEEKLY_CHECKIN' | 'GOALS';
 
 export interface WorkoutLog {
   id: string;

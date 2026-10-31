@@ -48,15 +48,14 @@ const ScheduleCalendar: React.FC<Props> = ({ client, accentColor = '#2563eb' }) 
         key={d} 
         className={`h-16 md:h-24 rounded-xl border flex flex-col items-center justify-start p-2 gap-1 transition-all ${
           workout 
-            ? 'bg-blue-600/10 border-blue-500/30' 
-            : 'bg-slate-950/40 border-slate-800/50'
-        } ${isToday ? 'ring-2 ring-blue-500' : ''}`}
+            ? 'bg-raised border-edge' 
+            : 'bg-field border-line'
+        } ${isToday ? 'ring-2 ring-accent' : ''}`}
       >
-        <span className={`text-[10px] font-black ${isToday ? 'text-blue-400' : 'text-slate-600'}`}>{d}</span>
+        <span className={`text-xs font-bold ${isToday ? 'text-accent' : 'text-muted'}`}>{d}</span>
         {workout && (
           <div 
-            className="w-7 h-7 md:w-10 md:h-10 rounded-lg font-black text-white text-xs md:text-sm flex items-center justify-center shadow-lg animate-in zoom-in duration-300"
-            style={{ backgroundColor: accentColor }}
+            className="w-7 h-7 md:w-10 md:h-10 rounded-lg font-extrabold bg-accent text-onaccent text-xs md:text-sm flex items-center justify-center"
           >
             {workout.name}
           </div>
@@ -69,26 +68,26 @@ const ScheduleCalendar: React.FC<Props> = ({ client, accentColor = '#2563eb' }) 
     <>
       <button 
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-3 px-6 py-4 bg-slate-900 border border-slate-800 rounded-2xl hover:border-blue-500/50 transition-all group shadow-xl"
+        className="flex items-center gap-2 h-11 px-3.5 bg-card border border-edge rounded-xl text-ink text-sm font-bold"
       >
-        <CalendarIcon className="w-5 h-5 text-blue-500 group-hover:scale-110 transition-transform" />
-        <span className="text-xs font-black brand-font uppercase text-white tracking-widest">My Training Split</span>
+        <CalendarIcon size={18} className="text-accent" />
+        My weekly schedule
       </button>
 
       {isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-10 animate-in fade-in duration-300">
           <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={() => setIsOpen(false)}></div>
-          <div className="relative w-full max-w-4xl glass-card rounded-[3rem] border border-white/10 shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
+          <div className="relative w-full max-w-4xl bg-card border border-edge rounded-3xl flex flex-col overflow-hidden max-h-[90vh]">
             {/* Header */}
-            <div className="p-8 border-b border-white/5 flex items-center justify-between">
+            <div className="p-5 border-b border-line flex items-center justify-between">
               <div className="flex items-center gap-6">
-                <h2 className="text-3xl font-black brand-font uppercase text-white tracking-tight">{monthName} {year}</h2>
+                <h2 className="text-2xl font-extrabold text-ink">{monthName} {year}</h2>
                 <div className="flex gap-2">
                   <button onClick={prevMonth} className="p-2 hover:bg-white/5 rounded-lg transition-colors text-slate-400 hover:text-white"><ChevronLeft size={20}/></button>
                   <button onClick={nextMonth} className="p-2 hover:bg-white/5 rounded-lg transition-colors text-slate-400 hover:text-white"><ChevronRight size={20}/></button>
                 </div>
               </div>
-              <button onClick={() => setIsOpen(false)} className="p-3 bg-white/5 text-white rounded-full hover:bg-red-500 transition-all">
+              <button onClick={() => setIsOpen(false)} aria-label="Close" className="w-11 h-11 flex items-center justify-center bg-raised text-ink rounded-full">
                 <X size={20} />
               </button>
             </div>
@@ -97,23 +96,23 @@ const ScheduleCalendar: React.FC<Props> = ({ client, accentColor = '#2563eb' }) 
             <div className="p-6 md:p-10 overflow-y-auto no-scrollbar">
               <div className="grid grid-cols-7 gap-2 md:gap-4">
                 {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(d => (
-                  <div key={d} className="text-center text-[10px] font-black uppercase text-slate-500 tracking-widest mb-2">{d}</div>
+                  <div key={d} className="text-center text-xs font-bold text-muted mb-1">{d}</div>
                 ))}
                 {calendarDays}
               </div>
             </div>
 
             {/* Legend */}
-            <div className="p-6 bg-slate-950/50 border-t border-white/5 flex flex-wrap gap-6 items-center justify-center">
+            <div className="p-5 bg-field border-t border-line flex flex-wrap gap-6 items-center justify-center">
               {client.workouts.map(w => (
                 <div key={w.id} className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-black text-white" style={{ backgroundColor: accentColor }}>{w.name}</div>
-                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{w.title}</span>
+                  <div className="w-6 h-6 rounded-md flex items-center justify-center text-xs font-extrabold bg-accent text-onaccent">{w.name}</div>
+                  <span className="text-[13px] font-semibold text-muted">{w.title}</span>
                 </div>
               ))}
               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-md border border-slate-800 bg-slate-950/40"></div>
-                <span className="text-[10px] font-black uppercase text-slate-600 tracking-widest">Rest Day</span>
+                <div className="w-6 h-6 rounded-md border border-line bg-field"></div>
+                <span className="text-[13px] font-semibold text-muted">Rest day</span>
               </div>
             </div>
           </div>

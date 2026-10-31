@@ -28,7 +28,7 @@ export default class ErrorBoundary extends React.Component<Props, State> {
     if (!this.state.error) return this.props.children;
 
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-5 bg-[#020617] px-6 text-center">
+      <div className="min-h-screen flex flex-col items-center justify-center gap-5 bg-page px-6 text-center">
         <p className="text-slate-200 text-lg font-bold">Something went wrong.</p>
         <p className="text-slate-500 text-sm max-w-sm">
           Nothing was lost. Reloading usually fixes it — if it keeps happening,

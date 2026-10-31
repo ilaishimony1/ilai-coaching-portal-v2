@@ -359,9 +359,9 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
       {/* Header */}
       <header className="flex flex-col md:flex-row justify-between items-center gap-6">
         <div>
-          <h2 className="text-5xl font-black brand-font uppercase text-white tracking-tight leading-none">Protocol Library</h2>
-          <p className="text-blue-500 font-bold uppercase text-[10px] tracking-[0.4em] mt-2 flex items-center gap-2">
-            <Library size={14} /> Master Blueprints & Modular Templates
+          <h2 className="text-2xl font-extrabold text-ink">Programs</h2>
+          <p className="text-sm text-muted mt-1 flex items-center gap-2">
+            <Library size={14} /> Workouts you saved to reuse
           </p>
         </div>
         <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex items-center gap-3">
@@ -733,7 +733,7 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
       {/* ── USE TEMPLATE MODAL ── */}
       {assigningTemplate && (
         <div className="fixed inset-0 z-[700] flex items-center justify-center p-4 animate-in fade-in duration-300">
-          <div className="absolute inset-0 bg-[#020617]/95 backdrop-blur-xl" onClick={() => setAssigningTemplate(null)} />
+          <div className="absolute inset-0 bg-page/95 backdrop-blur-xl" onClick={() => setAssigningTemplate(null)} />
           <div className="relative w-full max-w-xl glass-card rounded-[3rem] border border-white/10 shadow-2xl overflow-hidden flex flex-col">
             <div className="p-8 border-b border-white/5 flex justify-between items-center bg-blue-600/5">
               <div className="flex items-center gap-4">
@@ -823,7 +823,7 @@ const MasterLibrary: React.FC<Props> = ({ onLoadIntoEditor }) => {
       {/* ── PREVIEW MODAL ── */}
       {previewTemplate && (
         <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 animate-in fade-in duration-300">
-          <div className="absolute inset-0 bg-[#020617]/95 backdrop-blur-xl" onClick={() => setPreviewTemplate(null)} />
+          <div className="absolute inset-0 bg-page/95 backdrop-blur-xl" onClick={() => setPreviewTemplate(null)} />
           <div className="relative w-full max-w-2xl glass-card rounded-[3rem] border border-white/10 shadow-2xl overflow-hidden max-h-[85vh] flex flex-col">
             <div className="p-8 border-b border-white/5 flex justify-between items-center bg-white/5">
               <div className="flex items-center gap-6">
